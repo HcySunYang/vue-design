@@ -83,11 +83,59 @@
 
 相比于知道 Vue 的不同构建输出，我们更关心的是：不同的构建输出有什么区别，为什么要输出这么多不同的版本，有什么作用？
 
-为什么要分 `运行时版` 与 `完整版`？首先你要知道一个公式：`运行时版 + Compiler = 完整版`。也就是说运行时版比完整版多了一个 `Compiler`，一个将字符串模板编译为 `render` 函数的家伙，大家想一想：将字符串模板编译为 `render` 函数的这个过程，是不是一定要在代码运行的时候再去做？当然不是，实际上这个过程在构建的时候就可以完成，这样真正运行的代码就免去了这样一个步骤，提升了性能。同时，将 `Compiler` 抽离为单独的包，还能减小了库的体积。
+为什么要分 `运行时版` 与 `完整版`？首先你要知道一个公式：`运行时版 + Compiler = 完整版`。也就是说完整版比运行时版多了一个 `Compiler`，一个将字符串模板编译为 `render` 函数的家伙，大家想一想：将字符串模板编译为 `render` 函数的这个过程，是不是一定要在代码运行的时候再去做？当然不是，实际上这个过程在构建的时候就可以完成，这样真正运行的代码就免去了这样一个步骤，提升了性能。同时，将 `Compiler` 抽离为单独的包，还能减小了库的体积。
 
 但是为什么需要完整版呢？说白了就是允许你在代码运行的时候去现场编译模板，在不配合构建工具的情况下可以直接使用，但是更多的时候推荐你配合构建工具使用运行时版本。
 
 除了运行时版与完整版之外，为什么还要输出不同形式的模块的包？比如 `cjs`、`es` 和 `umd`？其中 `umd` 是使得你可以直接使用 `<script>` 标签引用Vue的模块形式。但我们使用 Vue 的时候更多的是结合构建工具，比如 `webpack` 之类的，而 `cjs` 形式的模块就是为 `browserify` 和 `webpack 1` 提供的，他们在加载模块的时候不能直接加载 `ES Module`。而 `webpack2+` 以及 `Rollup` 是可以直接加载 `ES Module` 的，所以就有了 `es` 形式的模块输出。
+
+#### package.json
+
+`package.json` 文件的作用这里就不说了，来看几个重要的字段：
+
+```sj
+"main": "dist/vue.runtime.common.js",
+"module": "dist/vue.runtime.esm.js",
+```
+
+`main` 和 `module` 指向的都是运行时版的Vue，不同时前者是 `cjs` 模块，后者是 `es` 模块。
+
+其中 `main` 字段和 `module` 字段分别用于 `browserify 或 webpack 1` 和 `webpack2+ 或 Rollup`，后者可以直接加载 `ES Module` 且会根据 `module` 字段的配置进行加载，关于 `module` 可以参考这里：[https://github.com/rollup/rollup/wiki/pkg.module](https://github.com/rollup/rollup/wiki/pkg.module)。
+
+然后我们看一下 `scripts` 字段如下，这里去掉了测试相关以及weex相关的脚本配置：
+
+```js
+"scripts": {
+	// 构建完整版 cjs 模块的 Vue
+    "dev": "rollup -w -c build/config.js --environment TARGET:web-full-dev",
+    // 构建运行时 cjs 模块的 Vue
+    "dev:cjs": "rollup -w -c build/config.js --environment TARGET:web-runtime-cjs",
+    // 构建运行时 es 模块的 Vue
+    "dev:esm": "rollup -w -c build/config.js --environment TARGET:web-runtime-esm",
+    // 构建 web-server-renderer 包
+    "dev:ssr": "rollup -w -c build/config.js --environment TARGET:web-server-renderer",
+    // 构建 Compiler 包
+    "dev:compiler": "rollup -w -c build/config.js --environment TARGET:web-compiler ",
+    "build": "node build/build.js",
+    "build:ssr": "npm run build -- vue.runtime.common.js,vue-server-renderer",
+    "lint": "eslint src build test",
+    "flow": "flow check",
+    "release": "bash build/release.sh",
+    "release:note": "node build/gen-release-note.js",
+    "setup": "node build/install-hooks.js",
+    "commit": "git-cz"
+  },
+```
+
+观察其中 `dev` 系列的命令，其作用如同注释中所写的样。
+
+另外说明一点：*这套源码分析的文章，大多数时候是基于 dev 脚本的，也就是完整版的 cjs 模块的 Vue*。原因是方便我们直接引用并使用，且完整版带了 `Compiler` 我们就不用单独去分析了。
+
+
+
+
+
+
 
 
 
