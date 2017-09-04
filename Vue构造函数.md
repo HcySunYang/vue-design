@@ -101,7 +101,7 @@ export default Vue
 
 可以看到，这个文件才是 `Vue` 构造函数真正的“出生地”，上面的代码是 `./instance/index.js` 文件中全部的代码，还是比较简短易看的，首先分别从 `./init.js`、`./state.js`、`./render.js`、`./events.js`、`./lifecycle.js` 这五个文件中导出五个方法，分别是：`initMixin`、`stateMixin`、`renderMixin`、`eventsMixin` 以及 `lifecycleMixin`，然后定义了 `Vue` 构造函数，其中使用了安全模式来提醒你要使用 `new` 操作符来调用 `Vue`，接着将 `Vue` 构造函数作为参数，分别传递给了导入进来的这五个方法，最后导出 `Vue`。
 
-那么这五个方法又做了什么呢？以 `initMixin` 为例，打开 `./init.js` 文件，找到 `initMixin` 方法，如下：
+那么这五个方法又做了什么呢？先看看 `initMixin` ，打开 `./init.js` 文件，找到 `initMixin` 方法，如下：
 
 ```js
 export function initMixin (Vue: Class<Component>) {
@@ -126,7 +126,7 @@ function Vue (options) {
 }
 ```
 
-这 `Vue` 的构造函数里有这么一句：`this._init(options)`，这说明，当我们执行 `new Vue()` 的时候，`this._init(options)` 将被执行。
+在 `Vue` 的构造函数里有这么一句：`this._init(options)`，这说明，当我们执行 `new Vue()` 的时候，`this._init(options)` 将被执行。
 
 再打开 `./state.js` 文件，找到 `stateMixin` 方法，这个方法的一开始，是这样一段代码：
 
@@ -182,6 +182,49 @@ propsDef.get = function () { return this._props }
 这三个方法分别是：`$set`、`$delete` 以及 `$watch`，实际上这些东西你都见过的，在这里：
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-09-04-093014.jpg)
+
+然后是 `eventsMixin` 方法，这个方法在 `./events.js` 文件中，打开这个文件找到 `eventsMixin` 方法，这个方法在 `Vue.prototype` 上添加了四个方法，分别是：
+
+```js
+Vue.prototype.$on = function (event: string | Array<string>, fn: Function): Component {}
+Vue.prototype.$once = function (event: string, fn: Function): Component {}
+Vue.prototype.$off = function (event?: string | Array<string>, fn?: Function): Component {}
+Vue.prototype.$emit = function (event: string): Component {}
+```
+
+下一个是 `lifecycleMixin`，打开 `./lifecycle.js` 文件找到相应方法，这个方法在 `Vue.prototype` 上添加了三个方法：
+
+```js
+Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {}
+Vue.prototype.$forceUpdate = function () {}
+Vue.prototype.$destroy = function () {}
+```
+
+最后一个就是 `renderMixin` 方法了，它在 `render.js` 文件中，它为 `Vue.prototype` 添加了一大堆的方法，我们暂且不管是干什么，先列出来，如下：
+
+```js
+Vue.prototype.$nextTick = function (fn: Function) {}
+Vue.prototype._render = function (): VNode {}
+Vue.prototype._o = markOnce
+Vue.prototype._n = toNumber
+Vue.prototype._s = toString
+Vue.prototype._l = renderList
+Vue.prototype._t = renderSlot
+Vue.prototype._q = looseEqual
+Vue.prototype._i = looseIndexOf
+Vue.prototype._m = renderStatic
+Vue.prototype._f = resolveFilter
+Vue.prototype._k = checkKeyCodes
+Vue.prototype._b = bindObjectProps
+Vue.prototype._v = createTextVNode
+Vue.prototype._e = createEmptyVNode
+Vue.prototype._u = resolveScopedSlots
+Vue.prototype._g = bindObjectListeners
+```
+至此，`instance/index.js` 文件中的代码就运行完毕了（注意：所谓的运行，是指执行 `npm run dev` 命令时构建的运行）。我们大概清楚每个 `*Mixin` 方法的作用其实就是包装 `Vue.prototype`，在其上挂载一些属性和方法，下面我们要做一件很重要的事情，就是将上面的内容集中合并起来，放单一个单独的地方，便于以后查看，我将它们整理到了这里：[附录/Vue 构造函数整理](./附录/Vue构造函数整理.md)，其中 `对原型的包装一节` 上对上面内容的整理，这样当我们在后面的讲解详细讲解的时候，提到某个方法你就可以迅速定位它的位置，而且以便于我们思路的清晰。
+
+
+
 
 
 
