@@ -221,7 +221,348 @@ Vue.prototype._e = createEmptyVNode
 Vue.prototype._u = resolveScopedSlots
 Vue.prototype._g = bindObjectListeners
 ```
-至此，`instance/index.js` 文件中的代码就运行完毕了（注意：所谓的运行，是指执行 `npm run dev` 命令时构建的运行）。我们大概清楚每个 `*Mixin` 方法的作用其实就是包装 `Vue.prototype`，在其上挂载一些属性和方法，下面我们要做一件很重要的事情，就是将上面的内容集中合并起来，放单一个单独的地方，便于以后查看，我将它们整理到了这里：[附录/Vue 构造函数整理](./附录/Vue构造函数整理.md)，其中 `对原型的包装一节` 上对上面内容的整理，这样当我们在后面的讲解详细讲解的时候，提到某个方法你就可以迅速定位它的位置，而且以便于我们思路的清晰。
+至此，`instance/index.js` 文件中的代码就运行完毕了（注意：所谓的运行，是指执行 `npm run dev` 命令时构建的运行）。我们大概清楚每个 `*Mixin` 方法的作用其实就是包装 `Vue.prototype`，在其上挂载一些属性和方法，下面我们要做一件很重要的事情，就是将上面的内容集中合并起来，放单一个单独的地方，便于以后查看，我将它们整理到了这里：[附录/Vue 构造函数整理-原型](./附录/Vue构造函数整理-原型.md)，其中 `对原型的包装一节` 是对上面内容的整理，这样当我们在后面的详细讲解的时候，提到某个方法你就可以迅速定位它的位置，便于我们思路的清晰。
+
+到目前为止，`core/instance/index.js` 文件，也就是 `Vue` 的出生文件的代码我们就看完了，按照之前我们寻找Vue构造函数时的文件路径回溯，下一个我们要看的文件应该就是 `core/index.js` 文件，这个文件将 `Vue` 从 `core/instance/index.js` 文件中导入了进来，我们打开 `core/index.js` 文件，下面是其全部的代码，同样很简短易看：
+
+```js
+// 从 Vue 的出生文件导入 Vue
+import Vue from './instance/index'
+import { initGlobalAPI } from './global-api/index'
+import { isServerRendering } from 'core/util/env'
+
+// 将 Vue 构造函数作为参数，传递给 initGlobalAPI 方法，该方法来自 ./global-api/index.js 文件
+initGlobalAPI(Vue)
+
+// 在 Vue.prototype 上添加 $isServer 属性，该属性代理了来自 core/util/env.js 文件的 isServerRendering
+Object.defineProperty(Vue.prototype, '$isServer', {
+  get: isServerRendering
+})
+
+// 在 Vue.prototype 上添加 $ssrContext 属性
+Object.defineProperty(Vue.prototype, '$ssrContext', {
+  get () {
+    /* istanbul ignore next */
+    return this.$vnode && this.$vnode.ssrContext
+  }
+})
+
+// Vue.version 存储了当前 Vue 的版本号
+Vue.version = '__VERSION__'
+
+// 导出 Vue
+export default Vue
+```
+
+上面的代码中，首先从 `Vue` 的出生文件，也就是 `instance/index.js` 文件导入 `Vue`，然后分别从两个文件导入了两个变量，如下：
+
+```js
+import { initGlobalAPI } from './global-api/index'
+import { isServerRendering } from 'core/util/env'
+```
+
+其中 `initGlobalAPI` 是一个函数，并且以 `Vue` 构造函数作为参数进行调用：
+
+```js
+initGlobalAPI(Vue)
+```
+
+然后在 `Vue.prototype` 上分别添加了两个只读的属性，分别是：`$isServer` 和 `$ssrContext`。
+
+最后，在 `Vue` 构造函数上添加了一个静态属性 `version`，存储了当前 `Vue` 的版本值，但是这里的 `'__VERSION__'` 是什么鬼？打开 `build/config.js` 文件，找到 `genConfig` 方法，如下：
+
+![](http://ovjvjtt4l.bkt.clouddn.com/2017-09-05-080823.jpg)
+
+也就是说，`__VERSION__` 最终将被 `version` 的值替换，而 `version` 的值就是 `Vue` 的版本号。
+
+我们在回过头来看看这句话：
+
+```js
+initGlobalAPI(Vue)
+```
+
+大家应该可以猜个大概，这看上去像是在 `Vue` 上添加一些全局的API，实际上就是这样的，这些全局API以静态属性和方法的形式被添加到 `Vue` 构造函数上，打开 `src/core/global-api/index.js` 文件找到 `initGlobalAPI` 方法，我们来看看 `initGlobalAPI` 方法都做了什么。
+
+首先是这样一段代码：
+
+```js
+// config
+  const configDef = {}
+  configDef.get = () => config
+  if (process.env.NODE_ENV !== 'production') {
+    configDef.set = () => {
+      warn(
+        'Do not replace the Vue.config object, set individual fields instead.'
+      )
+    }
+  }
+  Object.defineProperty(Vue, 'config', configDef)
+```
+
+这段代码的作用是在 `Vue` 构造函数上添加 `config` 属性，这个属性的添加方式类似我们前面看过的 `$data` 以及 `$props`，也是一个只读的属性，并且当你试图设置其值时，在非生产环境下会给你一个友好的提示，为什么说它友好呢？因为如果是我的话，我可能会提示你：`what are you fucking doing`。
+
+那 `Vue.config` 的值是什么呢？在 `src/core/global-api/index.js` 文件的开头有这样一句：
+
+```js
+import config from '../config'
+```
+
+所以 `Vue.config` 代理的是从 `core/config.js` 文件导出的对象。
+
+接着是这样一段代码：
+
+```js
+// exposed util methods.
+// NOTE: these are not considered part of the public API - avoid relying on
+// them unless you are aware of the risk.
+Vue.util = {
+	warn,
+	extend,
+	mergeOptions,
+	defineReactive
+}
+```
+
+在 `Vue` 上添加了 `util` 属性，这是一个对象，这个对象拥有四个属性分别是：`warn`、`extend`、`mergeOptions` 以及 `defineReactive`。这四个属性来自于 `core/util/index.js` 文件。
+
+这里有一段注释，大概意思是 `Vue.util` 以及 `util` 下的四个方法都不被认为是公共API的一部分，要避免依赖他们，但是你依然可以使用，只不过风险你要自己控制。并且，在官方文档上也并没有介绍这个全局API，所以能不用尽量不要用。
+
+然后是这样一段代码：
+
+```js
+Vue.set = set
+Vue.delete = del
+Vue.nextTick = nextTick
+
+Vue.options = Object.create(null)
+```
+
+这段代码比较简单，在 `Vue` 上添加了四个属性分别是 `set`、`delete`、`nextTick` 以及 `options`，这里要注意的是 `Vue.options`，现在它还只是一个空的对象，通过 `Object.create(null)` 创建。
+
+不过接下来，`Vue.options` 就不是一个空的对象了，因为下面这段代码：
+
+```js
+ASSET_TYPES.forEach(type => {
+	Vue.options[type + 's'] = Object.create(null)
+})
+
+// this is used to identify the "base" constructor to extend all plain-object
+// components with in Weex's multi-instance scenarios.
+Vue.options._base = Vue
+
+extend(Vue.options.components, builtInComponents)
+```
+
+上面的代码中，`ASSET_TYPES` 来自于 `shared/constants.js` 文件，打开这个文件，发现 `ASSET_TYPES` 是一个数组：
+
+```js
+export const ASSET_TYPES = [
+  'component',
+  'directive',
+  'filter'
+]
+```
+
+所以当下面这段代码执行完后：
+
+```js
+ASSET_TYPES.forEach(type => {
+	Vue.options[type + 's'] = Object.create(null)
+})
+
+// this is used to identify the "base" constructor to extend all plain-object
+// components with in Weex's multi-instance scenarios.
+Vue.options._base = Vue
+```
+
+`Vue.options` 将变成这样：
+
+```js
+Vue.options = {
+	components: Object.create(null),
+	directives: Object.create(null),
+	filters: Object.create(null),
+	_base: Vue
+}
+```
+
+紧接着，是这句代码：
+
+```js
+extend(Vue.options.components, builtInComponents)
+```
+
+`extend` 来自于 `shared/util.js` 文件，它长成这样：
+
+```js
+/**
+ * 将 _from 对象的属性混合到 to 对象中
+ */
+export function extend (to: Object, _from: ?Object): Object {
+  for (const key in _from) {
+    to[key] = _from[key]
+  }
+  return to
+}
+```
+
+这是一个很简单的方法，用来混合两个对象的属性，所以下面这段代码：
+
+```js
+extend(Vue.options.components, builtInComponents)
+```
+
+的意思就是将 `builtInComponents` 的属性混合到 `Vue.options.components` 中，其中 `builtInComponents` 来自于 `core/components/index.js` 文件，该文件如下：
+
+```js
+import KeepAlive from './keep-alive'
+
+export default {
+  KeepAlive
+}
+```
+
+所以最终 `Vue.options.components` 的值如下：
+
+```js
+Vue.options.components = {
+	KeepAlive
+}
+```
+
+那么到现在为止，`Vue.options` 已经变成了这样：
+
+```js
+Vue.options = {
+	components: {
+		KeepAlive
+	},
+	directives: Object.create(null),
+	filters: Object.create(null),
+	_base: Vue
+}
+```
+
+我们继续看代码，在 `initGlobalAPI` 方法的最后部分，以 `Vue` 为参数调用了四个 `init*` 方法：
+
+```js
+initUse(Vue)
+initMixin(Vue)
+initExtend(Vue)
+initAssetRegisters(Vue)
+```
+
+这四个方法从上至下分别来自于 `global-api/use.js`、`global-api/mixin.js`、`global-api/extend.js` 以及 `global-api/assets.js` 这四个文件，我们不着急，一个一个慢慢的看，先打开 `global-api/use.js` 文件，我们发现这个文件只有一个 `initUse` 方法，如下：
+
+```js
+/* @flow */
+
+import { toArray } from '../util/index'
+
+export function initUse (Vue: GlobalAPI) {
+  Vue.use = function (plugin: Function | Object) {
+    // ...
+  }
+}
+```
+
+该方法的作用是在 `Vue` 构造函数上添加 `use` 方法，也就是传说中的 `Vue.use` 这个全局API，这个方法大家应该不会陌生，用来安装 Vue 插件。
+
+再打开 `global-api/mixin.js` 文件，这个文件更简单，全部代码如下：
+
+```js
+/* @flow */
+
+import { mergeOptions } from '../util/index'
+
+export function initMixin (Vue: GlobalAPI) {
+  Vue.mixin = function (mixin: Object) {
+    this.options = mergeOptions(this.options, mixin)
+    return this
+  }
+}
+```
+
+其中，`initMixin` 方法的作用是，在 `Vue` 上添加 `mixin` 这个全局API。
+
+再打开 `global-api/extend.js` 文件，找到 `initExtend` 方法，如下：
+
+```js
+export function initExtend (Vue: GlobalAPI) {
+  /**
+   * Each instance constructor, including Vue, has a unique
+   * cid. This enables us to create wrapped "child
+   * constructors" for prototypal inheritance and cache them.
+   */
+  Vue.cid = 0
+  let cid = 1
+
+  /**
+   * Class inheritance
+   */
+  Vue.extend = function (extendOptions: Object): Function {
+    // ...
+  }
+}
+```
+
+`initExtend` 方法在 `Vue` 上添加了 `Vue.cid` 静态属性，和 `Vue.extend` 静态方法。
+
+最后一个是 `initAssetRegisters`，我们打开 `global-api/assets.js` 文件，找到 `initAssetRegisters` 方法如下：
+
+```js
+export function initAssetRegisters (Vue: GlobalAPI) {
+  /**
+   * Create asset registration methods.
+   */
+  ASSET_TYPES.forEach(type => {
+    Vue[type] = function (
+      id: string,
+      definition: Function | Object
+    ): Function | Object | void {
+      // ......
+    }
+  })
+}
+```
+
+其中，`ASSET_TYPES` 我们已经见过了，它在 `shared/constants.js` 文件中，长成这样：
+
+```js
+export const ASSET_TYPES = [
+  'component',
+  'directive',
+  'filter'
+]
+```
+
+所以，最终经过 `initAssetRegisters` 方法，`Vue` 将又多了三个静态方法：
+
+```js
+Vue.component
+Vue.directive
+Vue.filter
+```
+
+这样，`initGlobalAPI` 方法的全部功能我们就介绍完毕了，它的作用就像它的名字一样，是在 `Vue` 构造函数上添加全局的API，类似整理 `Vue.prototype` 上的属性和方法一样，我们同样对 `Vue` 静态属性和方法做一个整理，将他放到 [附录/Vue 构造函数整理-全局API](Vue构造函数整理-全局API.md) 中，便于以后查阅。
+
+至此，对于 `core/index.js` 文件的作用我们也大概清楚了，在这个文件里，它首先将核心的 `Vue`，也就是在 `core/instance/index.js` 文件中的 `Vue`，也可以说是原型被包装(添加属性和方法)后的 `Vue` 导出，然后使用 `initGlobalAPI` 方法给 `Vue` 添加静态方法和属性，除此之外，在这里文件里，也对原型进行了修改，为其添加了两个属性：`$isServer` 和 `$ssrContext`，最后添加了 `Vue.version` 属性并导出了 `Vue`。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

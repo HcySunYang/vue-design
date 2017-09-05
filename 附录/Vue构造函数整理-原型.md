@@ -1,23 +1,6 @@
-## Vue 构造函数整理
+## Vue 构造函数整理-原型
 
-这里是对 `Vue` 构造函数的整理，便于看源码时查看方法的对应位置。
-
-#### 定义
-
-* `instance/index.js` 中定义 `Vue` 构造函数
-
-```js
-function Vue (options) {
-  if (process.env.NODE_ENV !== 'production' &&
-    !(this instanceof Vue)
-  ) {
-    warn('Vue is a constructor and should be called with the `new` keyword')
-  }
-  this._init(options)
-}
-```
-
-#### 对原型的包装
+这里是对 `Vue` 构造函数原型的整理，便于看源码时查看方法的对应位置。
 
 ```js
 // initMixin(Vue)    src/core/instance/init.js **************************************************
@@ -63,4 +46,16 @@ Vue.prototype._v = createTextVNode
 Vue.prototype._e = createEmptyVNode
 Vue.prototype._u = resolveScopedSlots
 Vue.prototype._g = bindObjectListeners
+
+// core/index.js 文件中
+Object.defineProperty(Vue.prototype, '$isServer', {
+  get: isServerRendering
+})
+
+Object.defineProperty(Vue.prototype, '$ssrContext', {
+  get () {
+    /* istanbul ignore next */
+    return this.$vnode && this.$vnode.ssrContext
+  }
+})
 ```
