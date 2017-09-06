@@ -552,6 +552,14 @@ Vue.filter
 
 至此，对于 `core/index.js` 文件的作用我们也大概清楚了，在这个文件里，它首先将核心的 `Vue`，也就是在 `core/instance/index.js` 文件中的 `Vue`，也可以说是原型被包装(添加属性和方法)后的 `Vue` 导出，然后使用 `initGlobalAPI` 方法给 `Vue` 添加静态方法和属性，除此之外，在这里文件里，也对原型进行了修改，为其添加了两个属性：`$isServer` 和 `$ssrContext`，最后添加了 `Vue.version` 属性并导出了 `Vue`。
 
+#### Vue 平台化的包装
+
+现在，在我们弄清 `Vue` 构造函数的过程中已经看了两个主要的文件，分别是：`core/instance/index.js` 文件以及 `core/index.js` 文件，前者是 `Vue` 构造函数的定义文件，我们一直都叫其 `Vue` 的出生文件，主要作用是定义 `Vue` 构造函数，并对其原型添加属性和犯法。后者的主要作用是，为 `Vue` 添加全局的API，也就是静态的方法和属性。这两个文件有个共同点，就是它们都在 `core` 目录下，我们在介绍 `Vue` 项目目录结构的时候说过：`core` 目录存放的是平台无关的代码，所以无论是 `core/instance/index.js` 文件还是 `core/index.js` 文件，它们都在包装核心的 `Vue`，且这些包装是平台无关的。但是，`Vue` 是一个 `Multi-platform` 的项目（web和weex），不同平台可能会内置不同的组件、指令，或者一些平台特有的功能等等，那么这就需要对 `Vue` 根据不同的平台进行平台化的包装，这就是接下来我们要看的文件，这个文件也出现在我们寻找 `Vue` 构造函数的路线上，他就是：`platforms/web/runtime/index.js` 文件。
+
+在看这个文件之前，大家可以先打开 `platforms` 目录，可以发现有两个子目录 `web` 和 `weex`。这两个子目录的作用就是分别为相应的平台对核心的 `Vue` 进行包装的。而我们所要研究室 web 平台，就在 `web` 这个目录里。
+
+接下来，我们就打开 `platforms/web/runtime/index.js` 文件，看一看里面的代码：
+
 
 
 
