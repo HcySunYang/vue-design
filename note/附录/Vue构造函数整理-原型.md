@@ -58,4 +58,14 @@ Object.defineProperty(Vue.prototype, '$ssrContext', {
     return this.$vnode && this.$vnode.ssrContext
   }
 })
+
+// 在 runtime/index.js 文件中
+Vue.prototype.__patch__ = inBrowser ? patch : noop
+Vue.prototype.$mount = function (
+  el?: string | Element,
+  hydrating?: boolean
+): Component {
+  el = el && inBrowser ? query(el) : undefined
+  return mountComponent(this, el, hydrating)
+}
 ```

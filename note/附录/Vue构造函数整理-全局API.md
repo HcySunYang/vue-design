@@ -17,8 +17,16 @@ Vue.nextTick = nextTick
 Vue.options = {
 	components: {
 		KeepAlive
+		// Transition 和 TransitionGroup 组件在 runtime/index.js 文件中被添加
+		// Transition,
+    	// TransitionGroup
 	},
 	directives: Object.create(null),
+	// 在 runtime/index.js 文件中，为 directives 添加了两个平台化的指令 model 和 show
+	// directives:{
+	//	model,
+    //	show
+	// },
 	filters: Object.create(null),
 	_base: Vue
 }

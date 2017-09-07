@@ -554,11 +554,211 @@ Vue.filter
 
 #### Vue 平台化的包装
 
-现在，在我们弄清 `Vue` 构造函数的过程中已经看了两个主要的文件，分别是：`core/instance/index.js` 文件以及 `core/index.js` 文件，前者是 `Vue` 构造函数的定义文件，我们一直都叫其 `Vue` 的出生文件，主要作用是定义 `Vue` 构造函数，并对其原型添加属性和犯法。后者的主要作用是，为 `Vue` 添加全局的API，也就是静态的方法和属性。这两个文件有个共同点，就是它们都在 `core` 目录下，我们在介绍 `Vue` 项目目录结构的时候说过：`core` 目录存放的是平台无关的代码，所以无论是 `core/instance/index.js` 文件还是 `core/index.js` 文件，它们都在包装核心的 `Vue`，且这些包装是平台无关的。但是，`Vue` 是一个 `Multi-platform` 的项目（web和weex），不同平台可能会内置不同的组件、指令，或者一些平台特有的功能等等，那么这就需要对 `Vue` 根据不同的平台进行平台化的包装，这就是接下来我们要看的文件，这个文件也出现在我们寻找 `Vue` 构造函数的路线上，他就是：`platforms/web/runtime/index.js` 文件。
+现在，在我们弄清 `Vue` 构造函数的过程中已经看了两个主要的文件，分别是：`core/instance/index.js` 文件以及 `core/index.js` 文件，前者是 `Vue` 构造函数的定义文件，我们一直都叫其 `Vue` 的出生文件，主要作用是定义 `Vue` 构造函数，并对其原型添加属性和方法。后者的主要作用是，为 `Vue` 添加全局的API，也就是静态的方法和属性。这两个文件有个共同点，就是它们都在 `core` 目录下，我们在介绍 `Vue` 项目目录结构的时候说过：`core` 目录存放的是平台无关的代码，所以无论是 `core/instance/index.js` 文件还是 `core/index.js` 文件，它们都在包装核心的 `Vue`，且这些包装是平台无关的。但是，`Vue` 是一个 `Multi-platform` 的项目（web和weex），不同平台可能会内置不同的组件、指令，或者一些平台特有的功能等等，那么这就需要对 `Vue` 根据不同的平台进行平台化的包装，这就是接下来我们要看的文件，这个文件也出现在我们寻找 `Vue` 构造函数的路线上，他就是：`platforms/web/runtime/index.js` 文件。
 
-在看这个文件之前，大家可以先打开 `platforms` 目录，可以发现有两个子目录 `web` 和 `weex`。这两个子目录的作用就是分别为相应的平台对核心的 `Vue` 进行包装的。而我们所要研究室 web 平台，就在 `web` 这个目录里。
+在看这个文件之前，大家可以先打开 `platforms` 目录，可以发现有两个子目录 `web` 和 `weex`。这两个子目录的作用就是分别为相应的平台对核心的 `Vue` 进行包装的。而我们所要研究的 web 平台，就在 `web` 这个目录里。
 
-接下来，我们就打开 `platforms/web/runtime/index.js` 文件，看一看里面的代码：
+接下来，我们就打开 `platforms/web/runtime/index.js` 文件，看一看里面的代码，这个文件的一开始，是一大堆 `import` 语句，其中就包括从 `core/index.js` 文件导入 `Vue` 的那句。
+
+在 `import` 语句下面是这样一段代码：
+
+```js
+// install platform specific utils
+Vue.config.mustUseProp = mustUseProp
+Vue.config.isReservedTag = isReservedTag
+Vue.config.isReservedAttr = isReservedAttr
+Vue.config.getTagNamespace = getTagNamespace
+Vue.config.isUnknownElement = isUnknownElement
+```
+
+大家还记得 `Vue.config` 吗？其代理的值是从 `core/config.js` 文件导出的对象，这个对象最开始长成这样：
+
+```js
+Vue.config = {
+  optionMergeStrategies: Object.create(null),
+  silent: false,
+  productionTip: process.env.NODE_ENV !== 'production',
+  devtools: process.env.NODE_ENV !== 'production',
+  performance: false,
+  errorHandler: null,
+  warnHandler: null,
+  ignoredElements: [],
+  keyCodes: Object.create(null),
+  isReservedTag: no,
+  isReservedAttr: no,
+  isUnknownElement: no,
+  getTagNamespace: noop,
+  parsePlatformTagName: identity,
+  mustUseProp: no,
+  _lifecycleHooks: LIFECYCLE_HOOKS
+}
+```
+
+我们可以看到，从 `core/config.js` 文件导出的 `config` 对象，大部分都是初始化了一个初始值，并且我们在 `core/config.js` 文件中能看到很多这样的注释，如下图：
+
+![](http://ovjvjtt4l.bkt.clouddn.com/2017-09-06-090635.jpg)
+
+`This is platform-dependent and may be overwritten.`，这句话的意思是，这个配置的是与平台有关的，很可能被覆盖掉。这个时候我们在回看这段代码：
+
+```js
+// install platform specific utils
+Vue.config.mustUseProp = mustUseProp
+Vue.config.isReservedTag = isReservedTag
+Vue.config.isReservedAttr = isReservedAttr
+Vue.config.getTagNamespace = getTagNamespace
+Vue.config.isUnknownElement = isUnknownElement
+```
+
+其实这就是在覆盖默认导出的 `config` 对象的属性，注释已经写得很清楚了，安装平台特定的工具方法，至于这些东西的作用这里我们暂且不说，你只要知道它在干嘛即可。
+
+接着是这两句代码：
+
+```js
+// install platform runtime directives & components
+extend(Vue.options.directives, platformDirectives)
+extend(Vue.options.components, platformComponents)
+```
+
+安装运行时的平台化的指令和组件，大家还记 `Vue.options` 长什么样吗？在执行这两句代码之前，它长成这样：
+
+```js
+Vue.options = {
+	components: {
+		KeepAlive
+	},
+	directives: Object.create(null),
+	filters: Object.create(null),
+	_base: Vue
+}
+```
+
+`extend` 方法我们见过，这里就不说明其作用了，可以查看 [附录/shared/util.js 文件工具方法全解](/note/附录/shared-util)，那么经过这两句代码之后的 `Vue.options` 长什么样呢？要想知道这个问题，我们就要知道 `platformDirectives` 和 `platformComponents` 长什么样。
+
+根据文件开头的 `import` 语句：
+
+```js
+import platformDirectives from './directives/index'
+import platformComponents from './components/index'
+```
+
+我们知道，这两个变量来自于 `runtime/directives/index.js` 文件和 `runtime/components/index.js` 文件，我们先打开 `runtime/directives/index.js` 文件，下面是其全部代码：
+
+```js
+import model from './model'
+import show from './show'
+
+export default {
+  model,
+  show
+}
+```
+
+也就是说，`platformDirectives` 是：
+
+```js
+platformDirectives = {
+  model,
+  show
+}
+```
+
+所以，经过：
+
+```js
+extend(Vue.options.directives, platformDirectives)
+```
+
+这句代码之后，`Vue.options` 将变为：
+
+```js
+Vue.options = {
+	components: {
+		KeepAlive
+	},
+	directives: {
+    model,
+    show
+  },
+	filters: Object.create(null),
+	_base: Vue
+}
+```
+
+同样的道理，下面是 `runtime/components/index.js` 文件全部的代码：
+
+```js
+import Transition from './transition'
+import TransitionGroup from './transition-group'
+
+export default {
+  Transition,
+  TransitionGroup
+}
+```
+
+所以 `platformComponents` 的值为：
+
+```js
+platformComponents = {
+  Transition,
+  TransitionGroup
+}
+```
+
+那么经过：
+
+```js
+extend(Vue.options.components, platformComponents)
+```
+
+之后，`Vue.options` 将变为：
+
+```js
+Vue.options = {
+	components: {
+		KeepAlive,
+    Transition,
+    TransitionGroup
+	},
+	directives: {
+    model,
+    show
+  },
+	filters: Object.create(null),
+	_base: Vue
+}
+```
+
+这样，这两句代码的目的我们就搞清楚了，其作用是在 `Vue.options` 上添加 `web` 平台运行时的特定组件和指令。
+
+我们继续往下看代码，接下来是这段：
+
+```js
+// install platform patch function
+Vue.prototype.__patch__ = inBrowser ? patch : noop
+
+// public mount method
+Vue.prototype.$mount = function (
+  el?: string | Element,
+  hydrating?: boolean
+): Component {
+  el = el && inBrowser ? query(el) : undefined
+  return mountComponent(this, el, hydrating)
+}
+```
+
+首先在 `Vue.prototype` 上添加 `__patch__` 方法，如果在浏览器环境运行的话，这个方法的值为 `patch` 函数，否则是一个空函数 `noop`。然后又在 `Vue.prototype` 上添加了 `$mount` 方法，我们暂且不关心 `$mount` 方法的内容和作用。
+
+之后的一段代码是 `vue-devtools` 的全局钩子，它被包裹在 `setTimeout` 中。最后导出了 `Vue`。
+
+现在我们就看完了 `platforms/web/runtime/index.js` 文件，该文件的作用是对 `Vue` 进行平台化的包装：
+
+* 设置平台化的 `Vue.config`。
+* 在 `Vue.options` 上混合了两个指令(`directives`)，分别是 `model` 和 `show`。
+* 在 `Vue.options` 上混合了两个组件(`components`)，分别是 `Transition` 和 `TransitionGroup`。
+* 在 `Vue.prototype` 上添加了两个方法：`__patch__` 和 `$mount`。
+
+在经过这个文件之后，`Vue.options` 以及 `Vue.config` 和 `Vue.prototype` 都有所变化，我们把这些变化更新到对应的 `附录` 文件里，都可以查看的到。
 
 
 
