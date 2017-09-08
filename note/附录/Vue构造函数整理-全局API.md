@@ -50,4 +50,7 @@ Vue.filter = function (
 ): Function | Object | void {}
 
 Vue.version = '__VERSION__'
+
+// entry-runtime-with-compiler.js
+Vue.compile = compileToFunctions
 ```

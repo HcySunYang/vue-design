@@ -68,4 +68,12 @@ Vue.prototype.$mount = function (
   el = el && inBrowser ? query(el) : undefined
   return mountComponent(this, el, hydrating)
 }
+
+// 在入口文件 entry-runtime-with-compiler.js 中重写了 Vue.prototype.$mount 方法
+Vue.prototype.$mount = function (
+  el?: string | Element,
+  hydrating?: boolean
+): Component {
+  // ... 函数体
+}
 ```
