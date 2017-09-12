@@ -29,24 +29,25 @@
 ```js
 const path = require('path')
 
-module.exports = {
-  vue: path.resolve(__dirname, '../src/platforms/web/entry-runtime-with-compiler'),
-  compiler: path.resolve(__dirname, '../src/compiler'),
-  core: path.resolve(__dirname, '../src/core'),
-  shared: path.resolve(__dirname, '../src/shared'),
-  web: path.resolve(__dirname, '../src/platforms/web'),
-  weex: path.resolve(__dirname, '../src/platforms/weex'),
-  server: path.resolve(__dirname, '../src/server'),
-  entries: path.resolve(__dirname, '../src/entries'),
-  sfc: path.resolve(__dirname, '../src/sfc')
-}
+const resolve = p => path.resolve(__dirname, '../', p)
 
+module.exports = {
+  vue: resolve('src/platforms/web/entry-runtime-with-compiler'),
+  compiler: resolve('src/compiler'),
+  core: resolve('src/core'),
+  shared: resolve('src/shared'),
+  web: resolve('src/platforms/web'),
+  weex: resolve('src/platforms/weex'),
+  server: resolve('src/server'),
+  entries: resolve('src/entries'),
+  sfc: resolve('src/sfc')
+}
 ```
 
 其中有这么一句：
 
 ```js
-web: path.resolve(__dirname, '../src/platforms/web')
+web: resolve('src/platforms/web')
 ```
 
 所以 `web` 指向的应该是 `src/platforms/web`，除了 `web` 之外，`alias.js` 文件中还配置了其他的别名，大家在找对应目录的时候，可以来这里查阅，后面就不做这种目录寻找的说明了。
