@@ -16,6 +16,7 @@
 
 ##### [Vue构造函数整理-原型](/note/附录/Vue构造函数整理-原型)
 ##### [Vue构造函数整理-全局API](/note/附录/Vue构造函数整理-全局API)
+##### [Vue实例的设计](/note/附录/Vue构造函数整理-全局API)
 ##### [core/util 目录下的工具方法全解](/note/附录/core-util)
 ##### [platforms/web/util 目录下的工具方法全解](/note/附录/web-util)
 ##### [shared/util.js 文件工具方法全解](/note/附录/shared-util)
