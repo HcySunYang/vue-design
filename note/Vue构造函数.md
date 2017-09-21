@@ -1,5 +1,7 @@
 ## Vue 构造函数
 
+我们知道，我们在使用 `Vue` 的时候，要使用 `new` 操作符进行调用，这说明 `Vue` 应该是一个构造函数，所以我们做的第一件事就是：把 `Vue` 构造函数搞清楚。
+
 #### Vue 构造函数的原型
 
 在 [了解 Vue 这个项目](./了解Vue这个项目.md) 一节中，我们在最后提到这套文章将会以 `npm run dev` 为切入点：
@@ -224,7 +226,7 @@ Vue.prototype._e = createEmptyVNode
 Vue.prototype._u = resolveScopedSlots
 Vue.prototype._g = bindObjectListeners
 ```
-至此，`instance/index.js` 文件中的代码就运行完毕了（注意：所谓的运行，是指执行 `npm run dev` 命令时构建的运行）。我们大概清楚每个 `*Mixin` 方法的作用其实就是包装 `Vue.prototype`，在其上挂载一些属性和方法，下面我们要做一件很重要的事情，就是将上面的内容集中合并起来，放单一个单独的地方，便于以后查看，我将它们整理到了这里：[附录/Vue 构造函数整理-原型](./附录/Vue构造函数整理-原型.md)，其中 `对原型的包装一节` 是对上面内容的整理，这样当我们在后面的详细讲解的时候，提到某个方法你就可以迅速定位它的位置，便于我们思路的清晰。
+至此，`instance/index.js` 文件中的代码就运行完毕了（注意：所谓的运行，是指执行 `npm run dev` 命令时构建的运行）。我们大概清楚每个 `*Mixin` 方法的作用其实就是包装 `Vue.prototype`，在其上挂载一些属性和方法，下面我们要做一件很重要的事情，就是将上面的内容集中合并起来，放单一个单独的地方，便于以后查看，我将它们整理到了这里：[附录/Vue 构造函数整理-原型](./附录/Vue构造函数整理-原型.md)，这样当我们在后面详细讲解的时候，提到某个方法你就可以迅速定位它的位置，便于我们思路的清晰。
 
 #### Vue 构造函数的静态属性和方法（全局API）
 
@@ -239,7 +241,7 @@ import { isServerRendering } from 'core/util/env'
 // 将 Vue 构造函数作为参数，传递给 initGlobalAPI 方法，该方法来自 ./global-api/index.js 文件
 initGlobalAPI(Vue)
 
-// 在 Vue.prototype 上添加 $isServer 属性，该属性代理了来自 core/util/env.js 文件的 isServerRendering
+// 在 Vue.prototype 上添加 $isServer 属性，该属性代理了来自 core/util/env.js 文件的 isServerRendering 方法
 Object.defineProperty(Vue.prototype, '$isServer', {
   get: isServerRendering
 })
@@ -397,27 +399,7 @@ Vue.options = {
 extend(Vue.options.components, builtInComponents)
 ```
 
-`extend` 来自于 `shared/util.js` 文件，它长成这样：
-
-```js
-/**
- * 将 _from 对象的属性混合到 to 对象中
- */
-export function extend (to: Object, _from: ?Object): Object {
-  for (const key in _from) {
-    to[key] = _from[key]
-  }
-  return to
-}
-```
-
-这是一个很简单的方法，用来混合两个对象的属性，所以下面这段代码：
-
-```js
-extend(Vue.options.components, builtInComponents)
-```
-
-的意思就是将 `builtInComponents` 的属性混合到 `Vue.options.components` 中，其中 `builtInComponents` 来自于 `core/components/index.js` 文件，该文件如下：
+`extend` 来自于 `shared/util.js` 文件，可以在 [附录/shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看其作用，总之这句话的意思就是将 `builtInComponents` 的属性混合到 `Vue.options.components` 中，其中 `builtInComponents` 来自于 `core/components/index.js` 文件，该文件如下：
 
 ```js
 import KeepAlive from './keep-alive'
