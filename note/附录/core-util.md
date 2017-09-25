@@ -96,8 +96,6 @@ if (inBrowser && typeof console !== 'undefined') {
 export const emptyObject = Object.freeze({})
 ```
 
-* 描述：一个被冻结的空对象
-
 #### options.js 文件代码说明
 
 #### perf.js 文件代码说明
