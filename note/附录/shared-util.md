@@ -206,4 +206,21 @@ export const camelize = cached((str: string): string => {
 camelize('aaa-bbb')   // aaaBbb
 ```
 
+##### noop
 
+* 源码如下：
+
+```js
+/**
+ * Perform no operation.
+ * Stubbing args to make Flow happy without leaving useless transpiled code
+ * with ...rest (https://flow.org/blog/2017/05/07/Strict-Function-Call-Arity/)
+ */
+export function noop (a?: any, b?: any, c?: any) {}
+```
+
+* 描述：空函数，什么都不做，用于初始化一些值为函数的变量。
+
+* 源码分析：
+
+就是简单的写了一个空函数 `noop`，至于其中的参数 `a`，`b`，`c` 的作用，我们看注释可知是为了避免 `Flow` 使用 `rest` 参数转译代码。

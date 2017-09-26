@@ -10,6 +10,47 @@ export let tip = noop
 export let formatComponentName: Function = (null: any) // work around flow check
 ```
 
+其中 `warn` 和 `tip` 都被初始化为 `noop` 即空函数，而 `formatComponentName` 被初始化为 `null` 但它将来会是一个函数类型(`Function`)。
+
+接下来是这样一段代码：
+
+```js
+if (process.env.NODE_ENV !== 'production') {
+  // ...
+}
+```
+
+这些代码被包含在一个环境判断的语句块内，这说明，这些代码只有在非生产环境才会生效，而在这些代码中我们能看到如下语句：
+
+```js
+if (process.env.NODE_ENV !== 'production') {
+  // 其他代码...
+
+  warn = (msg, vm) => {
+    // ...
+  }
+
+  tip = (msg, vm) => {
+    // ...
+  }
+
+  formatComponentName = (vm, includeFile) => {
+    // ...
+  }
+
+  // 其他代码...
+}
+```
+
+上面的代码是简化过的，可以发现，在非生产环境下分别对 `warn`、`tip` 以及 `formatComponentName` 进行了赋值，且值都为函数，接下来我们分别看一下这三个函数的作用。
+
+##### warn
+
+##### tip
+
+##### formatComponentName
+
+
 #### env.js 文件代码说明
 
 #### error.js 文件代码说明
