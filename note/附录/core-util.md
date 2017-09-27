@@ -42,7 +42,21 @@ if (process.env.NODE_ENV !== 'production') {
 }
 ```
 
-上面的代码是简化过的，可以发现，在非生产环境下分别对 `warn`、`tip` 以及 `formatComponentName` 进行了赋值，且值都为函数，接下来我们分别看一下这三个函数的作用。
+上面的代码是简化过的，可以发现，在非生产环境下分别对 `warn`、`tip` 以及 `formatComponentName` 进行了赋值，且值都为函数，接下来我们分别看一下这三个函数的作用，不过在这之前，我们需要介绍三个变量，也就是 `if` 语句最开始的三个变量：
+
+```js
+const hasConsole = typeof console !== 'undefined'
+const classifyRE = /(?:^|[-_])(\w)/g
+const classify = str => str
+  .replace(classifyRE, c => c.toUpperCase())
+  .replace(/[-_]/g, '')
+```
+
+其中 `hasConsole` 用来检测宿主环境的 `console` 是否可用，`classifyRE` 是一个正则表达式：`/(?:^|[-_])(\w)/g`，用于 `classify` 函数，`classify` 函数的作用是将一个字符串的首字母以及中横线转为驼峰的，代码很简单相信大家都能看得懂，`classify` 的使用如下：
+
+```js
+console.log(classify('aaa-bbb-ccc')) // AaaBbbCcc
+```
 
 ##### warn
 
