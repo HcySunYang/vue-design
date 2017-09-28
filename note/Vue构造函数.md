@@ -276,11 +276,7 @@ initGlobalAPI(Vue)
 
 然后在 `Vue.prototype` 上分别添加了两个只读的属性，分别是：`$isServer` 和 `$ssrContext`。
 
-最后，在 `Vue` 构造函数上添加了一个静态属性 `version`，存储了当前 `Vue` 的版本值，但是这里的 `'__VERSION__'` 是什么鬼？打开 `build/config.js` 文件，找到 `genConfig` 方法，如下：
-
-![](http://ovjvjtt4l.bkt.clouddn.com/2017-09-05-080823.jpg)
-
-也就是说，`__VERSION__` 最终将被 `version` 的值替换，而 `version` 的值就是 `Vue` 的版本号。
+最后，在 `Vue` 构造函数上添加了一个静态属性 `version`，存储了当前 `Vue` 的版本值，但是这里的 `'__VERSION__'` 是什么鬼？打开 `build/config.js` 文件，找到 `genConfig` 方法，其中有这么一句话：`__VERSION__: version`。这句话被写在了 `rollup` 的 `replace` 插件中，也就是说，`__VERSION__` 最终将被 `version` 的值替换，而 `version` 的值就是 `Vue` 的版本号。
 
 我们在回过头来看看这句话：
 
