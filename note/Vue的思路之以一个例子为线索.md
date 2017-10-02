@@ -212,7 +212,7 @@ initProvide(vm) // resolve provide after data/props
 callHook(vm, 'created')
 ```
 
-而这些方法才是真正起作用的一些初始化方法，在这些初始化方法中，无一例外的都使用到了实例的 `$options` 属性，即 `vm.$options`。所以 `$options` 这个属性的的确确是用于 `Vue` 实例初始化的，只不过在初始化之前，我们需要一些手段产生 `$options` 属性，而这就是 `mergeOptions` 函数的作用，接下来我们就看看 `mergeOptions` 是都做了些什么，又有什么意义。
+而这些方法才是真正起作用的一些初始化方法，大家可以找到这些方法看一看，在这些初始化方法中，无一例外的都使用到了实例的 `$options` 属性，即 `vm.$options`。所以 `$options` 这个属性的的确确是用于 `Vue` 实例初始化的，只不过在初始化之前，我们需要一些手段来产生 `$options` 属性，而这就是 `mergeOptions` 函数的作用，接下来我们就看看 `mergeOptions` 是都做了些什么，又有什么意义。
 
 
 
