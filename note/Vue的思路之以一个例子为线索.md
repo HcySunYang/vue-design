@@ -89,7 +89,7 @@ vm._uid = uid++
 let startTag, endTag
 /* istanbul ignore if */
 if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
-    startTag = `vue-perf-init:${vm._uid}`
+    startTag = `vue-perf-start:${vm._uid}`
     endTag = `vue-perf-end:${vm._uid}`
     mark(startTag)
 }
@@ -100,7 +100,7 @@ if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
 if (process.env.NODE_ENV !== 'production' && config.performance && mark) {
     vm._name = formatComponentName(vm, false)
     mark(endTag)
-    measure(`${vm._name} init`, startTag, endTag)
+    measure(`vue ${vm._name} init`, startTag, endTag)
 }
 ```
 

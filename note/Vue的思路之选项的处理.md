@@ -120,6 +120,131 @@ Vue.options = {
 }
 ```
 
+接下来，我们再看看第二个参数 `options`，这个参数实际上就是我们调用 `Vue` 构造函数的透传进来的选项，所以根据我们的例子 `options` 的值如下：
+
+```js
+{
+  el: '#app',
+  data: {
+    test: 1
+  }
+}
+```
+
+而第三个参数 `vm` 就是 `Vue` 实例对象本身，综上所述，最终如下代码：
+
+```js
+vm.$options = mergeOptions(
+  resolveConstructorOptions(vm.constructor),
+  options || {},
+  vm
+)
+```
+
+相当于：
+
+```js
+vm.$options = mergeOptions(
+  // resolveConstructorOptions(vm.constructor)
+  {
+    components: {
+      KeepAlive
+      Transition,
+      TransitionGroup
+    },
+    directives:{
+      model,
+      show
+    },
+    filters: Object.create(null),
+    _base: Vue
+  },
+  // options || {}
+  {
+    el: '#app',
+    data: {
+      test: 1
+    }
+  },
+  vm
+)
+```
+
+现在我们已经搞清楚传递给 `mergeOptions` 函数的三个参数分别是什么了，那么接下来我们就打开 `core/util/options.js` 文件并找到  `mergeOptions` 方法，看一看都发生了什么。
+
+打开 `core/util/options.js` 文件，找到 `mergeOptions` 方法，这个方法上面有一段注释：
+
+```js
+/**
+ * Merge two option objects into a new one.
+ * Core utility used in both instantiation and inheritance.
+ */
+```
+
+合并两个选项对象为一个新的对象，这个函数在实例化和继承的时候都有用到，这里要注意两点：第一，这个函数将会产生一个新的对象；第二，这个函数不仅仅在实例化对象(即`_init`方法中)的时候用到，在继承(`Vue.extend`)中也有用到，所以这个函数应该是一个用来合并两个选项对象为一个新对象的通用程序。
+
+所以我们现在就看看它是怎么去合并两个选项对象的，找到 `mergeOptions` 函数，第一段代码如下：
+
+```js
+if (process.env.NODE_ENV !== 'production') {
+  checkComponents(child)
+}
+```
+
+在非生产环境下，会以 `child` 为参数调用 `checkComponents` 方法，我们看看 `checkComponents` 是做什么的，这个方法同样定义在 `core/util/options.js` 文件中，内容如下：
+
+```js
+/**
+ * Validate component names
+ */
+function checkComponents (options: Object) {
+  for (const key in options.components) {
+    const lower = key.toLowerCase()
+    if (isBuiltInTag(lower) || config.isReservedTag(lower)) {
+      warn(
+        'Do not use built-in or reserved HTML elements as component ' +
+        'id: ' + key
+      )
+    }
+  }
+}
+```
+
+由注释可知，这个方法是用来校验组件的名字是否符合要求的，那么什么样的名字才符合要求呢？这就要看看它是怎么校验的了。首先 `checkComponents` 方法使用一个 `for in` 循环遍历 `options.components`，我们知道，在 `Vue` 中要想使用一个组件就需要先注册这个组件：
+
+```js
+new Vue({
+  components: {
+    myComponent
+  }
+})
+```
+
+所以 `checkComponents` 方法，实际上就是来校验你所注册的组件的名字是否合法的，而规则就是 `checkComponents` 方法中的判断语句：
+
+```js
+const lower = key.toLowerCase()
+if (isBuiltInTag(lower) || config.isReservedTag(lower))
+```
+
+首先将 `options.components` 对象的 `key` 小写化作为组件的名字，然后以组件的名字为参数分别调用两个方法：`isBuiltInTag` 和 `config.isReservedTag`，其中 `isBuiltInTag` 方法的作用是用来检测你所注册的组件是否是内置的标签，这个方法可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看其实现，于是我们可知：`slot` 和 `component` 这个两个名字被 `Vue` 作为内置标签而存在的，你是不能够使用的，比如这样：
+
+```js
+new Vue({
+  components: {
+    'slot': myComponent
+  }
+})
+```
+
+你将会得到一个警告，该警告的内容就是 `checkComponents` 方法中的 `warn` 文案：
+
+![](http://ovjvjtt4l.bkt.clouddn.com/2017-10-03-084701.jpg)
+
+除了检测注册的组件名字是否为内置的标签之外，还会检测是否是保留标签，即通过 `config.isReservedTag` 方法进行检测，
+
+
+
 
 
 
