@@ -1,6 +1,6 @@
 ## Vue 构造函数
 
-我们知道，我们在使用 `Vue` 的时候，要使用 `new` 操作符进行调用，这说明 `Vue` 应该是一个构造函数，所以我们做的第一件事就是：把 `Vue` 构造函数搞清楚。
+我们知道，我们在使用 `Vue` 的时候，要使用 `new` 操作符进行调用，这说明 `Vue` 应该是一个构造函数，所以我们要做的第一件事就是：把 `Vue` 构造函数搞清楚。
 
 #### Vue 构造函数的原型
 
@@ -104,7 +104,7 @@ renderMixin(Vue)
 export default Vue
 ```
 
-可以看到，这个文件才是 `Vue` 构造函数真正的“出生地”，上面的代码是 `./instance/index.js` 文件中全部的代码，还是比较简短易看的，首先分别从 `./init.js`、`./state.js`、`./render.js`、`./events.js`、`./lifecycle.js` 这五个文件中导出五个方法，分别是：`initMixin`、`stateMixin`、`renderMixin`、`eventsMixin` 以及 `lifecycleMixin`，然后定义了 `Vue` 构造函数，其中使用了安全模式来提醒你要使用 `new` 操作符来调用 `Vue`，接着将 `Vue` 构造函数作为参数，分别传递给了导入进来的这五个方法，最后导出 `Vue`。
+可以看到，这个文件才是 `Vue` 构造函数真正的“出生地”，上面的代码是 `./instance/index.js` 文件中全部的代码，还是比较简短易看的，首先分别从 `./init.js`、`./state.js`、`./render.js`、`./events.js`、`./lifecycle.js` 这五个文件中导入五个方法，分别是：`initMixin`、`stateMixin`、`renderMixin`、`eventsMixin` 以及 `lifecycleMixin`，然后定义了 `Vue` 构造函数，其中使用了安全模式来提醒你要使用 `new` 操作符来调用 `Vue`，接着将 `Vue` 构造函数作为参数，分别传递给了导入进来的这五个方法，最后导出 `Vue`。
 
 那么这五个方法又做了什么呢？先看看 `initMixin` ，打开 `./init.js` 文件，找到 `initMixin` 方法，如下：
 
@@ -226,7 +226,7 @@ Vue.prototype._e = createEmptyVNode
 Vue.prototype._u = resolveScopedSlots
 Vue.prototype._g = bindObjectListeners
 ```
-至此，`instance/index.js` 文件中的代码就运行完毕了（注意：所谓的运行，是指执行 `npm run dev` 命令时构建的运行）。我们大概清楚每个 `*Mixin` 方法的作用其实就是包装 `Vue.prototype`，在其上挂载一些属性和方法，下面我们要做一件很重要的事情，就是将上面的内容集中合并起来，放单一个单独的地方，便于以后查看，我将它们整理到了这里：[附录/Vue 构造函数整理-原型](./附录/Vue构造函数整理-原型.md)，这样当我们在后面详细讲解的时候，提到某个方法你就可以迅速定位它的位置，便于我们思路的清晰。
+至此，`instance/index.js` 文件中的代码就运行完毕了（注意：所谓的运行，是指执行 `npm run dev` 命令时构建的运行）。我们大概清楚每个 `*Mixin` 方法的作用其实就是包装 `Vue.prototype`，在其上挂载一些属性和方法，下面我们要做一件很重要的事情，就是将上面的内容集中合并起来，放到一个单独的地方，便于以后查看，我将它们整理到了这里：[附录/Vue 构造函数整理-原型](./附录/Vue构造函数整理-原型.md)，这样当我们在后面详细讲解的时候，提到某个方法你就可以迅速定位它的位置，便于我们思路的清晰。
 
 #### Vue 构造函数的静态属性和方法（全局API）
 
@@ -728,7 +728,7 @@ Vue.prototype.$mount = function (
 
 首先在 `Vue.prototype` 上添加 `__patch__` 方法，如果在浏览器环境运行的话，这个方法的值为 `patch` 函数，否则是一个空函数 `noop`。然后又在 `Vue.prototype` 上添加了 `$mount` 方法，我们暂且不关心 `$mount` 方法的内容和作用。
 
-之后的一段代码是 `vue-devtools` 的全局钩子，它被包裹在 `setTimeout` 中。最后导出了 `Vue`。
+之后的一段代码是 `vue-devtools` 的全局钩子，它被包裹在 `Vue.nextTick` 中(对于 `Vue.nextTick` 我们会单独讲到)，最后导出了 `Vue`。
 
 现在我们就看完了 `platforms/web/runtime/index.js` 文件，该文件的作用是对 `Vue` 进行平台化的包装：
 

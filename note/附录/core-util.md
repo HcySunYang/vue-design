@@ -69,7 +69,15 @@ console.log(classify('aaa-bbb-ccc')) // AaaBbbCcc
 
 #### error.js 文件代码说明
 
-该文件导出一个函数：`handleError`
+该文件只导出一个函数：`handleError`，在看这个函数的实现之前，我们需要回顾一下 `Vue` 的文档，我们知道 `Vue` 提供了一个全局配置 `errorHandler`，用来捕获组件生命周期函数等的内部错误，使用方法如下：
+
+```js
+Vue.config.errorHandler = function (err, vm, info) {
+  // ...
+}
+```
+
+我们通过设置 `Vue.config.errorHandler` 为一个函数，实现对特定错误的捕获。具体使用可以查看官方文档。而接下来要讲的 `handleError` 函数就是用来实现 `Vue.config.errorHandler` 这一配置功能的，我们看看是怎么做的。
 
 ##### handleError
 
@@ -77,19 +85,20 @@ console.log(classify('aaa-bbb-ccc')) // AaaBbbCcc
 
 ```js
 export function handleError (err: Error, vm: any, info: string) {
-  if (config.errorHandler) {
-    config.errorHandler.call(null, err, vm, info)
-  } else {
-    if (process.env.NODE_ENV !== 'production') {
-      warn(`Error in ${info}: "${err.toString()}"`, vm)
-    }
-    /* istanbul ignore else */
-    if (inBrowser && typeof console !== 'undefined') {
-      console.error(err)
-    } else {
-      throw err
+  if (vm) {
+    let cur = vm
+    while ((cur = cur.$parent)) {
+      if (cur.$options.errorCaptured) {
+        try {
+          const propagate = cur.$options.errorCaptured.call(cur, err, vm, info)
+          if (!propagate) return
+        } catch (e) {
+          globalHandleError(e, cur, 'errorCaptured hook')
+        }
+      }
     }
   }
+  globalHandleError(err, vm, info)
 }
 ```
 
@@ -105,41 +114,179 @@ try {
 }
 ```
     * `{any} vm` 这里应该传递 `Vue` 实例
-    * `{String} info` Vue 特定的错误提示信息
+    * `{String} info` `Vue` 特定的错误提示信息
 
 * 源码分析
 
-首先检测是否定义 `config.errorHandler`，其中 `config` 为全局配置，来自于 `core/config.js`。如果发现 `config.errorHandler` 为真，就会执行这句：
+首先迎合一下使用场景，在 `Vue` 的源码中 `handleError` 函数的使用一般如下：
 
 ```js
-config.errorHandler.call(null, err, vm, info)
-```
-
-所以你尽管通过 `Vue.config` 修改 `errorHandler` 的定义即可自定义错误处理错误的方式：
-
-```js
-Vue.config.errorHandler = (err, vm, info) => {
-
+try {
+  handlers[i].call(vm)
+} catch (e) {
+  handleError(e, vm, `${hook} hook`)
 }
 ```
 
-如果 `config.errorHandler` 为假，那么程序将走 `else` 分支，可以理解为默认的错误处理方式，如果不是生产环境，首先提示一段文字信息：
+上面是声明周期钩子回调执行时的代码，由于声明周期钩子是开发者自定义的函数，这个函数的执行是很可能存在运行时错误的，所以这里需要 `try catch` 包裹，且在发生错误的时候，在 `catch` 语句块中捕获错误，然后使用 `handleError` 进行错误处理。知道了这些，我们再看看 `handleError` 到底怎么处理的，源码上面已经贴出来了，首先是一个 `if` 判断：
 
 ```js
-if (process.env.NODE_ENV !== 'production') {
+if (vm) {
+  let cur = vm
+  while ((cur = cur.$parent)) {
+    if (cur.$options.errorCaptured) {
+      try {
+        const propagate = cur.$options.errorCaptured.call(cur, err, vm, info)
+        if (!propagate) return
+      } catch (e) {
+        globalHandleError(e, cur, 'errorCaptured hook')
+      }
+    }
+  }
+}
+```
+
+那这段代码是干嘛的呢？我们先不管，回头来说。在判断语句后面直接调用了 `globalHandleError` 函数，且将三个参数透传了过去：
+
+```js
+globalHandleError(err, vm, info)
+```
+
+`globalHandleError` 函数就定义在 `handleError` 函数的下面，源码如下：
+
+```js
+function globalHandleError (err, vm, info) {
+  if (config.errorHandler) {
+    try {
+      return config.errorHandler.call(null, err, vm, info)
+    } catch (e) {
+      logError(e, null, 'config.errorHandler')
+    }
+  }
+  logError(err, vm, info)
+}
+```
+
+`globalHandleError` 函数首先判断 `config.errorHandler` 是否为真，如果为真则调用 `config.errorHandler` 并将参数透传，这里的 `config.errorHandler` 就是 `Vue` 全局API提供的用于自定义错误处理的配置我们前面讲过。由于这个错误处理函数也是开发者自定义的，所以可能出现运行时错误，这个时候就需要使用 `try catch` 语句块包裹起来，当错误发生时，使用 `logError` 函数打印错误，当然啦，如果你们有配置 `config.errorHandler` 也就是说 `config.errorHandler` 此时为假，那么将使用默认的错误处理函数，也就是 `logError` 进行错误处理。
+
+所以 `globalHandleError` 是用来检测你是否自定义了 `config.errorHandler` 的，如果有则用之，如果没有就是用 `logError`。
+
+那么 `logError` 是什么呢？这个函数定义在 `globalHandleError` 函数的下面，源码如下：
+
+```js
+function logError (err, vm, info) {
+  if (process.env.NODE_ENV !== 'production') {
     warn(`Error in ${info}: "${err.toString()}"`, vm)
+  }
+  /* istanbul ignore else */
+  if (inBrowser && typeof console !== 'undefined') {
+    console.error(err)
+  } else {
+    throw err
+  }
 }
 ```
 
-然后判断是否是浏览器环境，是的话使用 `console.error` 打印错误信息，否则直接 `throw err`：
+可以看到，在非生产环境下，先使用 `warn` 函数报一个警告，然后判断是否在浏览器环境且 `console` 是否可用，如果可用则使用 `console.error` 打印错误，没有则直接 `throw err`。
+
+所以 `logError` 才真正打印错误的函数，且实现也比较简单。这其实已经达到了 `handleError` 的目的了，但是大家注意我们此时忽略了一段代码，就是 `handleError` 函数开头的一段代码：
 
 ```js
-if (inBrowser && typeof console !== 'undefined') {
-    console.error(err)
-} else {
-    throw err
+if (vm) {
+  let cur = vm
+  while ((cur = cur.$parent)) {
+    if (cur.$options.errorCaptured) {
+      try {
+        const propagate = cur.$options.errorCaptured.call(cur, err, vm, info)
+        if (!propagate) return
+      } catch (e) {
+        globalHandleError(e, cur, 'errorCaptured hook')
+      }
+    }
+  }
 }
 ```
+
+那么这个 `if` 判断是干嘛的呢？这其实是在支持新的 `Vue` 选项 `errorCaptured`。在编写该文章的时候 `Vue` 的文档还没有跟新，实际上你可以这样写代码：
+
+```js
+var vm = new Vue({
+  errorCaptured: function (err, vm, info) {
+    console.log(err)
+    console.log(vm)
+    console.log(info)
+  }
+})
+```
+
+`errorCaptured` 选项可以用来捕获子代组件的错误，当子组件有错误被 `handleError` 函数处理时，父组件可以通过该选项捕获错误。这个选项与生命周期钩子并列。
+
+举一个例子，如下代码：
+
+```js
+var ChildComponent = {
+  template: '<div>child component</div>',
+  beforeCreate: function () {
+    JSON.parse("};")
+  }
+}
+
+var vm = new Vue({
+  components: {
+    ChildComponent
+  },
+  errorCaptured: function (err, vm, info) {
+    console.log(err)
+    console.log(vm)
+    console.log(info)
+  }
+})
+```
+
+上面的代码中，首先我们定义了一个子组件 `ChildComponent`，并且在 `ChildComponent` 的 `beforeCreate` 钩子中写了如下代码：
+
+```js
+JSON.parse("};")
+```
+
+这明显会报错嘛，然后我们在父组件中使用了 `errorCaptured` 选项，这样是可以捕获到错误的。
+
+接下来我们就看看 `Vue` 是怎么实现的，原理就在这段代码中：
+
+```js
+if (vm) {
+  let cur = vm
+  while ((cur = cur.$parent)) {
+    if (cur.$options.errorCaptured) {
+      try {
+        const propagate = cur.$options.errorCaptured.call(cur, err, vm, info)
+        if (!propagate) return
+      } catch (e) {
+        globalHandleError(e, cur, 'errorCaptured hook')
+      }
+    }
+  }
+}
+```
+
+首先看这个 `while` 循环：
+
+```js
+while ((cur = cur.$parent))
+```
+
+这是一个链表遍历嘛，逐层寻找父级组件，如果父级组件使用了 `errorCaptured` 选项，则调用之，就怎么简单。当然，调用 `errorCaptured` 的语句是被包裹在 `try catch` 语句块中的。
+
+这里有两点需要注意：
+
+* 第一、既然是逐层寻找父级，那意味着，如果一个子组件报错，那么其使用了 `errorCaptured` 的所有父代组件都可以捕获得到。
+* 第二、注意这句话：
+
+```js
+if (!propagate) return
+```
+
+其中 `propagate` 是 `errorCaptured` 的返回值，也就是说，如果 `errorCaptured` 函数什么都不反回或者返回假，那么直接 `return`，程序不会走 `if` 语句块后面的 `globalHandleError`，如果 `errorCaptured` 函数返回真，那么除了 `errorCaptured` 被调用外，`if` 语句块后面的 `globalHandleError` 也会被调用。
 
 #### lang.js 文件代码说明
 

@@ -98,7 +98,7 @@
 "module": "dist/vue.runtime.esm.js",
 ```
 
-`main` 和 `module` 指向的都是运行时版的Vue，不同时前者是 `cjs` 模块，后者是 `es` 模块。
+`main` 和 `module` 指向的都是运行时版的Vue，不同的是：前者是 `cjs` 模块，后者是 `es` 模块。
 
 其中 `main` 字段和 `module` 字段分别用于 `browserify 或 webpack 1` 和 `webpack2+ 或 Rollup`，后者可以直接加载 `ES Module` 且会根据 `module` 字段的配置进行加载，关于 `module` 可以参考这里：[https://github.com/rollup/rollup/wiki/pkg.module](https://github.com/rollup/rollup/wiki/pkg.module)。
 
