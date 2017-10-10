@@ -88,12 +88,15 @@ export function handleError (err: Error, vm: any, info: string) {
   if (vm) {
     let cur = vm
     while ((cur = cur.$parent)) {
-      if (cur.$options.errorCaptured) {
-        try {
-          const propagate = cur.$options.errorCaptured.call(cur, err, vm, info)
-          if (!propagate) return
-        } catch (e) {
-          globalHandleError(e, cur, 'errorCaptured hook')
+      const hooks = cur.$options.errorCaptured
+      if (hooks) {
+        for (let i = 0; i < hooks.length; i++) {
+          try {
+            const capture = hooks[i].call(cur, err, vm, info) === false
+            if (capture) return
+          } catch (e) {
+            globalHandleError(e, cur, 'errorCaptured hook')
+          }
         }
       }
     }
@@ -195,12 +198,15 @@ function logError (err, vm, info) {
 if (vm) {
   let cur = vm
   while ((cur = cur.$parent)) {
-    if (cur.$options.errorCaptured) {
-      try {
-        const propagate = cur.$options.errorCaptured.call(cur, err, vm, info)
-        if (!propagate) return
-      } catch (e) {
-        globalHandleError(e, cur, 'errorCaptured hook')
+    const hooks = cur.$options.errorCaptured
+    if (hooks) {
+      for (let i = 0; i < hooks.length; i++) {
+        try {
+          const capture = hooks[i].call(cur, err, vm, info) === false
+          if (capture) return
+        } catch (e) {
+          globalHandleError(e, cur, 'errorCaptured hook')
+        }
       }
     }
   }
@@ -257,12 +263,15 @@ JSON.parse("};")
 if (vm) {
   let cur = vm
   while ((cur = cur.$parent)) {
-    if (cur.$options.errorCaptured) {
-      try {
-        const propagate = cur.$options.errorCaptured.call(cur, err, vm, info)
-        if (!propagate) return
-      } catch (e) {
-        globalHandleError(e, cur, 'errorCaptured hook')
+    const hooks = cur.$options.errorCaptured
+    if (hooks) {
+      for (let i = 0; i < hooks.length; i++) {
+        try {
+          const capture = hooks[i].call(cur, err, vm, info) === false
+          if (capture) return
+        } catch (e) {
+          globalHandleError(e, cur, 'errorCaptured hook')
+        }
       }
     }
   }
@@ -275,7 +284,7 @@ if (vm) {
 while ((cur = cur.$parent))
 ```
 
-这是一个链表遍历嘛，逐层寻找父级组件，如果父级组件使用了 `errorCaptured` 选项，则调用之，就怎么简单。当然，调用 `errorCaptured` 的语句是被包裹在 `try catch` 语句块中的。
+这是一个链表遍历嘛，逐层寻找父级组件，如果父级组件使用了 `errorCaptured` 选项，则调用之，就怎么简单。当然啦，作为生命周期钩子，`errorCaptured` 选项在内部时以一个数组的形式存在的，所以需要 `for` 循环遍历，另外钩子执行的语句是被包裹在 `try catch` 语句块中的。
 
 这里有两点需要注意：
 
@@ -283,10 +292,10 @@ while ((cur = cur.$parent))
 * 第二、注意这句话：
 
 ```js
-if (!propagate) return
+if (capture) return
 ```
 
-其中 `propagate` 是 `errorCaptured` 的返回值，也就是说，如果 `errorCaptured` 函数什么都不反回或者返回假，那么直接 `return`，程序不会走 `if` 语句块后面的 `globalHandleError`，如果 `errorCaptured` 函数返回真，那么除了 `errorCaptured` 被调用外，`if` 语句块后面的 `globalHandleError` 也会被调用。
+其中 `capture` 是钩子调用的返回值与 `false` 的全等比较的结果，也就是说，如果 `errorCaptured` 钩子函数返回假，那么 `capture` 为真直接 `return`，程序不会走 `if` 语句块后面的 `globalHandleError`，否则除了 `errorCaptured` 被调用外，`if` 语句块后面的 `globalHandleError` 也会被调用。
 
 #### lang.js 文件代码说明
 
