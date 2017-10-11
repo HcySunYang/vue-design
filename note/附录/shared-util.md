@@ -206,7 +206,7 @@ export const camelize = cached((str: string): string => {
 camelize('aaa-bbb')   // aaaBbb
 ```
 
-##### noop
+#### noop
 
 * 源码如下：
 
@@ -224,3 +224,39 @@ export function noop (a?: any, b?: any, c?: any) {}
 * 源码分析：
 
 就是简单的写了一个空函数 `noop`，至于其中的参数 `a`，`b`，`c` 的作用，我们看注释可知是为了避免 `Flow` 使用 `rest` 参数转译代码。
+
+#### isPlainObject
+
+* 源码如下：
+
+```js
+/**
+ * Strict object type check. Only returns true
+ * for plain JavaScript objects.
+ */
+export function isPlainObject (obj: any): boolean {
+  return _toString.call(obj) === '[object Object]'
+}
+```
+
+* 描述：检测一个对象是否是纯对象。
+
+* 源码分析：
+
+原理很简单，使用 `Object.prototype.toString` 与 `'[object Object]'` 做全等对比。
+
+#### isRegExp
+
+* 源码如下：
+
+```js
+export function isRegExp (v: any): boolean {
+  return _toString.call(v) === '[object RegExp]'
+}
+```
+
+* 描述：检测一个对象是否是正则对象。
+
+* 源码分析：
+
+原理很简单，使用 `Object.prototype.toString` 与 `'[object RegExp]'` 做全等对比。
