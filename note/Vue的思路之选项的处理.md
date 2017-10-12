@@ -477,7 +477,277 @@ res[name] = isPlainObject(val)
   : { type: val }
 ```
 
-现在我们已经了解了，原来 `Vue` 底层是这样处理 `props` 选项的，下面我们再来看看第二个规范化函数：`normalizeInject`。
+现在我们已经了解了，原来 `Vue` 底层是这样处理 `props` 选项的，下面我们再来看看第二个规范化函数：`normalizeInject`，源码如下：
+
+```js
+/**
+ * Normalize all injections into Object-based format
+ */
+function normalizeInject (options: Object) {
+  const inject = options.inject
+  const normalized = options.inject = {}
+  if (Array.isArray(inject)) {
+    for (let i = 0; i < inject.length; i++) {
+      normalized[inject[i]] = { from: inject[i] }
+    }
+  } else if (isPlainObject(inject)) {
+    for (const key in inject) {
+      const val = inject[key]
+      normalized[key] = isPlainObject(val)
+        ? extend({ from: key }, val)
+        : { from: val }
+    }
+  }
+}
+```
+
+首先是这两句代码：
+
+```js
+const inject = options.inject
+const normalized = options.inject = {}
+```
+
+第一句代码使用 `inject` 变量缓存了 `options.inject`，通过这句代码和函数的名字我们能够知道，这个函数时用来规范化 `inject` 选项的。然后在第二句代码中重新了 `options.inject` 的值为一个空的 `JSON` 对象，并定义了一个值同样为空 `JSON` 对象的变量 `normalized`。现在变量 `normalized` 和 `options.inject` 将拥有相同的引用，也就是说当修改 `normalized` 的时候，`options.inject` 也将受到影响。
+
+在这两句代码之后，同样是判断分支语句，判断 `inject` 选项是否是数组和纯对象，类似于对 `props` 的判断一样。说到这里我们需要了解一下 `inject` 选项了，这个选项是 `2.2.0` 版本新增，它要配合 `provide` 选项一同使用，具体介绍可以查看官方文档，这里我们举一个简单的例子：
+
+```js
+// 子组件
+const ChildComponent = {
+  template: '<div>child component</div>',
+  created: function () {
+    // 这里的 data 是父组件注入进来的
+    console.log(this.data)
+  },
+  inject: ['data']
+}
+
+// 父组件
+var vm = new Vue({
+  el: '#app',
+  // 向子组件提供数据
+  provide: {
+    data: 'test provide'
+  },
+  components: {
+    ChildComponent
+  }
+})
+```
+
+上面的代码中，父组件通过 `provide` 选项向子组件提供数据，然后子组件中可以使用 `inject` 选项注入数据。这里我们的 `inject` 选项使用一个字符串数组，其实我们也可以写成对象的形式，如下：
+
+```js
+// 子组件
+const ChildComponent = {
+  template: '<div>child component</div>',
+  created: function () {
+    console.log(this.d)
+  },
+  // 对象的语法类似于允许我们为注入的数据声明一个别名
+  inject: {
+    d: 'data'
+  }
+}
+```
+
+上面的代码中，我们使用对象语法代替了字符串数字的语法，对象语法实际上相当于允许我们为注入的数据声明一个别名。现在我们已经知道了 `inject` 选项的使用方法和写法，其写法与 `props` 一样拥有两种，一种是字符串数组，一种是对象语法。所以这个时候我们再回过头去看 `normalizeInject` 函数，其作用无非就是把两种写法规范化为一种写法罢了，由注释我们也能知道，最终规范化为对象语法。接下来我们就看看具体实现，首先是 `inject` 选项是数组的情况下，如下：
+
+```js
+if (Array.isArray(inject)) {
+  for (let i = 0; i < inject.length; i++) {
+    normalized[inject[i]] = { from: inject[i] }
+  }
+} else if (isPlainObject(inject)) {
+  ...
+}
+```
+
+使用 `for` 循环遍历数组的每一个元素，将元素的值作为 `normalized` 的 `key`，然后将 `{ from: inject[i] }` 作为整个表达式的值。大家不要忘了一件事，那就是 `normalized` 对象和 `options.inject` 拥有相同的引用，所以 `normalized` 的改变就意味着 `options.inject` 的改变。
+
+也就是说如果你的 `inject` 选项是这样写的：
+
+```js
+['data1', 'data2']
+```
+
+那么将被规范化为：
+
+```js
+{
+  'data1': { from: 'data1' },
+  'data2': { from: 'data2' }
+}
+```
+
+当 `inject` 选项不是数组的情况下，如果是一个纯对象，那么将走 `else if` 分支：
+
+```js
+if (Array.isArray(inject)) {
+  ...
+} else if (isPlainObject(inject)) {
+  for (const key in inject) {
+    const val = inject[key]
+    normalized[key] = isPlainObject(val)
+      ? extend({ from: key }, val)
+      : { from: val }
+  }
+}
+```
+
+有的同学可能回问：`normalized` 函数的目的不就将 `inject` 选项规范化为对象结构吗？那既然已经是对象了还规范什么呢？那是因为我们期望得到的对象是这样的：
+
+```js
+// 这里为简写，这应该写在Vue的选项中
+inject: {
+  'data1': { from: 'data1' },
+  'data2': { from: 'data2' }
+}
+```
+
+但是开发者所写的对象可能是这样的：
+
+```js
+let data1 = 'data1'
+
+// 这里为简写，这应该写在Vue的选项中
+inject: {
+  data1,
+  d2: 'data2',
+  data3: { someProperty: 'someValue' }
+}
+```
+
+对于这种情况，我们将会把它规范化为：
+
+```js
+inject: {
+  'data1': { from: 'data1' },
+  'd2': { from: 'data2' },
+  'data3': { from: 'data3', someProperty: 'someValue' }
+}
+```
+
+而实现方式，就是 `else if` 分支内的代码所实现的，即如下代码：
+
+```js
+for (const key in inject) {
+  const val = inject[key]
+  normalized[key] = isPlainObject(val)
+    ? extend({ from: key }, val)
+    : { from: val }
+}
+```
+
+使用 `for in` 循环遍历 `inject` 选项，依然使用 `inject` 对象的 `key` 作为 `normalized` 的 `key`，只不过要判断一下值(即 `val`)是否为纯对象，如果是纯对象则使用 `extend` 进行混合，反则直接使用 `val` 作为 `from` 字段的值，代码总体还是很简单的。
+
+最后一个规范化函数是 `normalizeDirectives`，源码如下：
+
+```js
+/**
+ * Normalize raw function directives into object format.
+ */
+function normalizeDirectives (options: Object) {
+  const dirs = options.directives
+  if (dirs) {
+    for (const key in dirs) {
+      const def = dirs[key]
+      if (typeof def === 'function') {
+        dirs[key] = { bind: def, update: def }
+      }
+    }
+  }
+}
+```
+
+看其代码内容，应该是规范化 `directives` 选项的。我们知道 `directives` 选项用来注册局部指令，比如下面的代码我们注册了两个局部指令分别是 `v-test1` 和 `v-test2`：
+
+```js
+<div id="app" v-test1 v-test2>{{test}}</div>
+
+var vm = new Vue({
+  el: '#app',
+  data: {
+    test: 1
+  },
+  // 注册两个局部指令
+  directives: {
+    test1: {
+      bind: function () {
+        console.log('v-test1')
+      }
+    },
+    test2: function () {
+      console.log('v-test2')
+    }
+  }
+})
+```
+
+上面的代码中我们注册了两个局部指令，但是注册的方法不同，其中 `v-test1` 指令我们使用对象语法，而 `v-test2` 指令我们使用的则是一个函数。所以既然出现了允许多种写法的情况，那么当然要进行规范化了，而规范化的手段就如同 `normalizeDirectives` 代码中写的那样：
+
+```js
+for (const key in dirs) {
+  const def = dirs[key]
+  if (typeof def === 'function') {
+    dirs[key] = { bind: def, update: def }
+  }
+}
+```
+
+注意 `if` 判断语句，当发现你注册的指令是一个函数的时候，则将该函数作为对象形式的 `bind` 属性和 `update` 属性的值。也就是说，可以把使用函数语法注册组件的方式理解为一种简写。
+
+这样，我们就彻底了解了这三个用于规范化选项的函数的作用了，相信通过上面的介绍，大家对 `props`、`inject` 以及 `directives` 这三个选项会有一个新的认识。知道了 `Vue` 是如何做到允许我们采用多种写法，也知道了 `Vue` 是如何统一处理的，这也算是看源码的收货之一吧。
+
+看完了 `mergeOptions` 函数里的三个规范化函数之后，我们继续看后面的代码，接下来是这样一段代码：
+
+```js
+const extendsFrom = child.extends
+if (extendsFrom) {
+  parent = mergeOptions(parent, extendsFrom, vm)
+}
+if (child.mixins) {
+  for (let i = 0, l = child.mixins.length; i < l; i++) {
+    parent = mergeOptions(parent, child.mixins[i], vm)
+  }
+}
+```
+
+很显然，这段代码是处理 `extends` 选项和 `mixins` 选项的，首先使用变量 `extendsFrom` 保存了对 `child.extends` 的引用，之后的处理都是用 `extendsFrom` 来做，然后判断是否有 `extends` 选项，如果有的话就是用 `mergeOptions` 函数将 `parent` 与 `extendsFrom` 进行合并，并将结果作为新的 `parent`。这里要注意，我们之前说过 `mergeOptions` 函数将会产生一个新的对象，所以此时的 `parent` 已经被新的对象重新赋值了。
+
+然后检测是否有 `child.mixins` 选项，如果有则使用同样的方法进行操作，不同的是，由于 `mixins` 是一个数组所以要遍历一下。
+
+经过了上面两个判断分支，此时的 `parent` 很可能已经不是当初的 `parent` 的，而是经过合并后产生的新对象。关于 `extends` 与 `mixins` 的更多东西以及这里调用 `mergeOptions` 所产生的影响，等我们看完整个 `mergeOptions` 后会更容易理解，因为现在我们还不清楚 `mergeOptions` 到底怎么合并选项。
+
+到目前为止我们所看到的 `mergeOptions` 的代码，还都是对选项的规范化，或者说的明显一点：现在所做的事儿还都在对 `parent` 以及 `child` 进行预处理。
+
+而接下来才是真正的合并阶段，接下来的一段代码如下：
+
+```js
+const options = {}
+let key
+for (key in parent) {
+  mergeField(key)
+}
+for (key in child) {
+  if (!hasOwn(parent, key)) {
+    mergeField(key)
+  }
+}
+function mergeField (key) {
+  const strat = strats[key] || defaultStrat
+  options[key] = strat(parent[key], child[key], vm, key)
+}
+return options
+```
+
+这段代码的第一句和最后一句说明了 `mergeOptions` 函数的的确确返回了一个新的对象，因为第一句代码声明了一个常量 `options`，而最后一段代码将其返回，所以我们自然可以预估到中间的代码是在充实 `options` 常量，而 `options` 常量就应该是最终合并之后的选项，我们看看它是怎么产生的。
+
+首先我们明确一下代码结构，这里有两个 `for in` 循环以及一个名字叫 `mergeField` 的函数，而且我们可以发现这两个 `for in` 循环中都调用了 `mergeField` 函数。
+
+
+
 
 
 
