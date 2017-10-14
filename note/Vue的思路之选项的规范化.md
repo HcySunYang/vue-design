@@ -1,4 +1,6 @@
-## Vue 的思路之选项的处理
+## Vue 的思路之选项的规范化
+
+<p class="tip">注意：本节中当我们提到“以我们的例子为例”的时候，这里的“我们的例子”指的是《Vue的思路之以一个例子为线索》中的例子</p>
 
 这一小节我们继续前面的讨论，看一看 `mergeOptions` 都做了些什么。根据 `core/instance/init.js` 顶部的引用关系可知，`mergeOptions` 函数来自于 `core/util/options.js` 文件，事实上不仅仅是 `mergeOptions` 函数，整个文件所做的一切都为了一件事：选项的合并。
 
@@ -35,7 +37,6 @@ export function resolveConstructorOptions (Ctor: Class<Component>) {
         extend(Ctor.extendOptions, modifiedOptions)
       }
       options = Ctor.options = mergeOptions(superOptions, Ctor.extendOptions)
-      console.log(options)
       if (options.name) {
         options.components[options.name] = Ctor
       }
@@ -66,7 +67,7 @@ const s = new Sub()
 return options
 ```
 
-也就是把 `Vue.options` 返回回去了，所以这个函数的确就像他的名字那样，用来获取构造者的 `options` 的。不过同学们可能注意到了，`resolveConstructorOptions` 函数的第一句和最后一句代码中间还有一坨包裹在 `if` 语句中的代码，那么这坨代码是干什么的呢？
+也就是把 `Vue.options` 返回回去了，所以这个函数的确就像他的名字那样，用来获取构造者的 `options` 的。不过同学们可能注意到了，`resolveConstructorOptions` 函数的第一句和最后一句代码中间还有一坨包裹在 `if` 语句块中的代码，那么这坨代码是干什么的呢？
 
 我可以很明确的告诉大家，这里水稍微有那么点深，比如 `if` 语句的判断条件 `Ctor.super`，`super` 这是子类才有的属性，如下：
 
@@ -88,11 +89,11 @@ const superOptions = resolveConstructorOptions(Ctor.super)
 const modifiedOptions = resolveModifiedOptions(Ctor)
 ```
 
-不过这次有点不同，不同的是，我们要注意的是注释，有兴趣的同学可以根据注释中括号内的 `issue` 索引去搜一下相关的问题，这句代码是用来解决 `vue-hot-reload-api` 或者 `vue-loader` 时产生的一个 `bug` 的。
+我们要注意的是注释，有兴趣的同学可以根据注释中括号内的 `issue` 索引去搜一下相关的问题，这句代码是用来解决 `vue-hot-reload-api` 或者 `vue-loader` 时产生的一个 `bug` 的。
 
 现在大家知道这里的水有多深了吗？关于这些问题，我们在将 `Vue.extend` 中都会给大家一一解答，不过有一个因素从来没有变，那就是 `resolveConstructorOptions` 这个函数的作用永远都是用来获取当前实例构造者的 `options` 属性的，即使 `if` 判断分支内也不例外，因为 `if` 分支只不过是处理了 `options`，最终返回的永远都是 `options`。
 
-所以根据我们的例子，`resolveConstructorOptions` 函数目前并不会走里面的判断分支，即此时这个函数相当于：
+所以根据我们的例子，`resolveConstructorOptions` 函数目前并不会走 `if` 判断分支，即此时这个函数相当于：
 
 ```js
 export function resolveConstructorOptions (Ctor: Class<Component>) {
@@ -110,7 +111,6 @@ Vue.options = {
 		Transition,
     	TransitionGroup
 	},
-	directives: Object.create(null),
 	directives:{
 	    model,
         show
@@ -258,9 +258,11 @@ Vue.config.isUnknownElement = isUnknownElement
 Vue.config.isReservedTag = isReservedTag
 ```
 
-就是在给 `config.isReservedTag` 赋值，其值为来自于 `platforms/web/util/element.js` 文件的 `isReservedTag` 函数，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看该方法的作用及实现，可知在 `Vue` 中 `html` 标签和部分 `SVG` 标签被认为是保留的。所以这段代码是在保证选项被合并前的合理合法。
+就是在给 `config.isReservedTag` 赋值，其值为来自于 `platforms/web/util/element.js` 文件的 `isReservedTag` 函数，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看该方法的作用及实现，可知在 `Vue` 中 `html` 标签和部分 `SVG` 标签被认为是保留的。所以这段代码是在保证选项被合并前的合理合法。最后大家注意一点，这些工作实在非生产环境下做的，所以在非生产环境下开发者就能够发现并修正这些问题，所以在生产环境下就不需要再重复做一次校验检测了。
 
-接下来的一段代码同样是一个 `if` 语句块：
+另外要说一点，我们的例子中并没有使用 `components` 选项，但是这里还是给大家顺便介绍了一下。如果按照我们的例子的话，`mergeOptions` 函数中的很多代码都不会执行，但是为了保证让大家理解整个选项合并所做的事情，这里都会有所介绍。
+
+我们继续看代码，接下来的一段代码同样是一个 `if` 语句块：
 
 ```js
 if (typeof child === 'function') {
@@ -270,15 +272,15 @@ if (typeof child === 'function') {
 
 这说明 `child` 参数除了是普通的选项对象外，还可以是一个函数，如果是函数的话就取该函数的 `options` 静态属性作为新的 `child`，我们想一想什么样的函数具有 `options` 静态属性呢？现在我们知道 `Vue` 构造函数本身就拥有这个属性，其实通过 `Vue.extend` 创造出来的子类也是拥有这个属性的。所以这就允许我们在进行选项合并的时候，去合并一个 `Vue` 实例构造者的选项了。
 
-接着看待，接下来是三个用来规范化选项的函数调用：
+接着看代码，接下来是三个用来规范化选项的函数调用：
 
 ```js
-normalizeProps(child)
-normalizeInject(child)
+normalizeProps(child, vm)
+normalizeInject(child, vm)
 normalizeDirectives(child)
 ```
 
-这三个函数是用来规范选项的，什么意思呢？以 `props` 为例，我们知道在 `Vue` 中，我们在使用 `props` 的时候有两种写法，一种是一个字符串数组，如下：
+这三个函数是用来规范选项的，什么意思呢？以 `props` 为例，我们知道在 `Vue` 中，我们在使用 `props` 的时候有两种写法，一种是使用字符串数组，如下：
 
 ```js
 const ChildComponent = {
@@ -299,16 +301,16 @@ const ChildComponent = {
 }
 ```
 
-其实不仅仅是 `props`，在 `Vue` 中拥有多种使用方法的选项有很多，这给开发者提供了非常灵活且便利的选择，但是对于 `Vue` 来讲，这并不是一件好事儿，因为 `Vue` 要做选项的合并处理，这个时候好的做法就是，无论开发者使用哪一种写法，在内部都将其转换成同一种方式，这样在选项合并的时候就能够统一处理，这就是上面三个函数的作用。
+其实不仅仅是 `props`，在 `Vue` 中拥有多种使用方法的选项有很多，这给开发者提供了非常灵活且便利的选择，但是对于 `Vue` 来讲，这并不是一件好事儿，因为 `Vue` 要对选项进行处理，这个时候好的做法就是，无论开发者使用哪一种写法，在内部都将其规范成同一种方式，这样在选项合并的时候就能够统一处理，这就是上面三个函数的作用。
 
-现在我们就详细看看这三个规范化选项的函数都是怎么规范的，首先是 `normalizeProps` 函数，这看上去貌似是用来规范化 `props` 选项的，找到 `normalizeProps` 函数源码如下：
+现在我们就详细看看这三个规范化选项的函数都是怎么规范选项的，首先是 `normalizeProps` 函数，这看上去貌似是用来规范化 `props` 选项的，找到 `normalizeProps` 函数源码如下：
 
 ```js
 /**
  * Ensure all props option syntax are normalized into the
  * Object-based format.
  */
-function normalizeProps (options: Object) {
+function normalizeProps (options: Object, vm: ?Component) {
   const props = options.props
   if (!props) return
   const res = {}
@@ -332,6 +334,12 @@ function normalizeProps (options: Object) {
         ? val
         : { type: val }
     }
+  } else if (process.env.NODE_ENV !== 'production' && props) {
+    warn(
+      `Invalid value for option "props": expected an Array or an Object, ` +
+      `but got ${toRawType(props)}.`,
+      vm
+    )
   }
   options.props = res
 }
@@ -413,6 +421,8 @@ if (Array.isArray(props)) {
   }
 } else if (isPlainObject(props)) {
   ...
+} else if (process.env.NODE_ENV !== 'production') {
+  ...
 }
 ```
 
@@ -437,7 +447,7 @@ res[name] = { type: null }
 
 然后在 `res` 对象上添加了与转驼峰后的 `props` 同名的属性，其值为 `{ type: null }`，这就是实现了对字符串数组的规范化，将其规范为对象的写法，只不过 `type` 的值为 `null`。
 
-下面我们在看看当 `props` 选项不是数组而是对象时的情况：
+下面我们再看看当 `props` 选项不是数组而是对象时的情况：
 
 ```js
 if (Array.isArray(props)) {
@@ -450,6 +460,8 @@ if (Array.isArray(props)) {
       ? val
       : { type: val }
   }
+} else if (process.env.NODE_ENV !== 'production' && props) {
+  ...
 }
 ```
 
@@ -477,13 +489,33 @@ res[name] = isPlainObject(val)
   : { type: val }
 ```
 
+这样就实现了对纯对象语法的规范化。
+
+最后还有一个判断分支，即当你传递了 `props` 选项，但其值既不是数组又不是纯对象的时候，则会给你一个警告：
+
+```js
+if (Array.isArray(props)) {
+  ...
+} else if (isPlainObject(props)) {
+  ...
+} else if (process.env.NODE_ENV !== 'production') {
+  warn(
+    `Invalid value for option "props": expected an Array or an Object, ` +
+    `but got ${toRawType(props)}.`,
+    vm
+  )
+}
+```
+
+在警告中使用了来自 `shared/util.js` 文件的 `toRawType` 方法获取你所传递的 `props` 的真实数据类型。
+
 现在我们已经了解了，原来 `Vue` 底层是这样处理 `props` 选项的，下面我们再来看看第二个规范化函数：`normalizeInject`，源码如下：
 
 ```js
 /**
  * Normalize all injections into Object-based format
  */
-function normalizeInject (options: Object) {
+function normalizeInject (options: Object, vm: ?Component) {
   const inject = options.inject
   const normalized = options.inject = {}
   if (Array.isArray(inject)) {
@@ -497,6 +529,12 @@ function normalizeInject (options: Object) {
         ? extend({ from: key }, val)
         : { from: val }
     }
+  } else if (process.env.NODE_ENV !== 'production' && inject) {
+    warn(
+      `Invalid value for option "inject": expected an Array or an Object, ` +
+      `but got ${toRawType(inject)}.`,
+      vm
+    )
   }
 }
 ```
@@ -508,7 +546,7 @@ const inject = options.inject
 const normalized = options.inject = {}
 ```
 
-第一句代码使用 `inject` 变量缓存了 `options.inject`，通过这句代码和函数的名字我们能够知道，这个函数时用来规范化 `inject` 选项的。然后在第二句代码中重新了 `options.inject` 的值为一个空的 `JSON` 对象，并定义了一个值同样为空 `JSON` 对象的变量 `normalized`。现在变量 `normalized` 和 `options.inject` 将拥有相同的引用，也就是说当修改 `normalized` 的时候，`options.inject` 也将受到影响。
+第一句代码使用 `inject` 变量缓存了 `options.inject`，通过这句代码和函数的名字我们能够知道，这个函数是用来规范化 `inject` 选项的。然后在第二句代码中重新了 `options.inject` 的值为一个空的 `JSON` 对象，并定义了一个值同样为空 `JSON` 对象的变量 `normalized`。现在变量 `normalized` 和 `options.inject` 将拥有相同的引用，也就是说当修改 `normalized` 的时候，`options.inject` 也将受到影响。
 
 在这两句代码之后，同样是判断分支语句，判断 `inject` 选项是否是数组和纯对象，类似于对 `props` 的判断一样。说到这里我们需要了解一下 `inject` 选项了，这个选项是 `2.2.0` 版本新增，它要配合 `provide` 选项一同使用，具体介绍可以查看官方文档，这里我们举一个简单的例子：
 
@@ -536,7 +574,7 @@ var vm = new Vue({
 })
 ```
 
-上面的代码中，父组件通过 `provide` 选项向子组件提供数据，然后子组件中可以使用 `inject` 选项注入数据。这里我们的 `inject` 选项使用一个字符串数组，其实我们也可以写成对象的形式，如下：
+上面的代码中，在子组件的 `created` 钩子中我们访问了 `this.data`，但是在子组件中我们并没有定义这个数据，但是我们使用了 `inject` 选项注入了这个数据，这个数据的来源就是父组件通过 `provide` 提供的。父组件通过 `provide` 选项向子组件提供数据，然后子组件中可以使用 `inject` 选项注入数据。这里我们的 `inject` 选项使用一个字符串数组，其实我们也可以写成对象的形式，如下：
 
 ```js
 // 子组件
@@ -552,7 +590,7 @@ const ChildComponent = {
 }
 ```
 
-上面的代码中，我们使用对象语法代替了字符串数字的语法，对象语法实际上相当于允许我们为注入的数据声明一个别名。现在我们已经知道了 `inject` 选项的使用方法和写法，其写法与 `props` 一样拥有两种，一种是字符串数组，一种是对象语法。所以这个时候我们再回过头去看 `normalizeInject` 函数，其作用无非就是把两种写法规范化为一种写法罢了，由注释我们也能知道，最终规范化为对象语法。接下来我们就看看具体实现，首先是 `inject` 选项是数组的情况下，如下：
+上面的代码中，我们使用对象语法代替了字符串数组的语法，对象语法实际上相当于允许我们为注入的数据声明一个别名。现在我们已经知道了 `inject` 选项的使用方法和写法，其写法与 `props` 一样拥有两种，一种是字符串数组，一种是对象语法。所以这个时候我们再回过头去看 `normalizeInject` 函数，其作用无非就是把两种写法规范化为一种写法罢了，由注释我们也能知道，最终规范化为对象语法。接下来我们就看看具体实现，首先是 `inject` 选项是数组的情况下，如下：
 
 ```js
 if (Array.isArray(inject)) {
@@ -560,6 +598,8 @@ if (Array.isArray(inject)) {
     normalized[inject[i]] = { from: inject[i] }
   }
 } else if (isPlainObject(inject)) {
+  ...
+} else if (process.env.NODE_ENV !== 'production' && inject) {
   ...
 }
 ```
@@ -593,10 +633,12 @@ if (Array.isArray(inject)) {
       ? extend({ from: key }, val)
       : { from: val }
   }
+} else if (process.env.NODE_ENV !== 'production' && inject) {
+  ...
 }
 ```
 
-有的同学可能回问：`normalized` 函数的目的不就将 `inject` 选项规范化为对象结构吗？那既然已经是对象了还规范什么呢？那是因为我们期望得到的对象是这样的：
+有的同学可能会问：`normalized` 函数的目的不就将 `inject` 选项规范化为对象结构吗？那既然已经是对象了还规范什么呢？那是因为我们期望得到的对象是这样的：
 
 ```js
 // 这里为简写，这应该写在Vue的选项中
@@ -606,7 +648,7 @@ inject: {
 }
 ```
 
-但是开发者所写的对象可能是这样的：
+即带有 `from` 属性的对象，但是开发者所写的对象可能是这样的：
 
 ```js
 let data1 = 'data1'
@@ -641,6 +683,22 @@ for (const key in inject) {
 ```
 
 使用 `for in` 循环遍历 `inject` 选项，依然使用 `inject` 对象的 `key` 作为 `normalized` 的 `key`，只不过要判断一下值(即 `val`)是否为纯对象，如果是纯对象则使用 `extend` 进行混合，反则直接使用 `val` 作为 `from` 字段的值，代码总体还是很简单的。
+
+最后一个判断分支同样是在当你传递的 `inject` 选项既不是数组又不是纯对象的时候，在非生产环境下给你一个警告：
+
+```js
+if (Array.isArray(inject)) {
+  ...
+} else if (isPlainObject(inject)) {
+  ...
+} else if (process.env.NODE_ENV !== 'production' && inject) {
+  warn(
+    `Invalid value for option "inject": expected an Array or an Object, ` +
+    `but got ${toRawType(inject)}.`,
+    vm
+  )
+}
+```
 
 最后一个规范化函数是 `normalizeDirectives`，源码如下：
 
@@ -720,31 +778,8 @@ if (child.mixins) {
 
 经过了上面两个判断分支，此时的 `parent` 很可能已经不是当初的 `parent` 的，而是经过合并后产生的新对象。关于 `extends` 与 `mixins` 的更多东西以及这里调用 `mergeOptions` 所产生的影响，等我们看完整个 `mergeOptions` 后会更容易理解，因为现在我们还不清楚 `mergeOptions` 到底怎么合并选项。
 
-到目前为止我们所看到的 `mergeOptions` 的代码，还都是对选项的规范化，或者说的明显一点：现在所做的事儿还都在对 `parent` 以及 `child` 进行预处理。
+到目前为止我们所看到的 `mergeOptions` 的代码，还都是对选项的规范化，或者说的明显一点：现在所做的事儿还都在对 `parent` 以及 `child` 进行预处理，而这是接下来合并选项的必要步骤。
 
-而接下来才是真正的合并阶段，接下来的一段代码如下：
-
-```js
-const options = {}
-let key
-for (key in parent) {
-  mergeField(key)
-}
-for (key in child) {
-  if (!hasOwn(parent, key)) {
-    mergeField(key)
-  }
-}
-function mergeField (key) {
-  const strat = strats[key] || defaultStrat
-  options[key] = strat(parent[key], child[key], vm, key)
-}
-return options
-```
-
-这段代码的第一句和最后一句说明了 `mergeOptions` 函数的的确确返回了一个新的对象，因为第一句代码声明了一个常量 `options`，而最后一段代码将其返回，所以我们自然可以预估到中间的代码是在充实 `options` 常量，而 `options` 常量就应该是最终合并之后的选项，我们看看它是怎么产生的。
-
-首先我们明确一下代码结构，这里有两个 `for in` 循环以及一个名字叫 `mergeField` 的函数，而且我们可以发现这两个 `for in` 循环中都调用了 `mergeField` 函数。
 
 
 

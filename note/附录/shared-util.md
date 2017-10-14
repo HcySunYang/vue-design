@@ -225,6 +225,27 @@ export function noop (a?: any, b?: any, c?: any) {}
 
 就是简单的写了一个空函数 `noop`，至于其中的参数 `a`，`b`，`c` 的作用，我们看注释可知是为了避免 `Flow` 使用 `rest` 参数转译代码。
 
+#### toRawType
+
+* 源码如下：
+
+```js
+/**
+ * Get the raw type string of a value e.g. [object Object]
+ */
+const _toString = Object.prototype.toString
+
+export function toRawType (value: any): string {
+  return _toString.call(value).slice(8, -1)
+}
+```
+
+* 描述：获取一个值的原始类型字符串。
+
+* 源码分析：
+
+首先使用 `Object.prototype.toString` 获取诸如这样的字符串：`[object Object]`，然后使用 `slice` 方法截取，最终结果类似于 `Object`。
+
 #### isPlainObject
 
 * 源码如下：
