@@ -48,7 +48,7 @@ Vue.options = {
 }
 ```
 
-那么 `key` 就应该分别是：`components`、`directives`、`filters` 以及 `_base`，除了 `_base` 其他的都是字段都可以理解为是 `Vue` 提供的选项的名字。
+那么 `key` 就应该分别是：`components`、`directives`、`filters` 以及 `_base`，除了 `_base` 其他的字段都可以理解为是 `Vue` 提供的选项的名字。
 
 而第二段 `for in` 代码：
 
@@ -79,6 +79,41 @@ function mergeField (key) {
 }
 ```
 
-`mergeField` 函数只要两句代码，第一句代码定义了一个常量 `start`，它的值是通过指定的 `key` 访问 `strats` 对象得到的，而当访问的不存在时，则使用 `defaultStrat` 作为值。
+`mergeField` 函数只要两句代码，第一句代码定义了一个常量 `start`，它的值是通过指定的 `key` 访问 `strats` 对象得到的，而当访问的属性不存在时，则使用 `defaultStrat` 作为值。
 
-这里我就要明确了，`starts` 是什么？
+这里我就要明确了，`starts` 是什么？想弄明白这个问题，我们需要从整体角度去看一下 `options.js` 文件，首先看 `import` 语句下的第一句代码：
+
+```js
+/**
+ * Option overwriting strategies are functions that handle
+ * how to merge a parent option value and a child option
+ * value into the final value.
+ */
+const strats = config.optionMergeStrategies
+```
+
+这个 `config` 对象是全局配置对象，来自于 `core/config.js` 文件，此时 `config.optionMergeStrategies` 还只是一个空的对象。注意一下这里的一段注释：*选项覆盖策略是处理如何将父选项值和子选项值合并到最终值的函数*。也就是说 `config.optionMergeStrategies` 是一个合并选项的策略对象，这个对象下包含很多函数，这些函数就可以认为是合并特定选项的策略。这样不同的选项使用不同的合并策略，如果你使用自定义选项，那么你也可以自定义该选项的合并策略，只需要在 `Vue.config.optionMergeStrategies` 对象上添加与自定义选项同名的函数就行。而这就是 `Vue` 文档中提过的全局配置：[optionMergeStrategies](https://vuejs.org/v2/api/#optionMergeStrategies)。
+
+那么接下来我们就看看这个选项合并策略对象都有哪些策略，首先是下面这段代码：
+
+```js
+/**
+ * Options with restrictions
+ */
+if (process.env.NODE_ENV !== 'production') {
+  strats.el = strats.propsData = function (parent, child, vm, key) {
+    if (!vm) {
+      warn(
+        `option "${key}" can only be used during instance ` +
+        'creation with the `new` keyword.'
+      )
+    }
+    return defaultStrat(parent, child)
+  }
+}
+```
+
+在非生产环境下在 `strats` 策略对象上添加两个策略(两个属性)分别是 `el` 和 `propsData`，且这两个策略的值是一个函数。通过其策略的名字可知，这两个策略是用来合并 `el` 选项和 `propsData` 选项的。
+
+
+
