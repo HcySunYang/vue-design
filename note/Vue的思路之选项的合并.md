@@ -149,9 +149,70 @@ new Vue({
 })
 ```
 
-上面的代码中我们在子组件中使用了 `el` 选项，就会得到如上警告。其实我们想一想 `el` 选项的作用，它作为一个挂载点，确实没有必要出现在子组件中，出现在根组件中才是有意义的，而这就是要这么处理这两个选项的原因。
+上面的代码中我们在父组件中使用 `el` 选项，这并没有什么问题，但是在子组件中也使用了 `el` 选项，这就会得到如上警告。这说明了一个问题，即在策略函数中如果拿不到 `vm` 参数，那说明处理的是子组件选项。所以问题来了，为什么通过判断 `vm` 是否存在，就能判断出是否是子组件呢？那首先我们要搞清楚策略函数中的 `vm` 参数是哪里来的。首先我们还是看一下 `mergeField` 函数：
 
-我们接着按照顺序看 `options.js` 文件的代码，接下来定义了两个函数：`mergeData` 以及 `mergeDataOrFn`。我们暂且不关注这两个函数的作用，我们继续看下面的代码，接下来的代码如下：
+```js
+function mergeField (key) {
+  const strat = strats[key] || defaultStrat
+  options[key] = strat(parent[key], child[key], vm, key)
+}
+```
+
+第二句代码中在调用策略函数的时候，第三个参数 `vm` 就是我们在策略函数中使用的那个 `vm`，那么这里的 `vm` 是谁呢？它实际上是从 `mergeOptions` 函数透传过来的，因为 `mergeOptions` 函数的第三个参数就是 `vm`。我们知道在 `_init` 方法中调用 `mergeOptions` 函数时第三个参数就是当前 `Vue` 实例：
+
+```js
+// _init 方法中调用 mergeOptions 函数，第三个参数是 Vue 实例
+vm.$options = mergeOptions(
+  resolveConstructorOptions(vm.constructor),
+  options || {},
+  vm
+)
+```
+
+所以我们可以理解为：策略函数中的 `vm` 来自于 `mergeOptions` 函数的第三个参数。所以当调用 `mergeOptions` 函数且不传递第三个参数的时候，那么在策略函数中就拿不到 `vm` 参数。所以我们可以猜测到一件事，那就是 `mergeOptions` 函数除了在 `_init` 方法中被调用之外，还在其他地方被调用，且没有传递第三个参数。那么到底是在哪里被调用的呢？这里可以先明确的告诉大家，就在 `Vue.extend` 方法中被调用的，大家可以打开 `core/global-api/extend.js` 文件找到 `Vue.extend` 方法，其中有这么一段代码：
+
+```js
+Sub.options = mergeOptions(
+  Super.options,
+  extendOptions
+)
+```
+
+可以发现，此时调用 `mergeOptions` 函数就没有传递第三个参数，也就是说通过 `Vue.extend` 创建子类的时候 `mergeOptions` 会被调用，此时策略函数就拿不到第三个参数。
+
+所以现在就比较明朗了，在策略函数中通过判断是否存在 `vm` 就能够得知 `mergeOptions` 是在实例化时调用(使用 `new` 操作符走 `_init` 方法)还是在继承时调用(`Vue.extend`)，而子组件的实现方式就是通过实例化子类完成的，所以创建子类必然与子组件有关，这样我们就能通过对 `vm` 的判断而得知是否是子组件了。
+
+所以最终的结论就是：*如果策略函数中拿不到 `vm` 参数，那么处理的就是子组件的选项*。
+
+花了大量的口舌解释了策略函数中判断 `vm` 的意义，实际上这些解释是必要的，好了我们接着看 `strats.el` 和 `strats.propsData` 策略函数的代码，在 `if` 判断分支下面，直接调用了 `defaultStrat` 函数并返回：
+
+```js
+return defaultStrat(parent, child)
+```
+
+`defaultStrat` 函数就定义在 `options.js` 文件内，源码如下：
+
+```js
+/**
+ * Default strategy.
+ */
+const defaultStrat = function (parentVal: any, childVal: any): any {
+  return childVal === undefined
+    ? parentVal
+    : childVal
+}
+```
+
+实际上 `defaultStrat` 函数就如同它的名字一样，它是一个默认的策略，当一个选项不需要特殊处理的时候就是用默认的合并策略，它的逻辑很简单：只要子选项不是 `undefined` 那么就是用子选项，否则使用父选项。
+
+但是大家还要注意一点，`strats.el` 和 `strats.propsData` 这两个策略函数时只有在非生产环境才有的，在生产环境下访问这两个函数将会得到 `undefined`，那这个时候 `mergeField` 函数的第一句代码就起作用了，所以在生产环境将直接使用 `defaultStrat` 处理 `el` 和 `propsData` 这两个选项，如下是 `mergeField` 函数的第一句代码：
+
+```js
+// 当一个选项没有对应的策略函数时，使用默认策略
+const strat = strats[key] || defaultStrat
+```
+
+下面我们接着按照顺序看 `options.js` 文件的代码，接下来定义了两个函数：`mergeData` 以及 `mergeDataOrFn`。我们暂且不关注这两个函数的作用，我们继续看下面的代码，接下来的代码如下：
 
 ```js
 strats.data = function (
@@ -177,7 +238,15 @@ strats.data = function (
 }
 ```
 
-这段代码的作用是在 `strats` 策略对象上添加 `data` 策略函数，用来合并 `data` 选项的。
+这段代码的作用是在 `strats` 策略对象上添加 `data` 策略函数，用来合并 `data` 选项的。我们看看这个策略函数的内容，首先是一个判断分支：
+
+```js
+if (!vm) {
+  ...
+}
+```
+
+与 `el` 和 `propsData` 这两个策略函数相同，先判断是否传递了 `vm` 这个参数，我们知道当没有 `vm` 参数时，说明处理的是子组件的选项
 
 
 
