@@ -331,7 +331,7 @@ export function mergeDataOrFn (
 }
 ```
 
-这个函数整体由 `if` 判断分支语句块组成，首先对 `vm` 进行判断，我们知道无论是子组件选项还是非子组件选项 `strats.data` 策略函数都是通过调用 `mergeDataOrFn` 完成的，且处理非子组件选项的时候要比处理子组件选项时多传递了一个参数 `vm`，这就使得 `mergeDataOrFn` 也能通过是否有 `vm` 来区分处理的是不是子组件选项。如果没有拿到 `vm` 参数的话，那说明处理的是子组件选项，程序会走 `if` 分支，实际上我们可以看到这里有段注释：
+这个函数整体由 `if` 判断分支语句块组成，首先对 `vm` 进行判断，我们知道无论是子组件选项还是非子组件选项 `strats.data` 策略函数都是通过调用 `mergeDataOrFn` 函数来完成处理的，且处理非子组件选项的时候要比处理子组件选项时多传递了一个参数 `vm`，这就使得 `mergeDataOrFn` 也能通过是否有 `vm` 来区分处理的是不是子组件选项。如果没有拿到 `vm` 参数的话，那说明处理的是子组件选项，程序会走 `if` 分支，实际上我们可以看到这里有段注释：
 
 ```js
 // in a Vue.extend merge, both should be functions
@@ -358,7 +358,7 @@ if (!parentVal) {
 Vue.extend({})
 ```
 
-我们使用 `Vue.extend` 函数创建子类的时候传递的子组件选项是一个空对象，即没有 `data` 选项，那么此时 `parentVal` 实际上就是 `Vue.options`，由于 `Vue.options` 上也没有 `data` 这个属性，所以压根就不会执行 `strats.data` 策略函数，也就更不会执行 `mergeDataOrFn` 函数，有的同学可能回问：既然都没有执行，那么这里的 `return parentVal` 是不是多余的？当然不多余，因为 `parentVal` 存在有值的情况。那么什么时候才会出现 `childVal` 不存在但是 `parentVal` 存在的情况呢？看下面的代码：
+我们使用 `Vue.extend` 函数创建子类的时候传递的子组件选项是一个空对象，即没有 `data` 选项，那么此时 `parentVal` 实际上就是 `Vue.options`，由于 `Vue.options` 上也没有 `data` 这个属性，所以压根就不会执行 `strats.data` 策略函数，也就更不会执行 `mergeDataOrFn` 函数，有的同学可能会问：既然都没有执行，那么这里的 `return parentVal` 是不是多余的？当然不多余，因为 `parentVal` 存在有值的情况。那么什么时候才会出现 `childVal` 不存在但是 `parentVal` 存在的情况呢？看下面的代码：
 
 ```js
 const Parent = Vue.extend({
@@ -595,7 +595,7 @@ typeof childVal === 'function' ? childVal.call(this) : childVal
 typeof parentVal === 'function' ? parentVal.call(this) : parentVal
 ```
 
-我们知道 `childVal` 要吗是子组件的选项，要吗是使用 `new` 操作符创建实例时的选项，无论是哪一种，总之 `childVal` 要么是函数，要么就是一个普通的对象。所以如果是函数的话就通过执行该函数从而获取到一个纯对象，所以类似上面那段代码中判断 `childVal` 和 `parentVal` 的类型是否是函数的目的只有一个，获取数据对象(纯对象)。所以 `mergedDataFn` 和 `mergedInstanceDataFn` 函数内部调用 `mergeData` 方法时传递的两个参数就是两个纯对象(当然你可以简单的理解为两个JSON对象)。
+我们知道 `childVal` 要么是子组件的选项，要么是使用 `new` 操作符创建实例时的选项，无论是哪一种，总之 `childVal` 要么是函数，要么就是一个纯对象。所以如果是函数的话就通过执行该函数从而获取到一个纯对象，所以类似上面那段代码中判断 `childVal` 和 `parentVal` 的类型是否是函数的目的只有一个，获取数据对象(纯对象)。所以 `mergedDataFn` 和 `mergedInstanceDataFn` 函数内部调用 `mergeData` 方法时传递的两个参数就是两个纯对象(当然你可以简单的理解为两个JSON对象)。
 
 所以说既然知道了 `mergeData` 函数接收的两个参数就是两个纯对象，那么再看看 `mergeData` 函数的代码就轻松多了，它才是终极合并策略，其源码如下：
 
@@ -604,22 +604,58 @@ typeof parentVal === 'function' ? parentVal.call(this) : parentVal
  * Helper that recursively merges two data objects together.
  */
 function mergeData (to: Object, from: ?Object): Object {
+  // 没有 from 直接返回 to
   if (!from) return to
   let key, toVal, fromVal
   const keys = Object.keys(from)
+  // 遍历 from 的 key
   for (let i = 0; i < keys.length; i++) {
     key = keys[i]
     toVal = to[key]
     fromVal = from[key]
+    // 如果 from 对象中的 key 不在 to 对象中，则使用 set 函数为 to 对象设置 key 及相应的值
     if (!hasOwn(to, key)) {
       set(to, key, fromVal)
+    // 如果 from 对象中的 key 也在 to 对象中，且这两个属性的值都是纯对象则递归进行深度合并
     } else if (isPlainObject(toVal) && isPlainObject(fromVal)) {
       mergeData(toVal, fromVal)
     }
+    // 其他情况什么都不做
   }
   return to
 }
 ```
+
+`mergeData` 函数接收两个参数 `to` 和 `from`，根据 `mergeData` 函数被调用时参数的传递顺序我们知道，`to` 对应的是 `childVla` 产生的春对象，`from` 对应 `parentVal` 产生的纯对象，我们看 `mergeData` 第一句代码：
+
+```js
+if (!from) return to
+```
+
+如果没有 `from` 则直接返回 `to`，也就是说如果没有 `parentVal` 产生的值，就直接使用 `childVal` 产生的值。
+
+如果有 `parentVal` 产生的值，则代码继续向下运行，我们看 `mergeData` 最后的返回值：
+
+```js
+return to
+```
+
+其返回的仍是 `to` 对象，所以你应该能猜的到 `mergeData` 函数的作用，可以简单理解为：*将 `form` 对象的属性混合到 `to` 对象中，也可以说是将 `parentVal` 对象的属性混合到 `childVal` 中*，最后返回的是处理后的 `childVal` 对象。
+
+`mergeData` 的具体做法就是像上面 `mergeData` 函数的代码段中所注释的那样，对 `from` 对象的 `key` 进行遍历：
+
+* 如果 `from` 对象中的 `key` 不在 `to` 对象中，则使用 `set` 函数为 `to` 对象设置 `key` 及相应的值。
+
+* 如果 `from` 对象中的 `key` 在 `to` 对象中，且这两个属性的值都是纯对象则递归的调用 `mergeData` 函数进行深度合并。
+
+* 其他情况不做处理。
+
+上面提到了一个 `set` 函数，这个函数根据 `options.js` 文件头部的引用关系，可知这个函数来自于 `core/observer/index.js` 文件，实际上这个 `set` 函数就是 `Vue` 暴露给我们的全局API `Vue.set`。在这里由于我们还没有讲到 `set` 函数的具体实现，所以你就可以简单理解为 `set` 函数的功能与我们前面遇到过的 `extend` 工具函数功能相似即可了。
+
+所以我们知道了 `mergeData` 函数的执行结果才是真正的数据对象，由于 `mergedDataFn` 和 `mergedInstanceDataFn` 这两个函数的返回值就是 `mergeData` 函数的执行结果，所以 `mergedDataFn` 和 `mergedInstanceDataFn` 函数的执行将会得到数据对象，我们还知道 `data` 选项会被 `mergeOptions` 处理成函数，比如处理成 `mergedInstanceDataFn`，所以：*最终得到的 `data` 选项是一个函数，且该函数的执行结果就是最终的数据对象*。
+
+
+
 
 
 
