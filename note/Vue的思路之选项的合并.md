@@ -654,6 +654,208 @@ return to
 
 所以我们知道了 `mergeData` 函数的执行结果才是真正的数据对象，由于 `mergedDataFn` 和 `mergedInstanceDataFn` 这两个函数的返回值就是 `mergeData` 函数的执行结果，所以 `mergedDataFn` 和 `mergedInstanceDataFn` 函数的执行将会得到数据对象，我们还知道 `data` 选项会被 `mergeOptions` 处理成函数，比如处理成 `mergedInstanceDataFn`，所以：*最终得到的 `data` 选项是一个函数，且该函数的执行结果就是最终的数据对象*。
 
+##### 生命周期钩子选项的合并策略
+
+现在我们看了完 `strats.data` 策略函数，我们继续按照 `options.js` 文件的顺序看代码，接下来的一段代码如下：
+
+```js
+/**
+ * Hooks and props are merged as arrays.
+ */
+function mergeHook (
+  parentVal: ?Array<Function>,
+  childVal: ?Function | ?Array<Function>
+): ?Array<Function> {
+  return childVal
+    ? parentVal
+      ? parentVal.concat(childVal)
+      : Array.isArray(childVal)
+        ? childVal
+        : [childVal]
+    : parentVal
+}
+
+LIFECYCLE_HOOKS.forEach(hook => {
+  strats[hook] = mergeHook
+})
+```
+
+看上去，这段代码貌似是用来合并声明周期钩子的，事实上的确是这样，我们看看它是怎么做的，首先上面的代码由两部分组成：`mergeHook` 函数和一个 `forEach` 语句。我们先看下面的 `forEach` 语句：
+
+```js
+LIFECYCLE_HOOKS.forEach(hook => {
+  strats[hook] = mergeHook
+})
+```
+
+使用 `forEach` 遍历 `LIFECYCLE_HOOKS` 变量，那说明这个变量应该是一个数组，我们根据 `options.js` 文件头部的引用关系可知 `LIFECYCLE_HOOKS` 变量来自于 `shared/constants.js` 文件，我们打开这个文件找到 `LIFECYCLE_HOOKS` 变量如下：
+
+```js
+export const LIFECYCLE_HOOKS = [
+  'beforeCreate',
+  'created',
+  'beforeMount',
+  'mounted',
+  'beforeUpdate',
+  'updated',
+  'beforeDestroy',
+  'destroyed',
+  'activated',
+  'deactivated',
+  'errorCaptured'
+]
+```
+
+可以发现 `LIFECYCLE_HOOKS` 变量实际上是由与生命周期钩子同名的字符串组成的数组。
+
+所以现在再回头来看那段 `forEach` 语句可知，它的作用就是在 `strats` 策略对象上添加用来合并各个生命周期钩子选项的策略函数，并且这些生命周期钩子选项的策略函数相同：*都是 `mergeHook` 函数*。
+
+那么 `mergeHook` 函数时怎样合并生命周期选项的呢？我们看看 `mergeHook` 函数的代码，如下：
+
+```js
+function mergeHook (
+  parentVal: ?Array<Function>,
+  childVal: ?Function | ?Array<Function>
+): ?Array<Function> {
+  return childVal
+    ? parentVal
+      ? parentVal.concat(childVal)
+      : Array.isArray(childVal)
+        ? childVal
+        : [childVal]
+    : parentVal
+}
+```
+
+整个函数体由三组*三目运算符*组成，有一点值得大家学习的就是这里写三目运算符的方式，是不是感觉非常的清晰异读？那么这段代码的分析我同样使用与上面代码相同的格式来写：
+
+```js
+retrun (是否有 childVal，即判断组件的选项中是否有对应名字的生命周期钩子函数)
+  ? 如果有 childVal 则判断是否有 parentVal
+    ? 如果有 parentVal 则使用 concat 方法将二者合并为一个数组
+    : 如果没有 parentVal 则判断 childVal 是不是一个数组
+      ? 如果 childVal 是一个数组则直接返回
+      : 否则将其作为数组的元素，然后返回数组
+  : 如果没有 childVal 则直接返回 parentVal
+```
+
+如上就是对 `mergeHook` 函数的解读，我们可以发现，在经过 `mergeHook` 函数处理之后，组件选项的生命周期钩子函数被合并成一个数组。第一个三目运算符需要注意，它判断是否有 `childVal`，即组件的选项是否写了生命周期钩子函数，如果有则直接返回了 `parentVal`，这里有个问题：`parentVal` 一定是数组吗？答案是：*如果有 `parentVal` 那么其一定是数组，如果没有 `parentVal` 那么 `strats[hooks]` 函数根本不会执行*。我们以 `created` 声明周期钩子函数为例：
+
+如下代码：
+
+```js
+new Vue({
+  created: function () {
+    console.log('created')
+  }
+})
+```
+
+如果以这段代码为例，那么对于 `strats.created` 策略函数来讲(注意这里的 `strats.created` 就是 `mergeHooks`)，`childVal` 就是我们例子中的 `created` 选项，它是一个函数。`parentVal` 应该是 `Vue.options.created`，但 `Vue.options.created` 是不存在的，所以最终经过 `strats.created` 函数的处理将返回一个数组：
+
+```js
+options.created = [
+  function () {
+    console.log('created')
+  }  
+]
+```
+
+再看下面的例子：
+
+```js
+const Parent = Vue.extend({
+  created: function () {
+    console.log('parentVal')
+  }
+})
+
+const Child = new Parent({
+  created: function () {
+    console.log('childVal')
+  }
+})
+```
+
+其中 `Child` 使用过 `new Parent` 生成的，所以对于 `Child` 来讲，`childVal` 是：
+
+```js
+created: function () {
+  console.log('childVal')
+}
+```
+
+而 `parentVal` 已经不是 `Vue.options.created` 了，而是 `Parent.options.created`，那么 `Parent.options.created` 是什么呢？它其实是通过 `Vue.extend` 函数内部的 `mergeOptions` 处理过的，所以它应该是这样的：
+
+```js
+Parent.options.created = [
+  created: function () {
+    console.log('parentVal')
+  }
+]
+```
+
+所以这个例子最终的结果就是既有 `childVal`，又有 `parentVal`，那么根据 `mergeHooks` 函数的逻辑：
+
+```js
+function mergeHook (
+  parentVal: ?Array<Function>,
+  childVal: ?Function | ?Array<Function>
+): ?Array<Function> {
+  return childVal
+    ? parentVal
+      // 这里，合并且生成一个新数组
+      ? parentVal.concat(childVal)
+      : Array.isArray(childVal)
+        ? childVal
+        : [childVal]
+    : parentVal
+}
+```
+
+关键在这句：`parentVal.concat(childVal)`，将 `parentVal` 和 `childVal` 合并成一个数组。所以最终结果如下：
+
+```js
+[
+  created: function () {
+    console.log('parentVal')
+  },
+  created: function () {
+    console.log('childVal')
+  }
+]
+```
+
+另外我们注意第三个三目运算符：
+
+```js
+: Array.isArray(childVal)
+  ? childVal
+  : [childVal]
+```
+
+它判断了 `childVal` 是不是数组，这说明什么？说明了生命周期钩子是可以写成数组的，虽然 `Vue` 的文档里没有，不信你可以试试：
+
+```js
+new Vue({
+  created: [
+    function () {
+      console.log('first')
+    },
+    function () {
+      console.log('second')
+    },
+    function () {
+      console.log('third')
+    }
+  ]
+})
+```
+
+钩子函数将按顺序执行。
+
+
+
 
 
 
