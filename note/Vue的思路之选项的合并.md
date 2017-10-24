@@ -854,6 +854,181 @@ new Vue({
 
 钩子函数将按顺序执行。
 
+##### 资源(assets)选项的合并策略
+
+在 `Vue` 中 `directives`、`filters` 以及 `components` 被认为是资源，其实很好理解，指令、过滤器和组件都是可以作为第三方应用来提供的，比如你需要一个模拟滚动的组件，你当然可以选用超级强大的三方组件 [simulation-scroll-y](https://fmover.hcysun.me/#/zh-cn/vue-components/simulation-scroll-y-vue)，所以这样看来 [simulation-scroll-y](https://fmover.hcysun.me/#/zh-cn/vue-components/simulation-scroll-y-vue) 就可以认为是资源，除了组件之外指令和过滤器也都是同样的道理。
+
+而我们接下来要看的代码就是用来合并处理 `directives`、`filters` 以及 `components` 等资源选项的，看如下代码：
+
+```js
+/**
+ * Assets
+ *
+ * When a vm is present (instance creation), we need to do
+ * a three-way merge between constructor options, instance
+ * options and parent options.
+ */
+function mergeAssets (
+  parentVal: ?Object,
+  childVal: ?Object,
+  vm?: Component,
+  key: string
+): Object {
+  const res = Object.create(parentVal || null)
+  if (childVal) {
+    process.env.NODE_ENV !== 'production' && assertObjectType(key, childVal, vm)
+    return extend(res, childVal)
+  } else {
+    return res
+  }
+}
+
+ASSET_TYPES.forEach(function (type) {
+  strats[type + 's'] = mergeAssets
+})
+```
+
+与生命周期钩子的合并处理策略基本一致，以上代码段也分为两部分：`mergeAssets` 函数以及一个 `forEach` 语句。我们同样先看 `forEach` 语句，这个 `forEach` 循环用来遍历 `ASSET_TYPES` 变量，根据 `options.js` 文件头部的引用关系可知 `ASSET_TYPES` 变量来自于 `shared/constants.js` 文件，我们打开 `shared/constants.js` 文件找到 `ASSET_TYPES` 变量如下：
+
+```js
+export const ASSET_TYPES = [
+  'component',
+  'directive',
+  'filter'
+]
+```
+
+我们发现 `ASSET_TYPES` 其实是由与资源选项“同名”的三个字符串组成的数组，注意所谓的“同名”是带引号的，因为数组中的字符串与真正的资源选项名字相比要少一个字符 `s`。
+
+| ASSET_TYPES   | 资源选项名字    |
+| ------------- |:-------------:|
+| component     | component`s`  |
+| directive     | directive`s`  |
+| filter        | filter`s`     |
+
+所以我们再看一下那段 `forEach` 语句：
+
+```js
+ASSET_TYPES.forEach(function (type) {
+  strats[type + 's'] = mergeAssets
+})
+```
+
+我们发现在循环内部它有手动拼接上一个 `'s'`，所以最终的结果就是在 `strats` 策略对象上添加与资源选项名字相同的策略函数，用来分别合并处理三类资源。所以接下来我们就看看它是怎么合并的，`mergeAssets` 代码如下：
+
+```js
+function mergeAssets (
+  parentVal: ?Object,
+  childVal: ?Object,
+  vm?: Component,
+  key: string
+): Object {
+  const res = Object.create(parentVal || null)
+  if (childVal) {
+    process.env.NODE_ENV !== 'production' && assertObjectType(key, childVal, vm)
+    return extend(res, childVal)
+  } else {
+    return res
+  }
+}
+```
+
+上面的代码本身逻辑很简单，首先以 `parentVal` 为原型创建对象 `res`，然后判断是否有 `childVal`，如果有的话使用 `extend` 函数将 `childVal` 上的属性混合到 `res` 对象上并返回。如果没有 `childVal` 则直接返回 `res`。
+
+举个例子，大家知道任何组件的模板中我们都可以直接使用 `<transition/>` 组件或者 `<keep-alive/>` 等，但是我们并没有在我们自己的组件实例的 `components` 选项中显示的声明这些组件。那么这是怎么做到的呢？其实答案就在 `mergeAssets` 函数中。一下面的代码为例：
+
+```js
+var v = new Vue({
+  el: '#app',
+  components: {
+    ChildComponent: ChildComponent
+  }
+})
+```
+
+上面的代码中，我们创建了一个 `Vue` 实例，并注册了一个子组件 `ChildComponent`，此时 `mergeAssets` 方法内的 `childVal` 就是例子中的 `components` 选项：
+
+```js
+components: {
+  ChildComponent: ChildComponent
+}
+```
+
+而 `parentVal` 就是 `Vue.options.components`，我们知道 `Vue.options` 如下：
+
+```js
+Vue.options = {
+	components: {
+		KeepAlive
+		Transition,
+    TransitionGroup
+	},
+	directives: Object.create(null),
+	directives:{
+		model,
+    show
+	},
+	filters: Object.create(null),
+	_base: Vue
+}
+```
+
+所以 `Vue.options.components` 就应该一个对象：
+
+```js
+{
+  KeepAlive
+  Transition,
+  TransitionGroup
+}
+```
+
+也就是说 `parentVal` 就是如上包含三个内置组件的对象，所以经过如下这句话之后：
+
+```js
+const res = Object.create(parentVal || null)
+```
+
+你可以通过 `res.KeepAlive` 访问当 `KeepAlive` 对象，因为虽然 `res` 对象自身属性没有 `KeepAlive`，但是它的原型上有。
+
+然后再经过 `return extend(res, childVal)` 这句话之后，`res` 变量将被添加 `ChildComponent` 属性，最终 `res` 如下：
+
+```js
+res = {
+  ChildComponent
+  // 原型
+  __proto__: {
+    KeepAlive
+    Transition,
+    TransitionGroup
+  }
+}
+```
+
+所以这就是为什么我们不用显示的注册组件就能够使用一些内置组件的原因，同时这也是内置组件的实现方式，通过 `Vue.extend` 创建出来的子类也是一样的道理，一层一层的通过原型进行组件的搜索。
+
+最后说一下 `mergeAssets` 函数中的这句话：
+
+```js
+process.env.NODE_ENV !== 'production' && assertObjectType(key, childVal, vm)
+```
+
+在非生产环境下，会调用 `assertObjectType` 函数，这个函数其实是用来检测 `childVal` 是不是一个纯对象的，如果不是纯对象会给你一个警告，其源码很简单，如下：
+
+```js
+function assertObjectType (name: string, value: any, vm: ?Component) {
+  if (!isPlainObject(value)) {
+    warn(
+      `Invalid value for option "${name}": expected an Object, ` +
+      `but got ${toRawType(value)}.`,
+      vm
+    )
+  }
+}
+```
+
+就是使用 `isPlainObject` 进行判断。上面我们都在以 `components` 进行讲解，对于指令(`directives`)和过滤器(`filters`)也是一样的，因为他们都是用 `mergeAssets` 进行合并处理。
+
 
 
 
