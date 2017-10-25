@@ -237,7 +237,7 @@ strats.data = function (
 
       return parentVal
     }
-    return mergeDataOrFn.call(this, parentVal, childVal)
+    return mergeDataOrFn(parentVal, childVal)
   }
 
   return mergeDataOrFn(parentVal, childVal, vm)
@@ -265,7 +265,7 @@ if (childVal && typeof childVal !== 'function') {
 
   return parentVal
 }
-return mergeDataOrFn.call(this, parentVal, childVal)
+return mergeDataOrFn(parentVal, childVal)
 ```
 
 首先判断是否传递了子组件选项(`childVal`)，并且检测 `childVla` 的类型是不是 `function`，如果 `childVla` 的类型不是 `function` 则会给你一个警告，也就是说 `childVla` 应该是一个函数，如果不是函数会提示你 `data` 的类型必须是一个函数，这就是我们知道的：*子组件中的 `data` 必须是一个返回对象的函数*。如果不是函数，除了给你一段警告之外，会直接返回 `parentVal`。
@@ -273,7 +273,7 @@ return mergeDataOrFn.call(this, parentVal, childVal)
 如果 `childVal` 是函数类型，那说明满足了子组件的 `data` 选项需要是一个函数的要求，那么就直接返回 `mergeDataOrFn` 函数的执行结果：
 
 ```js
-return mergeDataOrFn.call(this, parentVal, childVal)
+return mergeDataOrFn(parentVal, childVal)
 ```
 
 上面的情况是在 `strats.data` 策略函数拿不到 `vm` 参数时的情况，如果拿到了 `vm` 参数，那么说明处理的选项不是子组件的选项，而是正常使用 `new` 操作符创建实例时的选项，这个时候则直接返回 `mergeDataOrFn` 的函数执行结果，但是会多透传一个参数 `vm`：
@@ -312,7 +312,7 @@ export function mergeDataOrFn (
         typeof parentVal === 'function' ? parentVal.call(this) : parentVal
       )
     }
-  } else if (parentVal || childVal) {
+  } else {
     return function mergedInstanceDataFn () {
       // instance merge
       const instanceData = typeof childVal === 'function'
@@ -411,12 +411,12 @@ return function mergedDataFn () {
 return mergeDataOrFn(parentVal, childVal, vm)
 ```
 
-我们发现同样是调用 `mergeDataOrFn` 函数，只不过这个时候传递了 `vm` 参数，也就是说这将会执行 `mergeDataOrFn` 的 `else if` 分支：
+我们发现同样是调用 `mergeDataOrFn` 函数，只不过这个时候传递了 `vm` 参数，也就是说这将会执行 `mergeDataOrFn` 的 `else` 分支：
 
 ```js
 if (!vm) {
   ...
-} else if (parentVal || childVal) {
+} else {
   return function mergedInstanceDataFn () {
     // instance merge
     const instanceData = typeof childVal === 'function'
@@ -434,7 +434,7 @@ if (!vm) {
 }
 ```
 
-`else if` 分支判断了 `parentVal` 和 `childVal` 二者有其一即可，实际上这个判断是多余的，这二者必然会有其一否则 `strats.data` 策略函数都不会被执行，就更不会执行 `mergeDataOrFn` 这个函数啦。总之，如果走了 `else if` 分支的话那么就直接返回 `mergedInstanceDataFn` 函数，注意此时的 `mergedInstanceDataFn` 函数同样还没有执行，它是 `mergeDataOrFn` 函数的返回值，所以这再次说明了一个问题：*`mergeDataOrFn` 函数永远返回一个函数*。
+如果走了 `else` 分支的话那么就直接返回 `mergedInstanceDataFn` 函数，注意此时的 `mergedInstanceDataFn` 函数同样还没有执行，它是 `mergeDataOrFn` 函数的返回值，所以这再次说明了一个问题：*`mergeDataOrFn` 函数永远返回一个函数*。
 
 也就是说，假如以我们的例子为例：
 
@@ -476,7 +476,7 @@ export function mergeDataOrFn (
       return childVal
     }
     ...
-  } else if (parentVal || childVal) {
+  } else {
     ...
   }
 }
@@ -497,7 +497,7 @@ export function mergeDataOrFn (
       return parentVal
     }
     ...
-  } else if (parentVal || childVal) {
+  } else {
     ...
   }
 }
@@ -520,7 +520,7 @@ export function mergeDataOrFn (
         typeof parentVal === 'function' ? parentVal.call(this) : parentVal
       )
     }
-  } else if (parentVal || childVal) {
+  } else {
     ...
   }
 }
@@ -536,7 +536,7 @@ export function mergeDataOrFn (
 ): ?Function {
   if (!vm) {
     ...
-  } else if (parentVal || childVal) {
+  } else {
     // 当合并处理的是非子组件的选项时 `data` 函数为 `mergedInstanceDataFn` 函数
     return function mergedInstanceDataFn () {
       // instance merge
@@ -1029,7 +1029,7 @@ function assertObjectType (name: string, value: any, vm: ?Component) {
 
 就是使用 `isPlainObject` 进行判断。上面我们都在以 `components` 进行讲解，对于指令(`directives`)和过滤器(`filters`)也是一样的，因为他们都是用 `mergeAssets` 进行合并处理。
 
-
+##### 选项 watch 的合并策略
 
 
 
