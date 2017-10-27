@@ -67,6 +67,17 @@ console.log(classify('aaa-bbb-ccc')) // AaaBbbCcc
 
 #### env.js 文件代码说明
 
+##### nativeWatch
+
+源码如下：
+
+```js
+// Firefox has a "watch" function on Object.prototype...
+export const nativeWatch = ({}).watch
+```
+
+* 描述：在 `Firefox` 中原生提供了 `Object.prototype.watch` 函数，所以当运行在 `Firefox` 中时 `nativeWatch` 为原生提供的函数，在其他浏览器中 `nativeWatch` 为 `undefined`。这个变量主要用于 `Vue` 处理 `watch` 选项时与其冲突。
+
 #### error.js 文件代码说明
 
 该文件只导出一个函数：`handleError`，在看这个函数的实现之前，我们需要回顾一下 `Vue` 的文档，我们知道 `Vue` 提供了一个全局配置 `errorHandler`，用来捕获组件生命周期函数等的内部错误，使用方法如下：

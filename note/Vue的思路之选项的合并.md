@@ -1031,6 +1031,309 @@ function assertObjectType (name: string, value: any, vm: ?Component) {
 
 ##### 选项 watch 的合并策略
 
+接下来我们要看的代码就是这一段了：
+
+```js
+/**
+ * Watchers.
+ *
+ * Watchers hashes should not overwrite one
+ * another, so we merge them as arrays.
+ */
+strats.watch = function (
+  parentVal: ?Object,
+  childVal: ?Object,
+  vm?: Component,
+  key: string
+): ?Object {
+  // work around Firefox's Object.prototype.watch...
+  if (parentVal === nativeWatch) parentVal = undefined
+  if (childVal === nativeWatch) childVal = undefined
+  /* istanbul ignore if */
+  if (!childVal) return Object.create(parentVal || null)
+  if (process.env.NODE_ENV !== 'production') {
+    assertObjectType(key, childVal, vm)
+  }
+  if (!parentVal) return childVal
+  const ret = {}
+  extend(ret, parentVal)
+  for (const key in childVal) {
+    let parent = ret[key]
+    const child = childVal[key]
+    if (parent && !Array.isArray(parent)) {
+      parent = [parent]
+    }
+    ret[key] = parent
+      ? parent.concat(child)
+      : Array.isArray(child) ? child : [child]
+  }
+  return ret
+}
+```
+
+这一段代码的作用是在 `strats` 策略对象上添加 `watch` 策略函数。所以 `strats.watch` 策略函数应该是合并处理 `watch` 选项的。我们先看函数体开头的两句代码：
+
+```js
+// work around Firefox's Object.prototype.watch...
+if (parentVal === nativeWatch) parentVal = undefined
+if (childVal === nativeWatch) childVal = undefined
+```
+
+其中 `nativeWatch` 来自于 `core/util/env.js` 文件，大家可以在 [core/util 目录下的工具方法全解](/note/附录/core-util) 中查看其作用。在 `Firefox` 浏览器中 `Object.prototype` 拥有原生的 `watch` 函数，所以即便一个普通的对象你没有定义 `watch` 属性，但是依然可以通过原型链访问到原生的 `watch` 属性，这就会给 `Vue` 在处理选项的时候造成迷惑，因为 `Vue` 也提供了一个叫做 `watch` 的选项，即使你的组件选项中没有写 `watch` 选项，但是 `Vue` 通过原型访问到了原生的 `watch`。这不是我们想要的，所以上面两句代码的目的是一个变通方案，当发现组件选项是浏览器原生的 `watch` 时，那说明用户并没有提供 `Vue` 的 `watch` 选项，直接重置为 `undefined`。
+
+然后是这句代码：
+
+```js
+if (!childVal) return Object.create(parentVal || null)
+```
+
+检测了是否有 `childVal`，即组件选项是否有 `watch` 选项，如果没有的话，直接以 `parentVal` 为原型创建对象并返回(如果有 `parentVal` 的话)。
+
+如果组件选项中有 `watch` 选项，即 `childVal` 存在，则代码继续执行，接下来将执行这段代码：
+
+```js
+if (process.env.NODE_ENV !== 'production') {
+  assertObjectType(key, childVal, vm)
+}
+if (!parentVal) return childVal
+```
+
+由于此时 `childVal` 存在，所以在非生产环境下使用 `assertObjectType` 函数对 `childVal` 进行类型检测，检测其是否是一个纯对象，我们知道 `Vue` 的 `watch` 选项需要是一个纯对象。接着判断是否有 `parentVal`，如果没有的话则直接返回 `childVal`，即直接使用组件选项的 `watch`。
+
+如果存在 `parentVal`，那么代码继续执行，此时 `parentVal` 以及 `childVal` 都将存在，那么就需要做合并处理了，也就是下面要执行的代码：
+
+```js
+// 定义 ret 常量，其值为一个对象
+const ret = {}
+// 将 parentVal 的属性混合到 ret 中，后面处理的都将是 ret 对象，最后返回的也是 ret 对象
+extend(ret, parentVal)
+// 遍历 childVal
+for (const key in childVal) {
+  // 由于遍历的是 childVal，所以 key 是子选项的 key，父选项中未必能获取到值，所以 parent 未必有值
+  let parent = ret[key]
+  // child 是肯定有值的，因为遍历的就是 childVal 本身
+  const child = childVal[key]
+  // 这个 if 分支的作用就是如果 parent 存在，就将其转为数组
+  if (parent && !Array.isArray(parent)) {
+    parent = [parent]
+  }
+  ret[key] = parent
+    // 最后，如果 parent 存在，此时的 parent 应该已经被转为数组了，所以直接将 child concat 进去
+    ? parent.concat(child)
+    // 如果 parent 不存在，直接将 child 转为数组返回
+    : Array.isArray(child) ? child : [child]
+}
+// 最后返回新的 ret 对象
+return ret
+```
+
+上面的代码段中写了很详细的注释。首先定义了 `ret` 常量，最后返回的也是 `ret` 常量，所以中间的代码是在充实 `ret` 常量。之后使用 `extend` 函数将 `parentVal` 的属性混合到 `ret` 中。然后开始一个 `for in` 循环遍历 `childVal`，这个循环的目的是：*检测子选项中的值是否也在父选项中，如果在的话将父子选项合并到一个数组，否则直接把子选项变成一个数组返回*。
+
+举个例子：
+
+```js
+// 创建子类
+const Sub = Vue.extend({
+  // 检测 test 的变化
+  watch: {
+    test: function () {
+      console.log('extend: test change')
+    }
+  }
+})
+
+// 使用子类创建实例
+const v = new Sub({
+  el: '#app',
+  data: {
+    test: 1
+  },
+  // 检测 test 的变化
+  watch: {
+    test: function () {
+      console.log('instance: test change')
+    }
+  }
+})
+
+// 修改 test 的值
+v.test = 2
+```
+
+上面的代码中，当我们修改 `v.test` 的值时，两个观察 `test` 变化的函数都将被执行。
+
+我们使用子类 `Sub` 创建了实例 `v`，对于实例 `v` 来讲，其 `childVal` 就是组件选项的 `watch`：
+
+```js
+watch: {
+  test: function () {
+    console.log('instance: test change')
+  }
+}
+```
+
+而其 `parentVal` 就是 `Sub.options`，实际上就是：
+
+```js
+watch: {
+  test: function () {
+    console.log('extend: test change')
+  }
+}
+```
+
+最终这两个 `watch` 选项将被合并为一个数组：
+
+```js
+watch: {
+  test: [
+    function () {
+      console.log('extend: test change')
+    },
+    function () {
+      console.log('instance: test change')
+    }
+  ]
+}
+```
+
+我们可以通过打印实例的 `$options` 属性来确认这一点：
+
+```js
+console.log(v.$options)
+```
+
+如下图：
+
+![](http://ovjvjtt4l.bkt.clouddn.com/2017-10-26-112916.jpg)
+
+可以发现 `watch.test` 变成了数组，但是 `watch.test` 并不一定总是数组，只有父选项(`parentVal`)也存对该字段的观测时它才是数组，如下：
+
+```js
+// 创建实例
+const v = new Vue({
+  el: '#app',
+  data: {
+    test: 1
+  },
+  // 检测 test 的变化
+  watch: {
+    test: function () {
+      console.log('instance: test change')
+    }
+  }
+})
+
+// 修改 test 的值
+v.test = 2
+```
+
+我们直接使用 `Vue` 创建实例，这个时候对于实例 `v` 来说，父选项是 `Vue.options`，由于 `Vue.options` 并没有 `watch` 选项，所以逻辑将直接在 `strats.watch` 函数的这句话中返回：
+
+```js
+if (!parentVal) return childVal
+```
+
+没有 `parentVal` 即父选项中没有 `watch` 选项，则直接返回 `childVal`，也就是直接返回了子选项的 `watch` 选项，如就是例子中写的对象：
+
+```js
+{
+  test: function () {
+    console.log('instance: test change')
+  }
+}
+```
+
+所以此时 `test` 字段就不在是数组了，而就是一个函数，同样可以通过打印实例的 `$options` 选项证明：
+
+![](http://ovjvjtt4l.bkt.clouddn.com/2017-10-26-113858.jpg)
+
+所以大家应该知道：*被合并处理后的 `watch` 选项下的每个键值，有可能是一个数组，也有可能是一个函数*。
+
+##### 选项 props、methods、inject、computed 的合并策略
+
+接下来我们要看的一段代码如下：
+
+```js
+/**
+ * Other object hashes.
+ */
+strats.props =
+strats.methods =
+strats.inject =
+strats.computed = function (
+  parentVal: ?Object,
+  childVal: ?Object,
+  vm?: Component,
+  key: string
+): ?Object {
+  if (childVal && process.env.NODE_ENV !== 'production') {
+    assertObjectType(key, childVal, vm)
+  }
+  if (!parentVal) return childVal
+  const ret = Object.create(null)
+  extend(ret, parentVal)
+  if (childVal) extend(ret, childVal)
+  return ret
+}
+```
+
+这段代码的作用是在 `strats` 策略对象上添加 `props`、`methods`、`inject` 以及 `computed` 策略函数，顾名思义这些策略函数分别用来合并处理同名选项的，并且所使用的策略相同。
+
+对于 `props`、`methods`、`inject` 以及 `computed` 这四个选项有一个共同点，就是它们的结构都是纯对象，虽然我们在书写 `props` 或者 `inject` 选项的时候可能是一个数组，但是在 [Vue的思路之选项的规范化](/note/Vue的思路之选项的规范化) 一节中我们知道，`Vue` 内部都将其规范化为了一个对象。所以我们看看 `Vue` 是如何处理这些对象散列的。
+
+策略函数内容如下：
+
+```js
+// 如果存在 childVal，那么在非生产环境下要监测 childVal 的类型
+if (childVal && process.env.NODE_ENV !== 'production') {
+  assertObjectType(key, childVal, vm)
+}
+// parentVal 不存在的情况下直接返回 childVal
+if (!parentVal) return childVal
+// 如果 parentVal 存在，则创建 ret 对象，然后分别将 parentVal 和 childVal 的属性混合到 ret 中，注意：由于 childVal 将覆盖 parentVal 的同名属性
+const ret = Object.create(null)
+extend(ret, parentVal)
+if (childVal) extend(ret, childVal)
+// 最后返回 ret 对象。
+return ret
+```
+
+首先，会检测 `childVal` 是否存在，即子选项是否有相关的属性，如果有的话在非生产环境下需要使用 `assertObjectType` 检测其类型，保证其类型是纯对象。然后会判断 `parentVal` 是否存在，不存在的话直接返回子选项。
+
+如果 `parentVal` 存在，则使用 `extend` 方法将其属性混合到新对象 `ret` 中，如果 `childVal` 也存在的话，那么同样会再使用 `extend` 函数将其属性混合到 `ret` 中，所以如果父子选项中有相同的键，那么子选项会把父选项覆盖掉。
+
+以上就是 `props`、`methods`、`inject` 以及 `computed` 这四个属性的通用合并策略。
+
+##### 选项 provide 的合并策略
+
+最后一个选项的合并策略，就是 `provide` 选项的合并策略，只有一句代码，如下：
+
+```js
+strats.provide = mergeDataOrFn
+```
+
+也就是说 `provide` 选项的合并策略与 `data` 选项的合并策略相同，都是使用 `mergeDataOrFn` 函数。
+
+##### 总结
+
+现在我们了解了 `Vue` 中是如何合并处理选项的，接下来我们稍微做一个总结：
+
+* 对于 `el`、`propsData` 选项使用默认的合并策略 `defaultStrat`。
+* 对于 `data` 选项，使用 `mergeDataOrFn` 函数进行处理，最终结果是 `data` 选项将变成一个函数，且该函数的执行结果为真正的数据对象。
+* 对于 `生命周期钩子` 选项，将合并成数组，使得父子选项中的钩子函数都能够被执行
+* 对于 `directives`、`filters` 以及 `components` 等资源选项，父子选项将以原型链的形式被处理，正是因为这样我们才能够在任何地方都使用内置组件、指令等。
+* 对于 `watch` 选项的合并处理，类似于生命周期钩子，如果父子选项都有相同的观测字段，将被合并为数组，这样观察者都将被执行。
+* 对于 `props`、`methods`、`inject`、`computed` 选项，父选项始终可用，但是子选项会覆盖同名的父选项字段。
+* 对于 `provide` 选项，其合并策略使用与 `data` 选项相同的 `mergeDataOrFn` 函数。
+* 最后，以上没有提及到的选项都将使默认选项 `defaultStrat`。
+* 最最后，默认合并策略函数 `defaultStrat` 的策略是：*只要子选项不是 `undefined` 就使用子选项，否则使用父选项*。
+
+至此，我们大概介绍完了 `Vue` 对选项的处理，但留心的同学一定注意到了，`options.js` 文件的代码我们都基本逐行分析，唯独剩下一个函数我们始终没有提到，它就是 `resolveAsset` 函数。这个函数我们暂且不在这里讲，后面随着我们的深入，自然会再次碰到它，到那个时候应该是讲它的最好时机。
+
+
+
+
 
 
 
