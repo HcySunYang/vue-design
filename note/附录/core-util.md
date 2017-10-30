@@ -2,15 +2,16 @@
 
 #### debug.js 文件代码说明
 
-该文件主要导出三个函数，如下：
+该文件主要导出四个函数，如下：
 
 ```js
 export let warn = noop
 export let tip = noop
-export let formatComponentName: Function = (null: any) // work around flow check
+export let generateComponentTrace = (noop: any) // work around flow check
+export let formatComponentName = (noop: any)
 ```
 
-其中 `warn` 和 `tip` 都被初始化为 `noop` 即空函数，而 `formatComponentName` 被初始化为 `null` 但它将来会是一个函数类型(`Function`)。
+这四个变量都被初始化为空函数·
 
 接下来是这样一段代码：
 
@@ -38,11 +39,13 @@ if (process.env.NODE_ENV !== 'production') {
     // ...
   }
 
-  // 其他代码...
+  generateComponentTrace = vm => {
+    // ...
+  }
 }
 ```
 
-上面的代码是简化过的，可以发现，在非生产环境下分别对 `warn`、`tip` 以及 `formatComponentName` 进行了赋值，且值都为函数，接下来我们分别看一下这三个函数的作用，不过在这之前，我们需要介绍三个变量，也就是 `if` 语句最开始的三个变量：
+上面的代码是简化过的，可以发现，在非生产环境下分别对 `warn`、`tip`、`formatComponentName` 以及 `generateComponentTrace` 进行了赋值，且值都为函数，接下来我们分别看一下这四个函数的作用，不过在这之前，我们需要介绍三个变量，也就是 `if` 语句块最开始的三个变量：
 
 ```js
 const hasConsole = typeof console !== 'undefined'
