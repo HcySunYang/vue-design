@@ -68,7 +68,7 @@ export const mustUseProp = (tag: string, type: ?string, attr: string): boolean =
 }
 ```
 
-* 描述：用来检测一个属性在指定的标签中是否要使用 `props` 进行绑定
+* 描述：用来检测一个属性在标签中是否要使用 `props` 进行绑定
 
 * 参数：
     * `{String} tag` 标签名
