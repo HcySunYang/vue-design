@@ -67,7 +67,6 @@ console.log(classify('aaa-bbb-ccc')) // AaaBbbCcc
 
 ##### formatComponentName
 
-
 #### env.js 文件代码说明
 
 ##### nativeWatch
