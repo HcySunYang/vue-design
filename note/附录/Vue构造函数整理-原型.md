@@ -29,8 +29,7 @@ Vue.prototype.$forceUpdate = function () {}
 Vue.prototype.$destroy = function () {}
 
 // renderMixin(Vue)    src/core/instance/render.js **************************************************
-Vue.prototype.$nextTick = function (fn: Function) {}
-Vue.prototype._render = function (): VNode {}
+// installRenderHelpers 函数中
 Vue.prototype._o = markOnce
 Vue.prototype._n = toNumber
 Vue.prototype._s = toString
@@ -46,6 +45,8 @@ Vue.prototype._v = createTextVNode
 Vue.prototype._e = createEmptyVNode
 Vue.prototype._u = resolveScopedSlots
 Vue.prototype._g = bindObjectListeners
+Vue.prototype.$nextTick = function (fn: Function) {}
+Vue.prototype._render = function (): VNode {}
 
 // core/index.js 文件中
 Object.defineProperty(Vue.prototype, '$isServer', {

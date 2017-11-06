@@ -205,11 +205,34 @@ Vue.prototype.$forceUpdate = function () {}
 Vue.prototype.$destroy = function () {}
 ```
 
-最后一个就是 `renderMixin` 方法了，它在 `render.js` 文件中，它为 `Vue.prototype` 添加了一大堆的方法，我们暂且不管是干什么，先列出来，如下：
+最后一个就是 `renderMixin` 方法了，它在 `render.js` 文件中，这个方法的一开始以 `Vue.prototype` 为参数调用了 `installRenderHelpers` 函数，这个函数来自于与 `render.js` 文件相同目录下的 `render-helpers/index.js` 文件，打开这个文件找到 `installRenderHelpers` 函数：
 
 ```js
-Vue.prototype.$nextTick = function (fn: Function) {}
-Vue.prototype._render = function (): VNode {}
+export function installRenderHelpers (target: any) {
+  target._o = markOnce
+  target._n = toNumber
+  target._s = toString
+  target._l = renderList
+  target._t = renderSlot
+  target._q = looseEqual
+  target._i = looseIndexOf
+  target._m = renderStatic
+  target._f = resolveFilter
+  target._k = checkKeyCodes
+  target._b = bindObjectProps
+  target._v = createTextVNode
+  target._e = createEmptyVNode
+  target._u = resolveScopedSlots
+  target._g = bindObjectListeners
+}
+```
+
+以上代码就是 `installRenderHelpers` 函数的源码，可以发现，这个函数的作用就是在 `Vue.prototype` 上添加一系列方法的，那么这些方法的作用大家还不需要关心，我们后面自然会知道。
+
+`renderMixin` 方法在指定完 `installRenderHelpers` 函数之后，又在 `Vue.prototype` 上添加了两个方法，分别是：`$nextTick` 和 `_render`，最终经过 `renderMixin` 之后，`Vue.prototype` 将又被添加了如下方法：
+
+```js
+// installRenderHelpers 函数中
 Vue.prototype._o = markOnce
 Vue.prototype._n = toNumber
 Vue.prototype._s = toString
@@ -225,6 +248,9 @@ Vue.prototype._v = createTextVNode
 Vue.prototype._e = createEmptyVNode
 Vue.prototype._u = resolveScopedSlots
 Vue.prototype._g = bindObjectListeners
+
+Vue.prototype.$nextTick = function (fn: Function) {}
+Vue.prototype._render = function (): VNode {}
 ```
 至此，`instance/index.js` 文件中的代码就运行完毕了（注意：所谓的运行，是指执行 `npm run dev` 命令时构建的运行）。我们大概清楚每个 `*Mixin` 方法的作用其实就是包装 `Vue.prototype`，在其上挂载一些属性和方法，下面我们要做一件很重要的事情，就是将上面的内容集中合并起来，放到一个单独的地方，便于以后查看，我将它们整理到了这里：[附录/Vue 构造函数整理-原型](./附录/Vue构造函数整理-原型.md)，这样当我们在后面详细讲解的时候，提到某个方法你就可以迅速定位它的位置，便于我们思路的清晰。
 
