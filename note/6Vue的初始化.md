@@ -716,6 +716,67 @@ vm._isDestroyed = false
 vm._isBeingDestroyed = false
 ```
 
-其中 `$children` 和 `$refs` 都是我们属性的实例属性，他们都在 `initLifecycle` 函数中被初始化，除此之外，还定义了一些内部使用的属性，大家先混个脸熟，在后面的分析中自然会知道他们的用途，但是不要忘了，既然这些属性是在 `initLifecycle` 函数中定义的，那么自然会与声明周期有关。这样 `initLifecycle` 函数我们就分析完毕了，我们回到 `_init` 函数，看看接下来要做的初始化工作是什么。
+其中 `$children` 和 `$refs` 都是我们属性的实例属性，他们都在 `initLifecycle` 函数中被初始化，其中 `$children` 被初始化为一个数组，`$refs` 被初始化为一个空 `json` 对象，除此之外，还定义了一些内部使用的属性，大家先混个脸熟，在后面的分析中自然会知道他们的用途，但是不要忘了，既然这些属性是在 `initLifecycle` 函数中定义的，那么自然会与声明周期有关。这样 `initLifecycle` 函数我们就分析完毕了，我们回到 `_init` 函数，看看接下来要做的初始化工作是什么。
 
+
+#### 初始化之 initEvents
+
+在 `initLifecycle` 函数之后，执行的就是 `initEvents`，它来自于 `core/instance/events.js` 文件，打开该文件找到 `initEvents` 方法，其内容很简短，如下：
+
+```js
+export function initEvents (vm: Component) {
+  vm._events = Object.create(null)
+  vm._hasHookEvent = false
+  // init parent attached events
+  const listeners = vm.$options._parentListeners
+  if (listeners) {
+    updateComponentListeners(vm, listeners)
+  }
+}
+```
+
+首先在 `vm` 实例对象上添加两个实例属性 `_events` 和 `_hasHookEvent`，其中 `_events` 被初始化为一个空对象，`_hasHookEvent` 的初始值为 `false`。之后将执行这段代码：
+
+```js
+// init parent attached events
+const listeners = vm.$options._parentListeners
+if (listeners) {
+  updateComponentListeners(vm, listeners)
+}
+```
+
+大家肯定还是有这个疑问：`vm.$options._parentListeners` 这个 `_parentListeners` 是哪里来的？细心的同学可能已经注意到了，我们之前看过一个函数叫做 `createComponentInstanceForVnode`，他在 `core/vdom/create-component.js` 文件中，如下：
+
+```js
+export function createComponentInstanceForVnode (
+  vnode: any, // we know it's MountedComponentVNode but flow doesn't
+  parent: any, // activeInstance in lifecycle state
+  parentElm?: ?Node,
+  refElm?: ?Node
+): Component {
+  const vnodeComponentOptions = vnode.componentOptions
+  const options: InternalComponentOptions = {
+    _isComponent: true,
+    parent,
+    propsData: vnodeComponentOptions.propsData,
+    _componentTag: vnodeComponentOptions.tag,
+    _parentVnode: vnode,
+    _parentListeners: vnodeComponentOptions.listeners,
+    _renderChildren: vnodeComponentOptions.children,
+    _parentElm: parentElm || null,
+    _refElm: refElm || null
+  }
+  // check inline-template render functions
+  const inlineTemplate = vnode.data.inlineTemplate
+  if (isDef(inlineTemplate)) {
+    options.render = inlineTemplate.render
+    options.staticRenderFns = inlineTemplate.staticRenderFns
+  }
+  return new vnodeComponentOptions.Ctor(options)
+}
+```
+
+我们发现 `_parentListeners` 也出现这里，也就是说在创建子组件实例的时候才会有这个参数选项，所以现在我们不做深入讨论，后面自然有机会。
+
+#### 初始化之 initRender
 

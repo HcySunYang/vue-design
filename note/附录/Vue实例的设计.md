@@ -23,4 +23,8 @@ vm._directInactive = false
 vm._isMounted = false
 vm._isDestroyed = false
 vm._isBeingDestroyed = false
+
+// initEvents(vm)   src/core/instance/initEvents.js **************************************************
+vm._events = Object.create(null)
+vm._hasHookEvent = false
 ```
