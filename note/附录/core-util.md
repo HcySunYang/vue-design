@@ -144,7 +144,7 @@ try {
 }
 ```
 
-上面是声明周期钩子回调执行时的代码，由于声明周期钩子是开发者自定义的函数，这个函数的执行是很可能存在运行时错误的，所以这里需要 `try catch` 包裹，且在发生错误的时候，在 `catch` 语句块中捕获错误，然后使用 `handleError` 进行错误处理。知道了这些，我们再看看 `handleError` 到底怎么处理的，源码上面已经贴出来了，首先是一个 `if` 判断：
+上面是生命周期钩子回调执行时的代码，由于声明周期钩子是开发者自定义的函数，这个函数的执行是很可能存在运行时错误的，所以这里需要 `try catch` 包裹，且在发生错误的时候，在 `catch` 语句块中捕获错误，然后使用 `handleError` 进行错误处理。知道了这些，我们再看看 `handleError` 到底怎么处理的，源码上面已经贴出来了，首先是一个 `if` 判断：
 
 ```js
 if (vm) {
@@ -162,7 +162,7 @@ if (vm) {
 }
 ```
 
-那这段代码是干嘛的呢？我们先不管，回头来说。在判断语句后面直接调用了 `globalHandleError` 函数，且将三个参数透传了过去：
+那这段代码是干嘛的呢？我们先不管，回头来说。我们先看后面的代码，在判断语句后面直接调用了 `globalHandleError` 函数，且将三个参数透传了过去：
 
 ```js
 globalHandleError(err, vm, info)
@@ -183,7 +183,7 @@ function globalHandleError (err, vm, info) {
 }
 ```
 
-`globalHandleError` 函数首先判断 `config.errorHandler` 是否为真，如果为真则调用 `config.errorHandler` 并将参数透传，这里的 `config.errorHandler` 就是 `Vue` 全局API提供的用于自定义错误处理的配置我们前面讲过。由于这个错误处理函数也是开发者自定义的，所以可能出现运行时错误，这个时候就需要使用 `try catch` 语句块包裹起来，当错误发生时，使用 `logError` 函数打印错误，当然啦，如果你们有配置 `config.errorHandler` 也就是说 `config.errorHandler` 此时为假，那么将使用默认的错误处理函数，也就是 `logError` 进行错误处理。
+`globalHandleError` 函数首先判断 `config.errorHandler` 是否为真，如果为真则调用 `config.errorHandler` 并将参数透传，这里的 `config.errorHandler` 就是 `Vue` 全局API提供的用于自定义错误处理的配置我们前面讲过。由于这个错误处理函数也是开发者自定义的，所以可能出现运行时错误，这个时候就需要使用 `try catch` 语句块包裹起来，当错误发生时，使用 `logError` 函数打印错误，当然啦，如果没有配置 `config.errorHandler` 也就是说 `config.errorHandler` 此时为假，那么将使用默认的错误处理函数，也就是 `logError` 进行错误处理。
 
 所以 `globalHandleError` 是用来检测你是否自定义了 `config.errorHandler` 的，如果有则用之，如果没有就是用 `logError`。
 
@@ -195,7 +195,7 @@ function logError (err, vm, info) {
     warn(`Error in ${info}: "${err.toString()}"`, vm)
   }
   /* istanbul ignore else */
-  if (inBrowser && typeof console !== 'undefined') {
+  if ((inBrowser || inWeex) && typeof console !== 'undefined') {
     console.error(err)
   } else {
     throw err
@@ -203,7 +203,7 @@ function logError (err, vm, info) {
 }
 ```
 
-可以看到，在非生产环境下，先使用 `warn` 函数报一个警告，然后判断是否在浏览器环境且 `console` 是否可用，如果可用则使用 `console.error` 打印错误，没有则直接 `throw err`。
+可以看到，在非生产环境下，先使用 `warn` 函数报一个警告，然后判断是否在浏览器或者Weex环境且 `console` 是否可用，如果可用则使用 `console.error` 打印错误，没有则直接 `throw err`。
 
 所以 `logError` 才真正打印错误的函数，且实现也比较简单。这其实已经达到了 `handleError` 的目的了，但是大家注意我们此时忽略了一段代码，就是 `handleError` 函数开头的一段代码：
 
@@ -226,7 +226,7 @@ if (vm) {
 }
 ```
 
-那么这个 `if` 判断是干嘛的呢？这其实是在支持新的 `Vue` 选项 `errorCaptured`。在编写该文章的时候 `Vue` 的文档还没有跟新，实际上你可以这样写代码：
+那么这个 `if` 判断是干嘛的呢？这其实是 `Vue` 选项 `errorCaptured` 的实现。实际上我们可以这样写代码：
 
 ```js
 var vm = new Vue({
@@ -308,19 +308,13 @@ while ((cur = cur.$parent))
 if (capture) return
 ```
 
-其中 `capture` 是钩子调用的返回值与 `false` 的全等比较的结果，也就是说，如果 `errorCaptured` 钩子函数返回假，那么 `capture` 为真直接 `return`，程序不会走 `if` 语句块后面的 `globalHandleError`，否则除了 `errorCaptured` 被调用外，`if` 语句块后面的 `globalHandleError` 也会被调用。
+其中 `capture` 是钩子调用的返回值与 `false` 的全等比较的结果，也就是说，如果 `errorCaptured` 钩子函数返回假，那么 `capture` 为真直接 `return`，程序不会走 `if` 语句块后面的 `globalHandleError`，否则除了 `errorCaptured` 被调用外，`if` 语句块后面的 `globalHandleError` 也会被调用。最总要的是：如果 `errorCaptured` 钩子函数返回假将阻止错误继续向“上级”传递。
 
 #### lang.js 文件代码说明
 
-##### emptyObject
-
-* 源码如下：
-
-```js
-export const emptyObject = Object.freeze({})
-```
-
 #### options.js 文件代码说明
+
+*该文件的讲解集中在 [4Vue选项的规范化](/note/4Vue选项的规范化) 以及 [5Vue选项的合并](/note/5Vue选项的合并) 这两个小节中*。
 
 #### perf.js 文件代码说明
 

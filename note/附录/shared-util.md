@@ -180,6 +180,18 @@ return hit || (cache[str] = fn(str))
 
 可以看到，这就是一个函数式编程的玩法，也是比较简单的。
 
+##### emptyObject
+
+* 源码如下：
+
+```js
+export const emptyObject = Object.freeze({})
+```
+
+* 描述：创建一个空的冻结对象
+
+* 源码分析：通过以空 `json` 对象 `{}` 为参数调用 `Object.freeze` 函数实现。
+
 #### camelize
 
 * 源码如下：
