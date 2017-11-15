@@ -108,6 +108,79 @@ return (
 
 #### compat.js 文件
 
+`compat.js` 文件的全部代码如下：
+
+```js
+import { inBrowser } from 'core/util/index'
+
+// check whether current browser encodes a char inside attribute values
+let div
+function getShouldDecode (href: boolean): boolean {
+  div = div || document.createElement('div')
+  div.innerHTML = href ? `<a href="\n"/>` : `<div a="\n"/>`
+  return div.innerHTML.indexOf('&#10;') > 0
+}
+
+// #3663: IE encodes newlines inside attribute values while other browsers don't
+export const shouldDecodeNewlines = inBrowser ? getShouldDecode(false) : false
+// #6828: chrome encodes content in a[href]
+export const shouldDecodeNewlinesForHref = inBrowser ? getShouldDecode(true) : false
+```
+
+该文件主要导出两个变量，分别是 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref`，这两个变量都是布尔值，那么这两个变量是干嘛的呢？我们看一个例子就知道了，假设我们有如下 DOM：
+
+```html
+<div id="link-box">
+  <!-- 注意 href 属性值，链接后面加了一个换行 -->
+  <a href="http://hcysun.me
+  ">aaaa</a>
+  <!-- 注意 href 属性值，链接后面加了一个Tab -->
+  <a href="http://hcysun.me	">bbbb</a>
+</div>
+```
+
+上面的 DOM 看上去貌似没有什么奇特地方，关键点在于 `<a>` 标签的 `href` 属性，我们在第一个 `<a>` 标签的 `href` 属性值后面添加了换行符，在第二个 `<a>` 标签的 `href` 属性值后面添加了制表符。那么这么做会有什么影响呢？执行下面的代码就显而易见了：
+
+```js
+console.log(document.getElementById('link-box').innerHTML)
+```
+
+上面的代码中我们打印了 `id` 为 `link-box` 的 `innerHTML`，如下图：
+
+![](http://ovjvjtt4l.bkt.clouddn.com/2017-11-15-123008.jpg)
+
+注意，只有在 `chrome` 浏览器下才能获得如上效果，可以发现，在获取的内容中换行符和制表符分别被转换成了 `&#10` 和 `&#9`。实际上，这算是浏览器的怪癖行为。在 `IE` 中，不仅仅是 `a` 标签的 `href` 属性值，任何属性值都存在这个问题。这就会影响 `Vue` 的编译器在对模板进行编译后的结果，导致莫名奇妙的问题，为了避免这些问题 `Vue` 需要知道什么时候要做兼容工作，这就是 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个变量的作用。
+
+下面我们看一下具体实现，首先定义了一个函数 `getShouldDecode`：
+
+```js
+let div
+function getShouldDecode (href: boolean): boolean {
+  div = div || document.createElement('div')
+  div.innerHTML = href ? `<a href="\n"/>` : `<div a="\n"/>`
+  return div.innerHTML.indexOf('&#10;') > 0
+}
+```
+
+该函数的作用是判断当前浏览器是否会对属性值中所包含的换行符进行编码，如果是则返回真，否则返回假。其实现原理分三步：
+
+* 1、创建一个 `div`
+* 2、设置这个 `div` 的 `innerHTML` 为 `<a href="\n"/>` 或者 `<div a="\n"/>`
+* 3、获取该 `div` 的 `innerHTML` 并检测换行符是否被编码
+
+`getShouldDecode` 接受一个布尔值参数 `href`，如果该参数为 `true` 意味着要监测的是 `a` 标签的 `href` 属性，否则检测任意属性。
+
+有了上面的函数再实现 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个变量就容易多了：
+
+```js
+export const shouldDecodeNewlines = inBrowser ? getShouldDecode(false) : false
+export const shouldDecodeNewlinesForHref = inBrowser ? getShouldDecode(true) : false
+```
+
+最终如果 `shouldDecodeNewlines` 为 `true`，意味着 `Vue` 在编译模板的时候，要对属性值中的换行符或制表符做兼容处理。而 `shouldDecodeNewlinesForHref` 为 `true` 意味着 `Vue` 在编译模板的时候，要对 `a` 标签的 `href` 属性值中的换行符或制表符做兼容处理。当然，一切都是以在浏览器中为前提的，因为上面的代码中存在一个 `inBrowser` 的判断。
+
+最后再啰嗦一句，为什么只在浏览器中才需要判断是否需要做此兼容处理呢？那是因为，只有完整版(包括编译器)的 `Vue`才会遇到这个问题，因为只有完整版的 `Vue` 才会在浏览器中对模板就行编译，才有可能在获取模板的时候使用 `innerHTML` 获取模板内容。
+
 #### element.js 文件
 
 ##### isHTMLTag
