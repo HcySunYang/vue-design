@@ -25,3 +25,4 @@
 ##### [core/util 目录下的工具方法全解](/note/附录/core-util)
 ##### [platforms/web/util 目录下的工具方法全解](/note/附录/web-util)
 ##### [shared/util.js 文件工具方法全解](/note/附录/shared-util)
+##### [编译器选项整理](/note/附录/compiler-options)
