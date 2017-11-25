@@ -293,3 +293,50 @@ export function isRegExp (v: any): boolean {
 * 源码分析：
 
 原理很简单，使用 `Object.prototype.toString` 与 `'[object RegExp]'` 做全等对比。
+
+#### genStaticKeys
+
+* 源码如下：
+
+```js
+/**
+ * Generate a static keys string from compiler modules.
+ */
+export function genStaticKeys (modules: Array<ModuleOptions>): string {
+  return modules.reduce((keys, m) => {
+    return keys.concat(m.staticKeys || [])
+  }, []).join(',')
+}
+```
+
+* 描述：根据编译器(`compiler`)的 `modules` 生成一个静态键字符串。
+
+* 参数：
+  * `{Array} modules` 编译器选项参数的 `modules` 选项
+
+* 源码分析：
+
+首先我们知道 `modules` 是编译器的一个选项，该选项是一个数组，其格式大概如下：
+
+```js
+[
+  {
+    staticKeys: ['staticClass'],
+    transformNode,
+    genData
+  },
+  {
+    staticKeys: ['staticStyle'],
+    transformNode,
+    genData
+  },
+  {
+    preTransformNode
+  }
+]
+```
+
+可以发现 `modules` 的每一个元素是一个对象，该对象可能包含 `staticKeys` 属性，也可能不包含，而 `genStaticKeys` 函数的作用就是通过对 `modules` 数组的遍历，将所有的 `staticKeys` 收集到一个数组，最终转换成一个以逗号 `,` 拼接的字符串。
+
+其实现方式很简单，对数组 `modules` 使用 `reduce` 函数进行归并，将所有的 `staticKeys` 归并到一个数组中，最后通过 `join(',')` 实现目的。
+
