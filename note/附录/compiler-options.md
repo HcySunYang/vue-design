@@ -38,6 +38,9 @@
   canBeLeftOpenTag,
   isReservedTag,
   getTagNamespace,
-  staticKeys: genStaticKeys(modules)
+  staticKeys: genStaticKeys(modules),
+  warn = (msg, tip) => {
+    (tip ? tips : errors).push(msg)
+  }
 }
 ```
