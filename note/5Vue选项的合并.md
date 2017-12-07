@@ -308,18 +308,18 @@ export function mergeDataOrFn (
     // it has to be a function to pass previous merges.
     return function mergedDataFn () {
       return mergeData(
-        typeof childVal === 'function' ? childVal.call(this) : childVal,
-        typeof parentVal === 'function' ? parentVal.call(this) : parentVal
+        typeof childVal === 'function' ? childVal.call(this, this) : childVal,
+        typeof parentVal === 'function' ? parentVal.call(this, this) : parentVal
       )
     }
   } else {
     return function mergedInstanceDataFn () {
       // instance merge
       const instanceData = typeof childVal === 'function'
-        ? childVal.call(vm)
+        ? childVal.call(vm, vm)
         : childVal
       const defaultData = typeof parentVal === 'function'
-        ? parentVal.call(vm)
+        ? parentVal.call(vm, vm)
         : parentVal
       if (instanceData) {
         return mergeData(instanceData, defaultData)
@@ -395,8 +395,8 @@ if (!parentVal) {
 // it has to be a function to pass previous merges.
 return function mergedDataFn () {
   return mergeData(
-    typeof childVal === 'function' ? childVal.call(this) : childVal,
-    typeof parentVal === 'function' ? parentVal.call(this) : parentVal
+    typeof childVal === 'function' ? childVal.call(this, this) : childVal,
+    typeof parentVal === 'function' ? parentVal.call(this, this) : parentVal
   )
 }
 ```
@@ -516,8 +516,8 @@ export function mergeDataOrFn (
     // 返回 mergedDataFn 函数
     return function mergedDataFn () {
       return mergeData(
-        typeof childVal === 'function' ? childVal.call(this) : childVal,
-        typeof parentVal === 'function' ? parentVal.call(this) : parentVal
+        typeof childVal === 'function' ? childVal.call(this, this) : childVal,
+        typeof parentVal === 'function' ? parentVal.call(this, this) : parentVal
       )
     }
   } else {
@@ -541,10 +541,10 @@ export function mergeDataOrFn (
     return function mergedInstanceDataFn () {
       // instance merge
       const instanceData = typeof childVal === 'function'
-        ? childVal.call(vm)
+        ? childVal.call(vm, vm)
         : childVal
       const defaultData = typeof parentVal === 'function'
-        ? parentVal.call(vm)
+        ? parentVal.call(vm, vm)
         : parentVal
       if (instanceData) {
         return mergeData(instanceData, defaultData)
@@ -563,8 +563,8 @@ export function mergeDataOrFn (
 ```js
 return function mergedDataFn () {
   return mergeData(
-    typeof childVal === 'function' ? childVal.call(this) : childVal,
-    typeof parentVal === 'function' ? parentVal.call(this) : parentVal
+    typeof childVal === 'function' ? childVal.call(this, this) : childVal,
+    typeof parentVal === 'function' ? parentVal.call(this, this) : parentVal
   )
 }
 ```
@@ -591,8 +591,8 @@ return function mergedInstanceDataFn () {
 我们注意到 `mergedDataFn` 和 `mergedInstanceDataFn` 这两个函数都有类似这样的代码：
 
 ```js
-typeof childVal === 'function' ? childVal.call(this) : childVal
-typeof parentVal === 'function' ? parentVal.call(this) : parentVal
+typeof childVal === 'function' ? childVal.call(this, this) : childVal
+typeof parentVal === 'function' ? parentVal.call(this, this) : parentVal
 ```
 
 我们知道 `childVal` 要么是子组件的选项，要么是使用 `new` 操作符创建实例时的选项，无论是哪一种，总之 `childVal` 要么是函数，要么就是一个纯对象。所以如果是函数的话就通过执行该函数从而获取到一个纯对象，所以类似上面那段代码中判断 `childVal` 和 `parentVal` 的类型是否是函数的目的只有一个，获取数据对象(纯对象)。所以 `mergedDataFn` 和 `mergedInstanceDataFn` 函数内部调用 `mergeData` 方法时传递的两个参数就是两个纯对象(当然你可以简单的理解为两个JSON对象)。
