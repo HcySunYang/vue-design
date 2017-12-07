@@ -218,7 +218,7 @@ const strat = strats[key] || defaultStrat
 
 ##### 选项 data 的合并策略
 
-下面我们接着按照顺序看 `options.js` 文件的代码，接下来定义了两个函数：`mergeData` 以及 `mergeDataOrFn`。我们暂且不关注这两个函数的作用，我们继续看下面的代码，接下来的代码如下：
+下面我们接着按照顺序看 `options.js` 文件的代码，接下来定义了两个函数：`mergeData` 以及 `mergeDataOrFn`，我们暂且不关注这两个函数的作用。暂且跳过继续看下面的代码，接下来的代码如下：
 
 ```js
 strats.data = function (
@@ -244,7 +244,7 @@ strats.data = function (
 }
 ```
 
-这段代码的作用是在 `strats` 策略对象上添加 `data` 策略函数，用来合并 `data` 选项的。我们看看这个策略函数的内容，首先是一个判断分支：
+这段代码的作用是在 `strats` 策略对象上添加 `data` 策略函数，用来合并处理 `data` 选项的。我们看看这个策略函数的内容，首先是一个判断分支：
 
 ```js
 if (!vm) {
@@ -268,7 +268,7 @@ if (childVal && typeof childVal !== 'function') {
 return mergeDataOrFn(parentVal, childVal)
 ```
 
-首先判断是否传递了子组件选项(`childVal`)，并且检测 `childVla` 的类型是不是 `function`，如果 `childVla` 的类型不是 `function` 则会给你一个警告，也就是说 `childVla` 应该是一个函数，如果不是函数会提示你 `data` 的类型必须是一个函数，这就是我们知道的：*子组件中的 `data` 必须是一个返回对象的函数*。如果不是函数，除了给你一段警告之外，会直接返回 `parentVal`。
+首先判断是否传递了子组件的 `data` 选项(即：`childVal`)，并且检测 `childVla` 的类型是不是 `function`，如果 `childVla` 的类型不是 `function` 则会给你一个警告，也就是说 `childVla` 应该是一个函数，如果不是函数会提示你 `data` 的类型必须是一个函数，这就是我们知道的：*子组件中的 `data` 必须是一个返回对象的函数*。如果不是函数，除了给你一段警告之外，会直接返回 `parentVal`。
 
 如果 `childVal` 是函数类型，那说明满足了子组件的 `data` 选项需要是一个函数的要求，那么就直接返回 `mergeDataOrFn` 函数的执行结果：
 
@@ -420,10 +420,10 @@ if (!vm) {
   return function mergedInstanceDataFn () {
     // instance merge
     const instanceData = typeof childVal === 'function'
-      ? childVal.call(vm)
+      ? childVal.call(vm, vm)
       : childVal
     const defaultData = typeof parentVal === 'function'
-      ? parentVal.call(vm)
+      ? parentVal.call(vm, vm)
       : parentVal
     if (instanceData) {
       return mergeData(instanceData, defaultData)
@@ -459,7 +459,7 @@ console.log(v.$options)
 
 我们可以发现 `data` 选项确实被 `mergeOptions` 处理成了一个函数，且当 `data` 选项为非子组件的选项时，该函数就是 `mergedInstanceDataFn`。
 
-现在我们了解到了一个事实，即 `data` 选项最终被 `mergeOptions` 函数处理成了一个函数，当合并处理的是子组件的选项时 `data` 函数可能是以下三者之一：
+一个简单的总结，现在我们了解到了一个事实，即 `data` 选项最终被 `mergeOptions` 函数处理成了一个函数，当合并处理的是子组件的选项时 `data` 函数可能是以下三者之一：
 
 * 1、就是 `data` 本身，因为子组件的 `data` 选项本身就是一个函数，即如下 `mergeDataOrFn` 函数的代码段所示：
 
@@ -575,10 +575,10 @@ return function mergedDataFn () {
 return function mergedInstanceDataFn () {
   // instance merge
   const instanceData = typeof childVal === 'function'
-    ? childVal.call(vm)
+    ? childVal.call(vm, vm)
     : childVal
   const defaultData = typeof parentVal === 'function'
-    ? parentVal.call(vm)
+    ? parentVal.call(vm, vm)
     : parentVal
   if (instanceData) {
     return mergeData(instanceData, defaultData)
@@ -653,6 +653,103 @@ return to
 上面提到了一个 `set` 函数，这个函数根据 `options.js` 文件头部的引用关系，可知这个函数来自于 `core/observer/index.js` 文件，实际上这个 `set` 函数就是 `Vue` 暴露给我们的全局API `Vue.set`。在这里由于我们还没有讲到 `set` 函数的具体实现，所以你就可以简单理解为 `set` 函数的功能与我们前面遇到过的 `extend` 工具函数功能相似即可了。
 
 所以我们知道了 `mergeData` 函数的执行结果才是真正的数据对象，由于 `mergedDataFn` 和 `mergedInstanceDataFn` 这两个函数的返回值就是 `mergeData` 函数的执行结果，所以 `mergedDataFn` 和 `mergedInstanceDataFn` 函数的执行将会得到数据对象，我们还知道 `data` 选项会被 `mergeOptions` 处理成函数，比如处理成 `mergedInstanceDataFn`，所以：*最终得到的 `data` 选项是一个函数，且该函数的执行结果就是最终的数据对象*。
+
+最后我们对大家经常会产生疑问的地方做一些补充：
+
+###### 一、为什么最终 `strats.data` 会被处理成一个函数？
+
+这是因为，通过函数返回数据对象，保证了每个组件实例都有一个唯一的数据副本，避免了组件间数据互相影响。后面讲到 `Vue` 的初始化的时候大家会看到，在初始化数据状态的时候，就是通过执行 `strats.data` 函数来获取数据并对其进行处理的。
+
+###### 二、为什么不在合并阶段就把数据合并好，而是要等到初始化的时候再合并数据？
+
+这个问题是什么意思呢？我们知道合并阶段 `strats.data` 将被处理成一个函数，但是这个函数并没有被执行，而是到了后面初始化的阶段才执行的，这个时候才会调用 `mergeData` 对数据进行合并处理，那这么做的目的是什么呢？
+
+其实这么做是有原因的，后面将到 `Vue` 的初始化的时候，大家就会发现 `inject` 和 `props` 这两个选项的初始化是先于 `data` 选项的，这就保证了我们能够使用 `props` 初始化 `data` 中的数据，如下：
+
+```js
+// 子组件：使用 props 初始化子组件的 childData 
+const Child = {
+  template: '<span></span>',
+  data () {
+    return {
+      childData: this.parentData
+    }
+  },
+  props: ['parentData'],
+  created () {
+    // 这里将输出 parent
+    console.log(this.childData)
+  }
+}
+
+var vm = new Vue({
+    el: '#app',
+    // 通过 props 向子组件传递数据
+    template: '<child parent-data="parent" />',
+    components: {
+      Child
+    }
+})
+```
+
+如上例所示，子组件的数据 `childData` 的初始值就是 `parentData` 这个 `props`。而之所以能够这样做的原因有两个
+
+* 1、由于 `props` 的初始化先于 `data` 选项的初始化
+* 2、`data` 选项是在初始化的时候才求值的，你也可以理解为在初始化的时候才使用 `mergeData` 进行数据合并。
+
+###### 三、你可以这么做。
+
+在上面的例子中，子组件的 `data` 选项我们是这么写的：
+
+```js
+data () {
+  return {
+    childData: this.parentData
+  }
+}
+```
+
+但你知道吗，你也可以这么写：
+
+```js
+data (vm) {
+  return {
+    childData: vm.parentData
+  }
+}
+// 或者使用更简单的解构赋值
+data ({ parentData }) {
+  return {
+    childData: parentData
+  }
+}
+```
+
+我们可以通过解构赋值的方式，也就是说 `data` 函数的参数就是当前实例对象。那么这个参数是在哪里传递进来的呢？其实有两个地方，其中一个地方我们前面见过了，如下面这段代码：
+
+```js
+return function mergedDataFn () {
+  return mergeData(
+    typeof childVal === 'function' ? childVal.call(this, this) : childVal,
+    typeof parentVal === 'function' ? parentVal.call(this, this) : parentVal
+  )
+}
+```
+
+注意这里的 `childVal.call(this, this)` 和 `parentVal.call(this, this)`，关键在于 `call(this, this)`，可以看到，第一个 `this` 指定了 `data` 函数的作用域，而第二个 `this` 就是传递给 `data` 函数的参数。
+
+当然了仅仅在这里这么做是不够的，比如 `mergedDataFn` 前面的代码：
+
+```js
+if (!childVal) {
+  return parentVal
+}
+if (!parentVal) {
+  return childVal
+}
+```
+
+在这段代码中，直接将 `parentVal` 或 `childVal` 返回了，我们知道这里的 `parentVal` 和 `childVal` 就是 `data` 函数，由于被直接返回，所以并没有指定其运行的作用域，且也没有传递当前实例作为参数，所以我们必然还是在其他地方做这些事情，而这个地方就是我们说的第二个地方，它在哪里呢？当然是初始化的时候，后面我们会讲到的，如果这里大家没有理解也不用担心。
 
 ##### 生命周期钩子选项的合并策略
 

@@ -244,7 +244,7 @@ const hasHandler = {
 
 这里我假设大家都对 `Proxy` 的使用已经没有任何问题了，我们知道 `has` 可以拦截一下操作：
 
-> * 属性查询: foo in proxy
+* 属性查询: foo in proxy
 * 继承属性查询: foo in Object.create(proxy)
 * with 检查: with(proxy) { (foo); }
 * Reflect.has()
