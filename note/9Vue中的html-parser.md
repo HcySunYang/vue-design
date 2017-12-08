@@ -39,7 +39,7 @@ const comment = /^<!--/
 const conditionalComment = /^<!\[/
 ```
 
-###### attribute
+##### attribute
 
 这与上之前我们讲解的小例子中所定义的正则的作用基本是一致的，只不过 `Vue` 所定义的正则更加严谨和完善，我们一次看一下这些正则的作用。首先看一下 `attribute` 常量：
 
@@ -105,7 +105,7 @@ console.log('class=some-class'.match(attribute))  // 测试无引号
 ]
 ```
 
-###### ncname
+##### ncname
 
 接下来一句代码如下：
 
@@ -115,11 +115,30 @@ console.log('class=some-class'.match(attribute))  // 测试无引号
 const ncname = '[a-zA-Z_][\\w\\-\\.]*'
 ```
 
-注意 `ncname` 常量不是一个正则表达式，它仅仅是一个字符串，只不过这个字符串将来要用在 `new RegExp()` 中，所以我们可以在喻意上将其理解为一个正则，它主要用来匹配：不包含冒号(`:`)的 XML 名称，大家可以在这里找到关于 [ncname](https://msdn.microsoft.com/zh-cn/library/ms256452.aspx) 的概念，它实际上是一个术语。我们也能在 `Vue` 的源码中看到其给出了一个连接：[https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName](https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName)，这个链接的内容定义了一个合法的XML文档中的限定名(`qname`)是怎么样的。
+首先给大家解释几个概念或说明一些问题：
 
-上面的解释稍微有点不容易理解，简单的说，一个合法的标签名应该是这样的：
+* 一、合法的 XML 名称是什么样的？
+
+首先在 XML 中，标签是用户自己定义的，比如：`<bug></bug>`。
+
+正因为这样，所以不同的文档中如果定义了相同的元素(标签)，就会产生冲突，为此，XML 允许用户为标签指定前缀：`<k:bug></k:bug>`，前缀是字母 `k`。
+
+除了前缀还可以使用命名空间，即使用标签的 `xmlns` 属性，为前缀赋予与指定命名空间相关联的限定名称：
 
 ```html
-<>
+<k:bug xmlns:k="http://www.xxx.com/xxx"></k:bug>
 ```
+
+综上所述，一个合法的XML标签名应该是由 `前缀`、`冒号(:)` 以及 `标签名称` 组成的：`<前缀:名称>`
+
+* 二、什么是 `ncname`？
+
+`ncname` 的全称是 `An XML name that does not contain a colon (:)` 即：不包含冒号(`:`)的 XML 名称。也就是说 `ncname` 就是不包含前缀的XML标签名称。大家可以在这里找到关于 [ncname](https://msdn.microsoft.com/zh-cn/library/ms256452.aspx) 的概念。
+
+* 三、什么是 `qname`？
+
+我们可以在 `Vue` 的源码中看到其给出了一个连接：[https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName](https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName)，其实 `qname` 就是：`<前缀:名称>`，也就是合法的XML标签。
+
+了解了这些，我们再来看 `ncname` 的正则表达式，它定了 `ncname` 的合法组成，这个正则所匹配的内容很简单：*字母、数字或下划线开头，后面可以跟任意数量的字符、中横线和 `.`*。
+
 

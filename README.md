@@ -17,6 +17,7 @@
 ##### [6Vue的初始化](/note/6Vue的初始化)
 ##### [7Vue的编译器初探](/note/7Vue的编译器初探)
 ##### [8编译器之parser](/note/8编译器之parser)
+##### [9Vue中的html-parser](/note/9Vue中的html-parser)
 
 ### 附录
 
