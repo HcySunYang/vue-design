@@ -141,4 +141,67 @@ const ncname = '[a-zA-Z_][\\w\\-\\.]*'
 
 了解了这些，我们再来看 `ncname` 的正则表达式，它定了 `ncname` 的合法组成，这个正则所匹配的内容很简单：*字母、数字或下划线开头，后面可以跟任意数量的字符、中横线和 `.`*。
 
+##### qnameCapture
+
+下一个正则是 `qnameCapture`，`qnameCapture` 同样是普通字符串，只不过将来会用在 `new RegExp()` 中：
+
+```js
+const qnameCapture = `((?:${ncname}\\:)?${ncname})`
+```
+
+我们知道 `qname` 实际上就是合法的标签名称，它是有可选项的 `前缀`、`冒号` 以及 `名称` 组成，观察 `qnameCapture` 可知它有一个捕获分组，捕获的内容就是整个 `qname` 名称，即整个标签的名称。
+
+##### startTagOpen
+
+`startTagOpen` 是一个真正使用 `new RegExp()` 创建出来的正则表达式：
+
+```js
+const startTagOpen = new RegExp(`^<${qnameCapture}`)
+```
+
+用来匹配开始标签的一部分，这部分包括：`<` 以及后面的 `标签名称`，这个表达式的创建用到了上面定义的 `qnameCapture` 字符串，所以 `qnameCapture` 这个字符串中所设置的捕获分组，在这里同样适用，也就是说 `startTagOpen` 这个正则表达式也会有一个捕获的分组，用来捕获匹配的标签名称。
+
+##### startTagClose
+
+```js
+const startTagClose = /^\s*(\/?)>/
+```
+
+`startTagOpen` 用来匹配开始标签的 `<` 以及标签的名字，但是并不包过开始标签的闭合部分，即：`>` 或者 `/>`，由于标签可能是一元标签，所以开始标签的闭合部分有可能是 `/>`，比如：`<br />`，如果不是一元标签，此时就应该是：`>`
+
+观察 `startTagClose` 可知，这个正则拥有一个捕获分组，用来捕获开始标签结束部分的斜杠：`/`。
+
+##### endTag
+
+```js
+const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`)
+```
+
+`endTag` 这个正则用来匹配结束标签，由于该正则同样使用了字符串 `qnameCapture`，所以这个正则也拥有了一个捕获组，用来捕获标签名称。
+
+##### doctype
+
+```js
+const doctype = /^<!DOCTYPE [^>]+>/i
+```
+
+这个正则用来匹配文档的 `DOCTYPE` 标签，没有捕获组。
+
+##### comment
+
+```js
+const comment = /^<!--/
+```
+
+这个正则用来匹配注释节点，没有捕获组。
+
+##### conditionalComment
+
+```js
+const conditionalComment = /^<!\[/
+```
+
+这个正则用来匹配条件注释节点，没有捕获组。
+
+最后很重要的地点是，大家主要，这些正则表达式有一个共同的特点，即：*他们都是从一个字符串的开头位置开始匹配的，因为有 `^` 的存在*。
 
