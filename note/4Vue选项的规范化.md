@@ -199,35 +199,40 @@ if (process.env.NODE_ENV !== 'production') {
  */
 function checkComponents (options: Object) {
   for (const key in options.components) {
-    const lower = key.toLowerCase()
-    if (isBuiltInTag(lower) || config.isReservedTag(lower)) {
-      warn(
-        'Do not use built-in or reserved HTML elements as component ' +
-        'id: ' + key
-      )
-    }
+    validateComponentName(key)
   }
 }
 ```
 
-由注释可知，这个方法是用来校验组件的名字是否符合要求的，那么什么样的名字才符合要求呢？这就要看看它是怎么校验的了。首先 `checkComponents` 方法使用一个 `for in` 循环遍历 `options.components`，我们知道，在 `Vue` 中要想使用一个组件就需要先注册这个组件：
+由注释可知，这个方法是用来校验组件的名字是否符合要求的，首先 `checkComponents` 方法使用一个 `for in` 循环遍历 `options.components` 选项，将每个子组件的名字作为参数一次传递给 `validateComponentName` 函数，所以 `validateComponentName` 函数才是真正用来校验名字的函数，该函数就定义在 `checkComponents` 函数下方，源码如下：
 
 ```js
-new Vue({
-  components: {
-    myComponent
+export function validateComponentName (name: string) {
+  if (!/^[a-zA-Z][\w-]*$/.test(name)) {
+    warn(
+      'Invalid component name: "' + name + '". Component names ' +
+      'can only contain alphanumeric characters and the hyphen, ' +
+      'and must start with a letter.'
+    )
   }
-})
+  const lower = name.toLowerCase()
+  if (isBuiltInTag(lower) || config.isReservedTag(lower)) {
+    warn(
+      'Do not use built-in or reserved HTML elements as component ' +
+      'id: ' + name
+    )
+  }
+}
 ```
 
-所以 `checkComponents` 方法，实际上就是来校验你所注册的组件的名字是否合法的，而规则就是 `checkComponents` 方法中的判断语句：
+`validateComponentName` 函数由两个 `if` 语句块组成，所以可想而知，对于组件的名字要满足这两条规则才行，这两条规则就是这两个 `if` 分支的条件语句：
 
-```js
-const lower = key.toLowerCase()
-if (isBuiltInTag(lower) || config.isReservedTag(lower))
-```
+* ①：组件的名字要满足正则表达式：`/^[a-zA-Z][\w-]*$/`
+* ②：要满足：`isBuiltInTag(lower) || config.isReservedTag(lower)` 不成立
 
-首先将 `options.components` 对象的 `key` 小写化作为组件的名字，然后以组件的名字为参数分别调用两个方法：`isBuiltInTag` 和 `config.isReservedTag`，其中 `isBuiltInTag` 方法的作用是用来检测你所注册的组件是否是内置的标签，这个方法可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看其实现，于是我们可知：`slot` 和 `component` 这个两个名字被 `Vue` 作为内置标签而存在的，你是不能够使用的，比如这样：
+对于第一条规则，`Vue` 限定组件的名字由普通的字符和中横线(-)组成，且必须以字符开头。
+
+对于第二条规则，首先将 `options.components` 对象的 `key` 小写化作为组件的名字，然后以组件的名字为参数分别调用两个方法：`isBuiltInTag` 和 `config.isReservedTag`，其中 `isBuiltInTag` 方法的作用是用来检测你所注册的组件是否是内置的标签，这个方法可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看其实现，于是我们可知：`slot` 和 `component` 这个两个名字被 `Vue` 作为内置标签而存在的，你是不能够使用的，比如这样：
 
 ```js
 new Vue({
