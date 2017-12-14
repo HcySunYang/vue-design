@@ -161,9 +161,7 @@ export function createCompilerCreator (baseCompile: Function): Function {
 
 ```js
 export function createCompileToFunctionFn (compile: Function): Function {
-  const cache: {
-    [key: string]: CompiledFunctionResult;
-  } = Object.create(null)
+  const cache = Object.create(null)
 
   return function compileToFunctions (
     template: string,
@@ -278,9 +276,7 @@ return (cache[key] = res)
 那么 `cache` 这个变量是哪里来的？这个变量定义在 `compileToFunctions` 的前面，也就是 `createCompileToFunctionFn` 函数的开头，如下：
 
 ```js
-const cache: {
-  [key: string]: CompiledFunctionResult;
-} = Object.create(null)
+const cache = Object.create(null)
 ```
 
 可知 `cache` 就是一个通过 `Object.create(null)` 创建出来的空对象而已。
@@ -695,7 +691,7 @@ if (options) {
   // merge custom directives
   if (options.directives) {
     finalOptions.directives = extend(
-      Object.create(baseOptions.directives),
+      Object.create(baseOptions.directives || null),
       options.directives
     )
   }
@@ -728,13 +724,13 @@ if (options.modules) {
 // merge custom directives
 if (options.directives) {
   finalOptions.directives = extend(
-    Object.create(baseOptions.directives),
+    Object.create(baseOptions.directives || null),
     options.directives
   )
 }
 ```
 
-由于 `directives` 是对象而不是数组，所以不能采用与 `modules` 相同的处理方式，对于 `directives` 采用原型链的原理实现对扩展属性与基本属性。首先通过 `Object.create(baseOptions.directives)` 创建一个以 `baseOptions.directives` 对象为原型的新对象，然后使用 `extend` 方法将 `options.directives` 的属性混合到新创建出来的对象中，并将该对象作为 `finalOptions.directives` 的值。
+由于 `directives` 是对象而不是数组，所以不能采用与 `modules` 相同的处理方式，对于 `directives` 采用原型链的原理实现对扩展属性与基本属性。首先通过 `Object.create(baseOptions.directives || null)` 创建一个以 `baseOptions.directives` 对象为原型的新对象，然后使用 `extend` 方法将 `options.directives` 的属性混合到新创建出来的对象中，并将该对象作为 `finalOptions.directives` 的值。
 
 最后对于 `options` 中既不是 `modules` 又不是 `directives` 其他属性，采用直接复制过去的方式进行处理：
 
