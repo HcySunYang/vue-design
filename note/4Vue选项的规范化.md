@@ -335,6 +335,9 @@ function normalizeProps (options: Object, vm: ?Component) {
     for (const key in props) {
       val = props[key]
       name = camelize(key)
+      if (process.env.NODE_ENV !== 'production' && isPlainObject(val)) {
+        assertPropObject(name, val, vm)
+      }
       res[name] = isPlainObject(val)
         ? val
         : { type: val }
@@ -463,6 +466,9 @@ if (Array.isArray(props)) {
   for (const key in props) {
     val = props[key]
     name = camelize(key)
+    if (process.env.NODE_ENV !== 'production' && isPlainObject(val)) {
+      assertPropObject(name, val, vm)
+    }
     res[name] = isPlainObject(val)
       ? val
       : { type: val }
@@ -497,6 +503,40 @@ res[name] = isPlainObject(val)
 ```
 
 这样就实现了对纯对象语法的规范化。
+
+另外在被规范化之前，还对 `props` 进行了有效性的校验，我们知道一个对象形式的 `props` 的有效属性有四个，分别是：`type`、`default`、`required` 以及 `validator`。对于其他属性都是无效的，所以这里做了一层校验，使用如下这段代码：
+
+```js
+if (process.env.NODE_ENV !== 'production' && isPlainObject(val)) {
+  validatePropObject(name, val, vm)
+}
+```
+
+在非生产环境下，并且必须是对象形式的 `props` 才会去校验，其校验的方式是调用 `validatePropObject` 函数，该函数就定义在 `normalizeProps` 函数的下面，源码如下：
+
+```js
+/**
+ * Validate whether a prop object keys are valid.
+ */
+const propOptionsRE = /^(type|default|required|validator)$/
+
+function validatePropObject (
+  propName: string,
+  prop: Object,
+  vm: ?Component
+) {
+  for (const key in prop) {
+    if (!propOptionsRE.test(key)) {
+      warn(
+        `Invalid key "${key}" in validation rules object for prop "${propName}".`,
+        vm
+      )
+    }
+  }
+}
+```
+
+首先定义了一个包含所有有效属性的正则 `propOptionsRE`，然后其校验的方式就是使用 `for in` 遍历对象形式的 `props` 的所有属性，并使用 `propOptionsRE` 正则去匹配属性名，如果结果为假，则使用 `warn` 函数给出一个提示。为什么要这么做呢？是因为我们在开发程序的时候，难免会有拼写错误的情况，比如把 `type` 写成了 `typo`，这个时候如果没有错误提示，我们是很难定位错误的。有了这层校验，就能够很好的避免这类问题，节省没必要的时间开销。
 
 最后还有一个判断分支，即当你传递了 `props` 选项，但其值既不是数组又不是纯对象的时候，则会给你一个警告：
 
