@@ -89,7 +89,7 @@ const superOptions = resolveConstructorOptions(Ctor.super)
 const modifiedOptions = resolveModifiedOptions(Ctor)
 ```
 
-我们要注意的是注释，有兴趣的同学可以根据注释中括号内的 `issue` 索引去搜一下相关的问题，这句代码是用来解决 `vue-hot-reload-api` 或者 `vue-loader` 时产生的一个 `bug` 的。
+我们要注意的是注释，有兴趣的同学可以根据注释中括号内的 `issue` 索引去搜一下相关的问题，这句代码是用来解决使用 `vue-hot-reload-api` 或者 `vue-loader` 时产生的一个 `bug` 的。
 
 现在大家知道这里的水有多深了吗？关于这些问题，我们在将 `Vue.extend` 中都会给大家一一解答，不过有一个因素从来没有变，那就是 `resolveConstructorOptions` 这个函数的作用永远都是用来获取当前实例构造者的 `options` 属性的，即使 `if` 判断分支内也不例外，因为 `if` 分支只不过是处理了 `options`，最终返回的永远都是 `options`。
 
@@ -204,7 +204,7 @@ function checkComponents (options: Object) {
 }
 ```
 
-由注释可知，这个方法是用来校验组件的名字是否符合要求的，首先 `checkComponents` 方法使用一个 `for in` 循环遍历 `options.components` 选项，将每个子组件的名字作为参数一次传递给 `validateComponentName` 函数，所以 `validateComponentName` 函数才是真正用来校验名字的函数，该函数就定义在 `checkComponents` 函数下方，源码如下：
+由注释可知，这个方法是用来校验组件的名字是否符合要求的，首先 `checkComponents` 方法使用一个 `for in` 循环遍历 `options.components` 选项，将每个子组件的名字作为参数依次传递给 `validateComponentName` 函数，所以 `validateComponentName` 函数才是真正用来校验名字的函数，该函数就定义在 `checkComponents` 函数下方，源码如下：
 
 ```js
 export function validateComponentName (name: string) {
@@ -360,7 +360,9 @@ props: ["someData"]
 
 ```js
 props: {
-  type: null
+  someData:{
+    type: null
+  }
 }
 ```
 
