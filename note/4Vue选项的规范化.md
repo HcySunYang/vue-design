@@ -215,8 +215,7 @@ export function validateComponentName (name: string) {
       'and must start with a letter.'
     )
   }
-  const lower = name.toLowerCase()
-  if (isBuiltInTag(lower) || config.isReservedTag(lower)) {
+  if (isBuiltInTag(name) || config.isReservedTag(name)) {
     warn(
       'Do not use built-in or reserved HTML elements as component ' +
       'id: ' + name
@@ -228,7 +227,7 @@ export function validateComponentName (name: string) {
 `validateComponentName` 函数由两个 `if` 语句块组成，所以可想而知，对于组件的名字要满足这两条规则才行，这两条规则就是这两个 `if` 分支的条件语句：
 
 * ①：组件的名字要满足正则表达式：`/^[a-zA-Z][\w-]*$/`
-* ②：要满足：`isBuiltInTag(lower) || config.isReservedTag(lower)` 不成立
+* ②：要满足：`isBuiltInTag(name) || config.isReservedTag(name)` 不成立
 
 对于第一条规则，`Vue` 限定组件的名字由普通的字符和中横线(-)组成，且必须以字符开头。
 
