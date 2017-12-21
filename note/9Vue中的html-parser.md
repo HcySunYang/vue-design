@@ -39,6 +39,8 @@ const comment = /^<!--/
 const conditionalComment = /^<!\[/
 ```
 
+下面我们依次来看一下这些正则：
+
 ##### attribute
 
 这与上之前我们讲解的小例子中所定义的正则的作用基本是一致的，只不过 `Vue` 所定义的正则更加严谨和完善，我们一起看一下这些正则的作用。首先是 `attribute` 常量：
@@ -215,6 +217,39 @@ let IS_REGEX_CAPTURING_BROKEN = false
 ```
 
 首先定义了变量 `IS_REGEX_CAPTURING_BROKEN` 且初始值为 `false`，接着使用一个字符串 `'x'` 的 `replace` 函数用一个正则去获取捕获组的值，即：变量 `g`。我们观察字符串 `'x'` 和正则 `/x(.)?/` 可以发现，该正则中的捕获组应该捕获不到任何内容，所以此时 `g` 的值应该是 `undefined`，但是在老版本的火狐浏览器中存在一个问题，此时的 `g` 是一个空字符串 `''`，并不是 `undefined`。所以变量 `IS_REGEX_CAPTURING_BROKEN` 的作用就是用来标识当前宿主环境是否存在该问题。这个变量我们后面会用到，其作用到时候再说。
+
+#### 常量分析
+
+在这些正则的下面，定义了一些常量，如下：
+
+```js
+// Special Elements (can contain anything)
+export const isPlainTextElement = makeMap('script,style,textarea', true)
+const reCache = {}
+
+const decodingMap = {
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&amp;': '&',
+  '&#10;': '\n',
+  '&#9;': '\t'
+}
+const encodedAttr = /&(?:lt|gt|quot|amp);/g
+const encodedAttrWithNewLines = /&(?:lt|gt|quot|amp|#10|#9);/g
+```
+
+上面这段代码中，包含 `5` 个常量，我们逐个来看。
+
+首先是 `isPlainTextElement` 常量是一个函数，它是通过 `makeMap` 函数生成的，用来检测给定的标签名字是不是纯文本标签（包括：`script`、`style`、`textarea`）。
+
+然后定义了 `reCache` 常量，它被初始化为一个空的 `JSON` 对象字面量。
+
+再往下定义了 `decodingMap` 常量，它也是一个 `JOSN` 对象字面量，其中 `key` 是一些特殊的 `html` 实体，值则是这些实体对应的字符。在 `decodingMap` 常量下面的是两个正则常量：`encodedAttr` 和 `encodedAttrWithNewLines`。可以发现正则 `encodedAttrWithNewLines` 会比 `encodedAttr` 多匹配两个 `html` 实体字符，分别是 `&#10;` 和 `&#9;`。对于 `decodingMap` 以及下面两个正则的作用不知道大家能不能猜得到，其实我们 [创建编译器](http://localhost:8080/#/note/7Vue%E7%9A%84%E7%BC%96%E8%AF%91%E5%99%A8%E5%88%9D%E6%8E%A2) 一节中有讲到 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个编译器选项，当时我们就有针对这两个选项作用的讲解，可以再附录 [platforms/web/util 目录下的工具方法全解](http://localhost:8080/#/note/%E9%99%84%E5%BD%95/web-util?id=compat-js-%E6%96%87%E4%BB%B6) 中查看。
+
+所以这里的常量 `decodingMap` 以及两个正则 `encodedAttr` 和 `encodedAttrWithNewLines` 的作用就是用来完成对 `html` 实体进行解码的。
+
+
 
 
 
