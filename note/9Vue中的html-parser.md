@@ -270,7 +270,26 @@ const shouldIgnoreFirstNewline = (tag, html) => tag && isIgnoreNewlineTag(tag) &
 内容</pre>
 ```
 
-以上是浏览器的行为，所以 `Vue` 的编译器也要实现这个行为，否则就会出现 `issue #5992` 或者其他不可预期的问题。
+以上是浏览器的行为，所以 `Vue` 的编译器也要实现这个行为，否则就会出现 `issue #5992` 或者其他不可预期的问题。明白了这些我们再看 `shouldIgnoreFirstNewline` 函数就很容易理解，这个函数就是用来判断是否应该忽略标签内容的第一个换行符的，如果满足：*标签是 `pre` 或者 `textarea`* 且 *标签内容的第一个字符是换行符*，则返回 `true`，否则为 `false`。
+
+`isIgnoreNewlineTag` 函数将被用于后面的 `parse` 过程，所以我们到时候再看，接着往下看代码，接下来定义了一个函数 `decodeAttr`，其源码如下：
+
+```js
+function decodeAttr (value, shouldDecodeNewlines) {
+  const re = shouldDecodeNewlines ? encodedAttrWithNewLines : encodedAttr
+  return value.replace(re, match => decodingMap[match])
+}
+```
+
+`decodeAttr` 函数是用来解码 `html` 实体的。它的原理是利用前面我们讲过的正则 `encodedAttrWithNewLines` 和 `encodedAttr` 以及 `html` 实体与字符一一对应的 `decodingMap` 对象来实现将 `html` 实体转为对应的字符。该函数将会在后面 `parse` 的过程中使用到。
+
+#### parseHTML
+
+接下来，将进入真正的 `parse` 阶段，这个阶段我们将看到如何将 `html` 字符串作为字符输入流，并且按照一定的规则将其逐步消化分解。这也是我们本节的重点，同时接下来我们要分析的函数也是 `compiler/parser/html-parser.js` 文件所导出的函数，即 `parseHTML` 函数，这个函数的内容非常多，但其实它还是很有条理的，下面就是对 `parseHTML` 函数的简化，这能够让你更好的把握 `parseHTML` 函数的意图：
+
+```js
+
+```
 
 
 
