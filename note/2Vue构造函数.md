@@ -7,10 +7,10 @@
 在 [了解 Vue 这个项目](./了解Vue这个项目.md) 一节中，我们在最后提到这套文章将会以 `npm run dev` 为切入点：
 
 ```js
-"dev": "rollup -w -c build/config.js --environment TARGET:web-full-dev",
+"dev": "rollup -w -c scripts/config.js --environment TARGET:web-full-dev",
 ```
 
-当我们执行 `npm run dev` 时，根据 `build/config.js` 文件中的配置：
+当我们执行 `npm run dev` 时，根据 `scripts/config.js` 文件中的配置：
 
 ```js
 // Runtime+compiler development build (Browser)
@@ -26,7 +26,7 @@
 
 可知，入口文件为 `web/entry-runtime-with-compiler.js`，最终输出 `dist/vue.js`，它是一个 `umd` 模块，接下来我们就以入口文件为起点，找到 `Vue` 构造函数并将 `Vue` 构造函数的真面目扒的一清二楚。
 
-但现在有一个问题 `web/entry-runtime-with-compiler.js` 中这个 `web` 指的是哪一个目录？这其实是一个别名配置，打开 `build/alias.js` 文件：
+但现在有一个问题 `web/entry-runtime-with-compiler.js` 中这个 `web` 指的是哪一个目录？这其实是一个别名配置，打开 `scripts/alias.js` 文件：
 
 ```js
 const path = require('path')
@@ -66,7 +66,7 @@ import Vue from './runtime/index'
 import Vue from 'core/index'
 ```
 
-同样的道理，这说明 `runtime/index.js` 文件也不是 `Vue` 的“出生地”，你应该继续顺藤摸瓜打开 `core/index.js` 文件，在 `build/alias.js` 的配置中，`core` 指向的是 `src/core`，打开 `src/core/index.js` 你能看到这样一句：
+同样的道理，这说明 `runtime/index.js` 文件也不是 `Vue` 的“出生地”，你应该继续顺藤摸瓜打开 `core/index.js` 文件，在 `scripts/alias.js` 的配置中，`core` 指向的是 `src/core`，打开 `src/core/index.js` 你能看到这样一句：
 
 ```js
 import Vue from './instance/index'
@@ -302,7 +302,7 @@ initGlobalAPI(Vue)
 
 然后在 `Vue.prototype` 上分别添加了两个只读的属性，分别是：`$isServer` 和 `$ssrContext`。
 
-最后，在 `Vue` 构造函数上添加了一个静态属性 `version`，存储了当前 `Vue` 的版本值，但是这里的 `'__VERSION__'` 是什么鬼？打开 `build/config.js` 文件，找到 `genConfig` 方法，其中有这么一句话：`__VERSION__: version`。这句话被写在了 `rollup` 的 `replace` 插件中，也就是说，`__VERSION__` 最终将被 `version` 的值替换，而 `version` 的值就是 `Vue` 的版本号。
+最后，在 `Vue` 构造函数上添加了一个静态属性 `version`，存储了当前 `Vue` 的版本值，但是这里的 `'__VERSION__'` 是什么鬼？打开 `scripts/config.js` 文件，找到 `genConfig` 方法，其中有这么一句话：`__VERSION__: version`。这句话被写在了 `rollup` 的 `replace` 插件中，也就是说，`__VERSION__` 最终将被 `version` 的值替换，而 `version` 的值就是 `Vue` 的版本号。
 
 我们在回过头来看看这句话：
 

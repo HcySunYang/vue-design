@@ -7,7 +7,7 @@
 详细目录介绍如下：
 
 ```
-├── build --------------------------------- 构建相关的文件，一般情况下我们不需要动
+├── scripts ------------------------------- 构建相关的文件，一般情况下我们不需要动
 │   ├── git-hooks ------------------------- 存放git钩子的目录
 │   ├── alias.js -------------------------- 别名配置
 │   ├── config.js ------------------------- 生成rollup配置的文件
@@ -57,7 +57,7 @@
 
 ##### 从 Vue 的构建配置了解其不同的构建输出
 
-如果按照输出的模块形式分类，那么 Vue 有三种不同的构建输出，分别是：`UMD`、`CommonJS` 以及 `ES Module`，我们可以在 Vue 的 Rollup 构建配置中得知，打开 `build/config.js` 文件，如下图：
+如果按照输出的模块形式分类，那么 Vue 有三种不同的构建输出，分别是：`UMD`、`CommonJS` 以及 `ES Module`，我们可以在 Vue 的 Rollup 构建配置中得知，打开 `scripts/config.js` 文件，如下图：
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-08-31-vue-build-config1.png)
 
@@ -107,22 +107,22 @@
 ```js
 "scripts": {
 	// 构建完整版 cjs 模块的 Vue
-    "dev": "rollup -w -c build/config.js --environment TARGET:web-full-dev",
+    "dev": "rollup -w -c scripts/config.js --environment TARGET:web-full-dev",
     // 构建运行时 cjs 模块的 Vue
-    "dev:cjs": "rollup -w -c build/config.js --environment TARGET:web-runtime-cjs",
+    "dev:cjs": "rollup -w -c scripts/config.js --environment TARGET:web-runtime-cjs",
     // 构建运行时 es 模块的 Vue
-    "dev:esm": "rollup -w -c build/config.js --environment TARGET:web-runtime-esm",
+    "dev:esm": "rollup -w -c scripts/config.js --environment TARGET:web-runtime-esm",
     // 构建 web-server-renderer 包
-    "dev:ssr": "rollup -w -c build/config.js --environment TARGET:web-server-renderer",
+    "dev:ssr": "rollup -w -c scripts/config.js --environment TARGET:web-server-renderer",
     // 构建 Compiler 包
-    "dev:compiler": "rollup -w -c build/config.js --environment TARGET:web-compiler ",
-    "build": "node build/build.js",
+    "dev:compiler": "rollup -w -c scripts/config.js --environment TARGET:web-compiler ",
+    "build": "node scripts/build.js",
     "build:ssr": "npm run build -- vue.runtime.common.js,vue-server-renderer",
     "lint": "eslint src build test",
     "flow": "flow check",
-    "release": "bash build/release.sh",
-    "release:note": "node build/gen-release-note.js",
-    "setup": "node build/install-hooks.js",
+    "release": "bash scripts/release.sh",
+    "release:note": "node scripts/gen-release-note.js",
+    "setup": "node scripts/install-hooks.js",
     "commit": "git-cz"
   },
 ```
