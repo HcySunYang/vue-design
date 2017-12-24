@@ -285,10 +285,58 @@ function decodeAttr (value, shouldDecodeNewlines) {
 
 #### parseHTML
 
-接下来，将进入真正的 `parse` 阶段，这个阶段我们将看到如何将 `html` 字符串作为字符输入流，并且按照一定的规则将其逐步消化分解。这也是我们本节的重点，同时接下来我们要分析的函数也是 `compiler/parser/html-parser.js` 文件所导出的函数，即 `parseHTML` 函数，这个函数的内容非常多，但其实它还是很有条理的，下面就是对 `parseHTML` 函数的简化，这能够让你更好的把握 `parseHTML` 函数的意图：
+接下来，将进入真正的 `parse` 阶段，这个阶段我们将看到如何将 `html` 字符串作为字符输入流，并且按照一定的规则将其逐步消化分解。这也是我们本节的重点，同时接下来我们要分析的函数也是 `compiler/parser/html-parser.js` 文件所导出的函数，即 `parseHTML` 函数，这个函数的内容非常多，但其实它还是很有条理的，下面就是对 `parseHTML` 函数的简化和注释，这能够让你更好的把握 `parseHTML` 函数的意图：
 
 ```js
+export function parseHTML (html, options) {
+  const stack = []  // 在处理 html 字符流的时候每当遇到一个非一元标签，都会将该标签 push 到该数组
+  const expectHTML = options.expectHTML // options 选项，一个布尔值
+  const isUnaryTag = options.isUnaryTag || no // options 选项，用来判断给定标签是否是一元标签
+  const canBeLeftOpenTag = options.canBeLeftOpenTag || no // options 选项，用来检查标签是否是一个：可以省略结束标签的非一元标签
+  let index = 0 // index 变量存储着当前字符流的读入位置
+  let last, lastTag // last 变量存储剩余未 parse 的 html 字符； // lastTag: 每当遇到一个非一元标签时，就将 lastTag 设置为该标签名
 
+  // 开启一个 while 循环，循环结束的条件是 html 为空，即 html 被 parse 完毕
+  while (html) {
+    last = html
+    
+    if (!lastTag || !isPlainTextElement(lastTag)) {
+      // 确保即将 parse 的内容不是在纯文本标签里 (script,style,textarea)
+    } else {
+      // 即将 parse 的内容是在纯文本标签里 (script,style,textarea)
+    }
+
+    // 将整个字符串作为文本对待
+    if (html === last) {
+      options.chars && options.chars(html)
+      if (process.env.NODE_ENV !== 'production' && !stack.length && options.warn) {
+        options.warn(`Mal-formatted tag at end of template: "${html}"`)
+      }
+      break
+    }
+  }
+
+  // 调用 parseEndTag 函数
+  parseEndTag()
+
+  // advance 函数
+  function advance (n) {
+    // ...
+  }
+
+  // parseStartTag 函数用来 parse 开始标签
+  function parseStartTag () {
+    // ...
+  }
+  // handleStartTag 函数用来处理 parseStartTag 的结果
+  function handleStartTag (match) {
+    // ...
+  }
+  // parseEndTag 函数用来 parse 结束标签
+  function parseEndTag (tagName, start, end) {
+    // ...
+  }
+}
 ```
 
 
