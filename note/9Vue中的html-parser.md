@@ -339,6 +339,33 @@ export function parseHTML (html, options) {
 }
 ```
 
+总体上说，我们可以把 `parseHTML` 函数分为三个部分，第一部分即函数开头定义的一些常量和变量，第二部分是一个 `while` 循环，第三部分则是 `while` 循环之后定义的一些函数。我们分别来看，首先是第一部分，也就是 `parseHTML` 函数开头所定义的常量和变量，如下：
+
+```js
+const stack = []
+const expectHTML = options.expectHTML
+const isUnaryTag = options.isUnaryTag || no
+const canBeLeftOpenTag = options.canBeLeftOpenTag || no
+let index = 0
+let last, lastTag
+```
+
+第一个常量是 `stack`，它被初始化为一个空数组，在 `while` 循环中处理 `html` 字符流的时候每当遇到一个**非一元标签**，都会将该开始标签 `push` 到该数组。那么它的作用是什么呢？大家思考一个问题：在一个 `html` 字符串中，如何判断一个非一元标签是否缺少结束标签？
+
+假设我们有如下 `html` 字符串：
+
+```html
+<article><section><div></section></article>
+```
+
+在 `parse` 这个字符串的时候，首先会遇到 `article` 开始标签，并将该标签入栈(`push` 到 `stack` 数组)，然后会遇到 `section` 开始标签，并将该标签 `push` 到栈顶，接下来会遇到 `div` 开始标签，同样被压入栈顶，注意此时 `stack` 数组内包含三个元素，如下：
+
+![](http://ovjvjtt4l.bkt.clouddn.com/2017-12-25-070202.jpg)
+
+再然后便会遇到 `section` 结束标签，我们知道：**最先遇到的结束标签，应该最后被压入 stack 栈**，也就是说此时 `stack` 栈顶的元素应该是 `section`，但是我们发现事实上 `stack` 栈顶并不是 `section` 而是 `div`，这说明 `div` 元素缺少闭合标签。这就是检测 `html` 字符串中是否缺少闭合标签的原理。
+
+
+
 
 
 
