@@ -289,12 +289,13 @@ function decodeAttr (value, shouldDecodeNewlines) {
 
 ```js
 export function parseHTML (html, options) {
-  const stack = []  // 在处理 html 字符流的时候每当遇到一个非一元标签，都会将该标签 push 到该数组
-  const expectHTML = options.expectHTML // options 选项，一个布尔值
-  const isUnaryTag = options.isUnaryTag || no // options 选项，用来判断给定标签是否是一元标签
-  const canBeLeftOpenTag = options.canBeLeftOpenTag || no // options 选项，用来检查标签是否是一个：可以省略结束标签的非一元标签
-  let index = 0 // index 变量存储着当前字符流的读入位置
-  let last, lastTag // last 变量存储剩余未 parse 的 html 字符； // lastTag: 每当遇到一个非一元标签时，就将 lastTag 设置为该标签名
+  // 定义一些常量和变量
+  const stack = []
+  const expectHTML = options.expectHTML
+  const isUnaryTag = options.isUnaryTag || no
+  const canBeLeftOpenTag = options.canBeLeftOpenTag || no
+  let index = 0
+  let last, lastTag
 
   // 开启一个 while 循环，循环结束的条件是 html 为空，即 html 被 parse 完毕
   while (html) {
@@ -364,7 +365,15 @@ let last, lastTag
 
 再然后便会遇到 `section` 结束标签，我们知道：**最先遇到的结束标签，应该最后被压入 stack 栈**，也就是说此时 `stack` 栈顶的元素应该是 `section`，但是我们发现事实上 `stack` 栈顶并不是 `section` 而是 `div`，这说明 `div` 元素缺少闭合标签。这就是检测 `html` 字符串中是否缺少闭合标签的原理。
 
+讲完了 `stack` 常量，接下来第二个常量是 `expectHTML`，它的值被初始化为 `options.expectHTML`，也就是编译器选项中的 `expectHTML`。它是一个布尔值，后面遇到的时候再讲解其作用。
 
+第三个常量是 `isUnaryTag`，如果 `options.isUnaryTag` 存在则它的值被初始化为 `options.isUnaryTag` ，否则初始化为 `no`，即一个始终返回 `false` 的函数。其中 `options.isUnaryTag` 也是一个编译器选项，用来检测一个标签是否是一元标签。
+
+第四个常量是 `canBeLeftOpenTag`，它的值被初始化为 `options.canBeLeftOpenTag`(如果存在的话，否则初始化为 `no`)。其中 `options.canBeLeftOpenTag` 也是编译器选项，用来检测一个标签是否是可以省略闭合标签的非一元标签。
+
+<p class="tip">上面提到的一些常量的值，初始化的时候其实是使用编译器选项进行初始化的，对于编译器选项，在前面的章节中我们是有讲过的。</p>
+
+除了常量，还定义了三个变量，分别是 `index = 0`，`last` 以及 `lastTag`。其中 `index` 被初始化为 `0`，它标识着当前字符流的读入位置。变量 `last` 存储剩余还未 `parse` 的 `html` 字符串，变量 `lastTag` 则使用存储着位于 `stack` 栈顶的元素。
 
 
 

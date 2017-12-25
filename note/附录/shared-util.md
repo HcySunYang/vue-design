@@ -237,6 +237,19 @@ export function noop (a?: any, b?: any, c?: any) {}
 
 就是简单的写了一个空函数 `noop`，至于其中的参数 `a`，`b`，`c` 的作用，我们看注释可知是为了避免 `Flow` 使用 `rest` 参数转译代码。
 
+#### no
+
+* 源码如下：
+
+```js
+/**
+ * Always return false.
+ */
+export const no = (a?: any, b?: any, c?: any) => false
+```
+
+* 描述：始终返回 `false` 的函数
+
 #### toRawType
 
 * 源码如下：
