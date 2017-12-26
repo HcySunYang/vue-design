@@ -340,6 +340,8 @@ export function parseHTML (html, options) {
 }
 ```
 
+首先我们注意到 `parseHTML` 函数接收两个参数：`html` 和 `options`，其中 `html` 是要被 `parse` 的字符串，而 `options` 则是 `parser` 选项。
+
 总体上说，我们可以把 `parseHTML` 函数分为三个部分，第一部分即函数开头定义的一些常量和变量，第二部分是一个 `while` 循环，第三部分则是 `while` 循环之后定义的一些函数。我们分别来看，首先是第一部分，也就是 `parseHTML` 函数开头所定义的常量和变量，如下：
 
 ```js
@@ -365,13 +367,13 @@ let last, lastTag
 
 再然后便会遇到 `section` 结束标签，我们知道：**最先遇到的结束标签，应该最后被压入 stack 栈**，也就是说此时 `stack` 栈顶的元素应该是 `section`，但是我们发现事实上 `stack` 栈顶并不是 `section` 而是 `div`，这说明 `div` 元素缺少闭合标签。这就是检测 `html` 字符串中是否缺少闭合标签的原理。
 
-讲完了 `stack` 常量，接下来第二个常量是 `expectHTML`，它的值被初始化为 `options.expectHTML`，也就是编译器选项中的 `expectHTML`。它是一个布尔值，后面遇到的时候再讲解其作用。
+讲完了 `stack` 常量，接下来第二个常量是 `expectHTML`，它的值被初始化为 `options.expectHTML`，也就是 `parser` 选项中的 `expectHTML`。它是一个布尔值，后面遇到的时候再讲解其作用。
 
-第三个常量是 `isUnaryTag`，如果 `options.isUnaryTag` 存在则它的值被初始化为 `options.isUnaryTag` ，否则初始化为 `no`，即一个始终返回 `false` 的函数。其中 `options.isUnaryTag` 也是一个编译器选项，用来检测一个标签是否是一元标签。
+第三个常量是 `isUnaryTag`，如果 `options.isUnaryTag` 存在则它的值被初始化为 `options.isUnaryTag` ，否则初始化为 `no`，即一个始终返回 `false` 的函数。其中 `options.isUnaryTag` 也是一个 `parser` 选项，用来检测一个标签是否是一元标签。
 
-第四个常量是 `canBeLeftOpenTag`，它的值被初始化为 `options.canBeLeftOpenTag`(如果存在的话，否则初始化为 `no`)。其中 `options.canBeLeftOpenTag` 也是编译器选项，用来检测一个标签是否是可以省略闭合标签的非一元标签。
+第四个常量是 `canBeLeftOpenTag`，它的值被初始化为 `options.canBeLeftOpenTag`(如果存在的话，否则初始化为 `no`)。其中 `options.canBeLeftOpenTag` 也是 `parser` 选项，用来检测一个标签是否是可以省略闭合标签的非一元标签。
 
-<p class="tip">上面提到的一些常量的值，初始化的时候其实是使用编译器选项进行初始化的，对于编译器选项，在前面的章节中我们是有讲过的。</p>
+<p class="tip">上面提到的一些常量的值，初始化的时候其实是使用 parser 选项进行初始化的，这里的 parser 选项其实大部分与编译器选项相同，在前面的章节中我们是有讲过的。</p>
 
 除了常量，还定义了三个变量，分别是 `index = 0`，`last` 以及 `lastTag`。其中 `index` 被初始化为 `0`，它标识着当前字符流的读入位置。变量 `last` 存储剩余还未 `parse` 的 `html` 字符串，变量 `lastTag` 则始终存储着位于 `stack` 栈顶的元素。
 
@@ -410,7 +412,7 @@ last = html
 if (html === last)
 ```
 
-如果两者相等，则说明字符串 `html` 在经历循环体的代码之后没有任何改变，此时会把 `html` 字符串作为纯文本对待。接下来我们就着重讲解循环体中间的代码是如何 `parse` html 字符串的。首先是一个 `if...else` 语句块：
+如果两者相等，则说明字符串 `html` 在经历循环体的代码之后没有任何改变，此时会把 `html` 字符串作为纯文本对待。接下来我们就着重讲解循环体中间的代码是如何 `parse` html 字符串的。循环体中间的代码都被包含在一个 `if...else` 语句块中：
 
 ```js
 if (!lastTag || !isPlainTextElement(lastTag)) {
@@ -433,6 +435,176 @@ lastTag && isPlainTextElement(lastTag)
 ```
 
 取反后的条件就好理解多了，我们知道 `lastTag` 存储着 `stack` 栈顶的元素，而 `stack` 栈顶的元素应该就是**最近一次遇到的一元标签的开始标签**，所以以上条件为真等价于：**最近一次遇到的非一元标签是纯文本标签(即：script,style,textarea 标签)**。也就是说：**当前我们正在处理的是纯文本标签里面的内容**。那么现在就清晰多了，当处理纯文本标签里面的内容时，就会执行 `else` 分支，其他情况将执行 `if` 分支。
+
+接下来我们就先从 `if` 分支开始说起，下面的代码是对 `if` 语句块的简化：
+
+```js
+if (!lastTag || !isPlainTextElement(lastTag)) {
+  let textEnd = html.indexOf('<')
+
+  if (textEnd === 0) {
+    // textEnd === 0 的情况
+  }
+
+  let text, rest, next
+  if (textEnd >= 0) {
+    // textEnd >= 0 的情况
+  }
+
+  if (textEnd < 0) {
+    // textEnd < 0 的情况
+  }
+
+  if (options.chars && text) {
+    options.chars(text)
+  }
+} else {
+  // 省略 ...
+}
+```
+
+简化后的代码看去上结构非常清晰，在 `if` 语句块的一开始定义了 `textEnd` 变量，它的值是**html 字符串中左尖括号(<)第一次出现的位置**，接着开始了对 `textEnd` 变量的一些列判断：
+
+```js
+if (textEnd === 0) {
+  // textEnd === 0 的情况
+}
+
+let text, rest, next
+if (textEnd >= 0) {
+  // textEnd >= 0 的情况
+}
+
+if (textEnd < 0) {
+  // textEnd < 0 的情况
+}
+```
+
+当 `textEnd === 0` 时，说明 `html` 字符串的第一个字符就是左尖括号，比如 `html` 字符串为：`<div>asdf</div>`，那么这个字符串的第一个字符就是左尖括号(`<`)。现在我们采用深度优先的方式去分析，所以我们暂时不关系 `textEnd >= 0` 以及 `textEnd < 0` 的情况，我们查看一下当 `textEnd === 0` 时的 `if` 语句块内的代码，如下：
+
+```js
+if (textEnd === 0) {
+  // Comment:
+  if (comment.test(html)) {
+    // 有可能是注释节点
+  }
+
+  if (conditionalComment.test(html)) {
+    // 有可能是条件注释节点
+  }
+
+  // Doctype:
+  const doctypeMatch = html.match(doctype)
+  if (doctypeMatch) {
+    // doctype 节点
+  }
+
+  // End tag:
+  const endTagMatch = html.match(endTag)
+  if (endTagMatch) {
+    // 结束标签
+  }
+
+  // Start tag:
+  const startTagMatch = parseStartTag()
+  if (startTagMatch) {
+    // 开始标签
+  }
+}
+```
+
+以上同样是对源码的简化，这样看上去更加清晰，我们知道当 `textEnd === 0` 时说明 `html` 字符串的第一个字符就是左尖括号(`<`)，那么大家思考一下左尖括号开头的字符串，它可能是什么？其实通过上面代码中的一系列 `if` 判断分支大家应该能猜到：
+
+* 1、可能是注释节点：`<!-- -->`
+* 2、可能是条件注释节点：`<![ ]>`
+* 3、可能是 `doctype`：`<!DOCTYPE >`
+* 4、可能是结束标签：`</xxx>`
+* 5、可能是开始标签：`<xxx>`
+* 6、可能只是一个单纯的字符串：`<abcdefg`
+
+针对以上六中情况我们逐个来看，首先判断是否是注释节点：
+
+```js
+// Comment:
+if (comment.test(html)) {
+  const commentEnd = html.indexOf('-->')
+
+  if (commentEnd >= 0) {
+    if (options.shouldKeepComment) {
+      options.comment(html.substring(4, commentEnd))
+    }
+    advance(commentEnd + 3)
+    continue
+  }
+}
+```
+
+对于注释节点的判断方法是使用正则常量 `comment` 进行判断，即：`comment.test(html)`，对于 `comment` 正则常量我们在前面分析正则的部分已经讲过了，当时我提醒过大家一件事情，即这些正则常量有一个共同的特点：**都是从字符串的开头位置开始匹配的**，也就是说只有当 `html` 字符串的第一个字符是左尖括号(`<`)时才有意义。而现在我们分析的情况恰好是当 `textEnd === 0`，也就是说 `html` 字符串的第一个字符确实是左尖括号(`<`)。
+
+所以如果 `comment.test(html)` 条件为真，则说明**可能是**注释节点，大家要注意关键字：**可能是**，为什么这么说呢？大家知道完整的注释节点不仅仅要以 `<!--` 开头，还要以 `-->` 结尾，如果只以 `<!--` 开头而没有 `-->` 结尾，那显然不是一个注释节点，所以首先要检查 `html` 字符串中 `-->` 的位置：
+
+```js
+const commentEnd = html.indexOf('-->')
+```
+
+如果找到了 `-->`，则说明这确实是一个注释节点，那么就处理之，否则什么事情都不做。处理的代码如下：
+
+```js
+if (options.shouldKeepComment) {
+  options.comment(html.substring(4, commentEnd))
+}
+advance(commentEnd + 3)
+continue
+```
+
+首先判断 `parser` 选项 `options.shouldKeepComment` 是否为真，如果为真则调用同为 `parser` 选项的 `options.comment` 函数，并将注释节点的内容作为参数传递。在 `Vue` 官方文档中可以找到一个叫做 `comments` 的选项，实际上这里的 `options.shouldKeepComment` 的值就是 `Vue` 选项 `comments` 的值，这一点当我们讲到生成抽象语法树(`AST`)的时候即可看到。
+
+回过头来我们再次查看以上代码，我们看看这里是如何获取注释内容的：
+
+```js
+html.substring(4, commentEnd)
+```
+
+通过调用字符串的 `substring` 方法截取注释内容，其中其实位置是 `4`，结束位置是 `commentEnd` 的值，用一张图表示将会更加清晰：
+
+![](http://ovjvjtt4l.bkt.clouddn.com/2017-12-26-115232.jpg)
+
+可以看到，最终获取到的内容是不包含注释节点的起始(`<!--`)和结束(`-->`)的。
+
+这样一个注释节点就 `parse` 完毕了，那么完毕之后应该做什么呢？要做的很关键的一件事就是：**将已经 `parse` 完毕的字符串剔除**，也就是接下来调用的 `advance` 函数：
+
+```js
+advance(commentEnd + 3)
+```
+
+该函数定义在 `while` 循环的下方，源码如下：
+
+```js
+function advance (n) {
+  index += n
+  html = html.substring(n)
+}
+```
+
+`advance` 函数接收一个 `Number` 类型的参数 `n`，我们刚刚说到：已经 `parse` 完毕的部分要从 `html` 字符串中剔除，而剔除的方式很简单，就是找到已经 `parse` 完毕的字符串的结束位置，然后执行 `html = html.substring(n)` 即可，这里的 `n` 就是所谓的结束位置。除此之外，我们发现 `advance` 函数还对 `index` 变量做了赋值：`index += n`，前面我们介绍变量的时候说到过，`index` 变量存储着字符流的读入位置，该位置是相对于原始 `html` 字符串的，所以每次都要更新。
+
+那么对于注释节点，其执行的代码为：
+
+```js
+advance(commentEnd + 3)
+```
+
+`n` 的值是 `commentEnd + 3`，还是用一张图来表示：
+
+![](http://ovjvjtt4l.bkt.clouddn.com/2017-12-26-121606.jpg)
+
+可以很容易的看到，经过 `advance` 函数后，新的 `html` 字符串将从 `commentEnd + 3` 的位置开始，而不再包含已经 `parse` 过的注释节点了。
+
+最后还有一个很重要的步骤，即调用完 `advance` 函数之后，要执行 `continue` 跳过此次循环，由于此时 `html` 字符串已经是去掉了 `parse` 过的部分的新字符串了，所以开启下一次循环，重新开始 `parse` 过程。
+
+
+
+
 
 
 
