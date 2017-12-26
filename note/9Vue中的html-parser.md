@@ -373,8 +373,66 @@ let last, lastTag
 
 <p class="tip">上面提到的一些常量的值，初始化的时候其实是使用编译器选项进行初始化的，对于编译器选项，在前面的章节中我们是有讲过的。</p>
 
-除了常量，还定义了三个变量，分别是 `index = 0`，`last` 以及 `lastTag`。其中 `index` 被初始化为 `0`，它标识着当前字符流的读入位置。变量 `last` 存储剩余还未 `parse` 的 `html` 字符串，变量 `lastTag` 则使用存储着位于 `stack` 栈顶的元素。
+除了常量，还定义了三个变量，分别是 `index = 0`，`last` 以及 `lastTag`。其中 `index` 被初始化为 `0`，它标识着当前字符流的读入位置。变量 `last` 存储剩余还未 `parse` 的 `html` 字符串，变量 `lastTag` 则始终存储着位于 `stack` 栈顶的元素。
 
+接下来将进入第二部分，即开启一个 `while` 循环，循环的终止条件是 `html` 字符串为空，即 `html` 字符串全部 `parse` 完毕。`while` 循环的结构如下：
+
+```js
+while (html) {
+  last = html
+  
+  if (!lastTag || !isPlainTextElement(lastTag)) {
+    // 确保即将 parse 的内容不是在纯文本标签里 (script,style,textarea)
+  } else {
+    // 即将 parse 的内容是在纯文本标签里 (script,style,textarea)
+  }
+
+  // 将整个字符串作为文本对待
+  if (html === last) {
+    options.chars && options.chars(html)
+    if (process.env.NODE_ENV !== 'production' && !stack.length && options.warn) {
+      options.warn(`Mal-formatted tag at end of template: "${html}"`)
+    }
+    break
+  }
+}
+```
+
+首先将在每次循环开始时将 `html` 的值赋给变量 `last`：
+
+```js
+last = html
+```
+
+我们可以发现，在 `while` 循环即将结束的时候，有一个对 `last` 和 `html` 这两个变量的比较：
+
+```js
+if (html === last)
+```
+
+如果两者相等，则说明字符串 `html` 在经历循环体的代码之后没有任何改变，此时会把 `html` 字符串作为纯文本对待。接下来我们就着重讲解循环体中间的代码是如何 `parse` html 字符串的。首先是一个 `if...else` 语句块：
+
+```js
+if (!lastTag || !isPlainTextElement(lastTag)) {
+  // 确保即将 parse 的内容不是在纯文本标签里 (script,style,textarea)
+} else {
+  // 即将 parse 的内容是在纯文本标签里 (script,style,textarea)
+}
+```
+
+我们观察 `if` 语句块的判断条件：
+
+```js
+!lastTag || !isPlainTextElement(lastTag)
+```
+
+如果上面的条件为真，则走 `if` 分支，否则将执行 `else` 分支。不过这句判断条件看上去有些难懂，没关系我们换一个角度，如果对该条件进行取反的话，则是：
+
+```js
+lastTag && isPlainTextElement(lastTag)
+```
+
+取反后的条件就好理解多了，我们知道 `lastTag` 存储着 `stack` 栈顶的元素，而 `stack` 栈顶的元素应该就是**最近一次遇到的一元标签的开始标签**，所以以上条件为真等价于：**最近一次遇到的非一元标签是纯文本标签(即：script,style,textarea 标签)**。也就是说：**当前我们正在处理的是纯文本标签里面的内容**。那么现在就清晰多了，当处理纯文本标签里面的内容时，就会执行 `else` 分支，其他情况将执行 `if` 分支。
 
 
 
