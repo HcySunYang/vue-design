@@ -35,7 +35,8 @@ const startTagOpen = new RegExp(`^<${qnameCapture}`)
 const startTagClose = /^\s*(\/?)>/
 const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`)
 const doctype = /^<!DOCTYPE [^>]+>/i
-const comment = /^<!--/
+// #7298: escape - to avoid being pased as HTML comment when inlined in page
+const comment = /^<!\--/
 const conditionalComment = /^<!\[/
 ```
 
@@ -192,10 +193,11 @@ const doctype = /^<!DOCTYPE [^>]+>/i
 ##### comment
 
 ```js
-const comment = /^<!--/
+// #7298: escape - to avoid being pased as HTML comment when inlined in page
+const comment = /^<!\--/
 ```
 
-这个正则用来匹配注释节点，没有捕获组。
+这个正则用来匹配注释节点，没有捕获组。大家注意这句代码上方的注释，所以是：`#7298`。有兴趣的同学可以去 `Vue` 的 `issue` 中搜索一下相关问题。在这之前实际上 `comment` 常量的值是 `<!--` 而并不是 `<!\--`，之所以改成 `<!\--` 是为了允许把 `Vue` 代码内联到 `html` 中，否则 `<!--` 会被认为是注释节点。
 
 ##### conditionalComment
 
