@@ -1,5 +1,7 @@
 ## Vue 中的 html-parser
 
+<p class="tip">本节中大量出现 `parse` 以及 `parser` 这两个单词，不要混淆这两个单词，`parse` 是动词，代表“解析”的过程，`parser` 是名词，代表“解析器”。</p>
+
 打开 `src/compiler/parser/html-parser.js` 文件，该文件的开头是一段注释：
 
 ```js
@@ -524,6 +526,8 @@ if (textEnd === 0) {
 * 5、可能是开始标签：`<xxx>`
 * 6、可能只是一个单纯的字符串：`<abcdefg`
 
+##### parse 注释节点
+
 针对以上六中情况我们逐个来看，首先判断是否是注释节点：
 
 ```js
@@ -603,6 +607,32 @@ advance(commentEnd + 3)
 可以很容易的看到，经过 `advance` 函数后，新的 `html` 字符串将从 `commentEnd + 3` 的位置开始，而不再包含已经 `parse` 过的注释节点了。
 
 最后还有一个很重要的步骤，即调用完 `advance` 函数之后，要执行 `continue` 跳过此次循环，由于此时 `html` 字符串已经是去掉了 `parse` 过的部分的新字符串了，所以开启下一次循环，重新开始 `parse` 过程。
+
+##### parse 条件注释节点
+
+如果没有命中注释节点，则什么都不会做，继续判断是否命中条件注释节点：
+
+```js
+// http://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
+if (conditionalComment.test(html)) {
+  const conditionalEnd = html.indexOf(']>')
+
+  if (conditionalEnd >= 0) {
+    advance(conditionalEnd + 2)
+    continue
+  }
+}
+```
+
+类似对注释节点的判断一样，对于条件注释节点使用 `conditionalComment` 正则常量。但是如果条件 `conditionalComment.test(html)` 为真，只能说明**可能是**条件注释节点，因为条件注释节点除了要以 `<![` 开头还必须以 `]>` 结尾，所以在 `if` 语句块内第一句代码就是查找字符串 `]>` 的位置：
+
+```js
+const conditionalEnd = html.indexOf(']>')
+```
+
+如果没有找到，说明这不是一个条件注释节点，什么都不做。否则会作为条件注释节点对待，不过与注释节点不同，注释节点拥有 `parser` 选项 `options.comment`，在调用 `advance` 函数之前，会先将注释节点的内容传递给 `options.comment` 函数。而对于条件注释节点则没有相应的 `parser` 钩子，也就是说 `Vue` 模板永远都不会保留条件注释节点的内容，所以直接调用 `advance` 函数以及执行 `continue` 语句结束此次循环。
+
+其中传递给 `advance` 函数的参数是 `conditionalEnd` 常量，它保存着条件注释结束部分在字符串中的位置，道理与 `parse` 注释节点时相同。
 
 
 
