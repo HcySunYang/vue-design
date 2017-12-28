@@ -634,6 +634,242 @@ const conditionalEnd = html.indexOf(']>')
 
 其中传递给 `advance` 函数的参数是 `conditionalEnd` 常量，它保存着条件注释结束部分在字符串中的位置，道理与 `parse` 注释节点时相同。
 
+##### parse Doctype节点
+
+如果既没有命中注释节点，也没有命中条件注释节点，那么将判断是否命中 `Doctype` 节点：
+
+```js
+// Doctype:
+const doctypeMatch = html.match(doctype)
+if (doctypeMatch) {
+  advance(doctypeMatch[0].length)
+  continue
+}
+```
+
+判断的方法是使用字符串的 `match` 方法去匹配正则 `doctype`，如果匹配成功 `doctypeMatch` 的值是一个数组，数组的第一项保存着整个匹配项的字符串，即整个 `Doctype` 标签的字符串，否则 `doctypeMatch` 的值为 `null`。
+
+如果匹配成功 `if` 语句块将被执行，同样的，对于 `Doctype` 也没有提供相应的 `parser` 钩子，即 `Vue` 不会保留 `Doctype` 节点的内容。不过大家不用担心，因为在原则上 `Vue` 在编译的时候根本不会遇到 `Doctype` 标签。
+
+##### parse 开始标签
+
+实际上接下来的代码是解析结束标签的(`End tag`)，解析开始标签(`Start tag`)的代码被放到了最后面，但是这里把解析开始标签的代码提前来讲，是因为在顺序读取 `html` 字符流的过程中，总会先遇到开始标签，再遇到结束标签，除非你的 `html` 代码中没有开始标签，直接写结束标签。
+
+解析开始标签的代码如下：
+
+```js
+// Start tag:
+const startTagMatch = parseStartTag()
+if (startTagMatch) {
+  handleStartTag(startTagMatch)
+  if (shouldIgnoreFirstNewline(lastTag, html)) {
+    advance(1)
+  }
+  continue
+}
+```
+
+首先调用 `parseStartTag` 函数，并获取其返回值，如果存在返回值则说明开始标签解析成功，这的的确确是一个开始标签，然后才会执行 `if` 语句块内的代码。也就是说判断是否解析到一个开始标签的工作，是由 `parseStartTag` 函数完成的，这个函数定义在 `advance` 函数的下面，我们看看它的代码：
+
+```js
+function parseStartTag () {
+  const start = html.match(startTagOpen)
+  if (start) {
+    const match = {
+      tagName: start[1],
+      attrs: [],
+      start: index
+    }
+    advance(start[0].length)
+    let end, attr
+    while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) {
+      advance(attr[0].length)
+      match.attrs.push(attr)
+    }
+    if (end) {
+      match.unarySlash = end[1]
+      advance(end[0].length)
+      match.end = index
+      return match
+    }
+  }
+}
+```
+
+`parseStartTag` 函数首先会调用 `html` 字符串的 `match` 函数匹配 `startTagOpen` 正则，前面我们讲到过 `startTagOpen` 正则用来匹配开始标签的一部分，这部分包括：`<` 以及后面的 `标签名称`，并且拥有一个不获取，即捕获标签的名称。然后将匹配的结果赋值给 `start` 常量，如果 `start` 常量为 `null` 则说明匹配失败，则 `parseStartTag` 函数执行完毕，其返回值为 `undefined`。
+
+如果匹配成功，那么 `start` 常量将是一个包含两个元素的数组：第一个元素是标签的开始部分(包含 `<` 和 `标签名称`)；第二个元素是捕获组捕获到的标签名称。比如有如下 `html`：
+
+```html
+<div></div>
+```
+
+那么此时 `start` 数组为：
+
+```js
+start = ['<div', 'div']
+```
+
+由于匹配成功，所以 `if` 语句块将被执行，首先是下面这段代码：
+
+```js
+if (start) {
+  const match = {
+    tagName: start[1],
+    attrs: [],
+    start: index
+  }
+  advance(start[0].length)
+  // 省略 ...
+}
+```
+
+定义了 `match` 常量，它是一个对象，初始状态下拥有三个属性：
+
+* 1、`tagName`：它的值为 `start[1]` 即标签的名称。
+* 2、`attrs`：它的初始值是一个空数组，我们知道，开始标签是可能拥有属性的，而这个数组就是用来存储将来被匹配到的属性。
+* 3、`start`：它的值被设置为 `index`，也就是当前字符流读入位置在整个 `html` 字符串中的位置。
+
+接着开始标签的开始部分就匹配完成了，所以要调用 `advance` 函数，参数为 `start[0].length`，即匹配到的字符串的长度。
+
+代码继续执行，来到了这里：
+
+```js
+if (start) {
+  // 省略 ...
+  let end, attr
+  while (!(end = html.match(startTagClose)) && (attr = html.match(attribute))) {
+    advance(attr[0].length)
+    match.attrs.push(attr)
+  }
+  // 省略 ...
+}
+```
+
+首先定义两个变量 `end` 以及 `attr`，接着开启了一个 `while` 循环，那么这个 `while` 循环的作用是什么呢？我们看一下循环的条件就知道了：
+
+```js
+!(end = html.match(startTagClose)) && (attr = html.match(attribute))
+```
+
+循环的条件有两个，第一个条件是：**没有匹配到开始标签的结束部分**，这个条件的实现方式是使用 `html` 字符串的 `match` 方法去匹配 `startTagClose` 正则，并将结果保存到 `end` 变量中。第二个条件是：**匹配到了属性**，实现方式是使用  `html` 字符串的 `match` 方法去匹配 `attribute`正则。简单一句话总结这个条件的成立要素：**没有匹配到开始标签的结束部分，并且匹配到了开始标签中的属性**。这个时候循环体将被执行。
+
+在循环体内，由于此时匹配到了开始标签的属性，所以 `attr` 变量将保存着匹配结果，匹配的结果与 `attribute` 正则及其捕获组有关，详细内容我们在前面分析正则的时候讲到过，比如有如下 `html` 字符串：
+
+```html
+<div v-for="v in map"></div>
+```
+
+那么 `attr` 变量的值将为：
+
+```js
+attr = [
+  ' v-for="v in map"',
+  'v-for',
+  '=',
+  'v in map',
+  undefined,
+  undefined
+]
+```
+
+接下来在循环体内做了两件事，首先调用 `advance` 函数，参数为 `attr[0].length` 即整个属性的长度。然后会将此次循环匹配到的结果 `push` 到前面定义的 `match` 对象的 `attrs` 数组中，即：
+
+```js
+advance(attr[0].length)
+match.attrs.push(attr)
+```
+
+这样一次循环就结束了，将会开始下一次循环，直到**匹配到结束标签**或者**匹配不到属性**的时候循环才会停止。`parseStartTag` 函数 `if` 语句块内的最后一段代码如下：
+
+```js
+if (start) {
+  // 省略 ...
+  if (end) {
+    match.unarySlash = end[1]
+    advance(end[0].length)
+    match.end = index
+    return match
+  }
+}
+```
+
+这里首先判断了变量 `end` 是否为真，我们知道，即使匹配到了开始标签的 `开始部分` 以及 `属性部分` 但是却没有匹配到开始标签的 `结束部分`，则说明这根本就不是一个开始标签。所以只有当变量 `end` 存在，即匹配到了开始标签的 `结束部分` 时，才能说明这是一个完整的开始标签。
+
+如果变量 `end` 的确存在，那么将会执行 `if` 语句块内的代码，不过我们需要先了解一下变量 `end` 的值是什么？变量 `end` 的值是正则 `startTagClose` 的匹配结果，前面我们讲到过该正则用来匹配开始标签的结束部分即 `>` 或者 `/>`(当标签为一元标签时)，并且拥有一个捕获组用来捕获 `/`，比如当 `html` 字符串如下时：
+
+```html
+<br />
+```
+
+那么匹配到的 `end` 的值为：
+
+```js
+end = ['/>', '/']
+```
+
+如果 `html` 字符串如下：
+
+```js
+<div>
+```
+
+那么 `end` 的值将是：
+
+```js
+end = ['>', undefined]
+```
+
+所以，如果 `end[1]` 不为 `undefined`，那么说明该标签是一个一元标签。那么现在再看 `if` 语句块内的代码，将很容以理解，首先在 `match` 对象上添加 `unarySlash` 属性，其值为 `end[1]`：
+
+```js
+match.unarySlash = end[1]
+```
+
+然后调用 `advance` 函数，参数为 `end[0].length`，接着在 `match` 对象上添加了一个 `end` 属性，它的值为 `index`，注意由于先调用的 `advance` 函数，所以此时的 `index` 已经被更新了。最后将 `match` 对象作为 `parseStartTag` 函数的返回值返回。
+
+我们发现只有当变量 `end` 存在时，即能够确定确实解析到了一个开始标签的时候 `parseStartTag` 函数才会有返回值，并且返回值是 `match` 对象，其他情况下 `parseStartTag` 全部返回 `undefined`。
+
+下面我们整理一下 `parseStartTag` 函数的返回值，即 `match` 对象。当成功的匹配到一个开始标签时，假设有如下 `html` 字符串：
+
+```html
+<div v-if="isSucceed" v-for="v in map"></div>
+```
+
+则 `parseStartTag` 函数的返回值如下：
+
+```js
+match = {
+  tagName: 'div',
+  attrs: [
+    [
+      ' v-if="isSucceed"',
+      'v-if',
+      '=',
+      'isSucceed',
+      undefined,
+      undefined
+    ],
+    [
+      ' v-for="v in map"',
+      'v-for',
+      '=',
+      'v in map',
+      undefined,
+      undefined
+    ]
+  ],
+  start: index,
+  unarySlash: undefined,
+  end: index
+}
+```
+
+注意 `match.start` 和 `match.end` 是不同的，如下图：
+
+![](http://ovjvjtt4l.bkt.clouddn.com/2017-12-28-080651.jpg)
+
+
 
 
 
