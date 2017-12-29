@@ -220,7 +220,7 @@ let IS_REGEX_CAPTURING_BROKEN = false
 })
 ```
 
-首先定义了变量 `IS_REGEX_CAPTURING_BROKEN` 且初始值为 `false`，接着使用一个字符串 `'x'` 的 `replace` 函数用一个正则去获取捕获组的值，即：变量 `g`。我们观察字符串 `'x'` 和正则 `/x(.)?/` 可以发现，该正则中的捕获组应该捕获不到任何内容，所以此时 `g` 的值应该是 `undefined`，但是在老版本的火狐浏览器中存在一个问题，此时的 `g` 是一个空字符串 `''`，并不是 `undefined`。所以变量 `IS_REGEX_CAPTURING_BROKEN` 的作用就是用来标识当前宿主环境是否存在该问题。这个变量我们后面会用到，其作用到时候再说。
+首先定义了变量 `IS_REGEX_CAPTURING_BROKEN` 且初始值为 `false`，接着使用一个字符串 `'x'` 的 `replace` 函数用一个带有捕获组的正则进行匹配，并将捕获组捕获到的值赋值给变量 `g`。我们观察字符串 `'x'` 和正则 `/x(.)?/` 可以发现，该正则中的捕获组应该捕获不到任何内容，所以此时 `g` 的值应该是 `undefined`，但是在老版本的火狐浏览器中存在一个问题，此时的 `g` 是一个空字符串 `''`，并不是 `undefined`。所以变量 `IS_REGEX_CAPTURING_BROKEN` 的作用就是用来标识当前宿主环境是否存在该问题。这个变量我们后面会用到，其作用到时候再说。
 
 #### 常量分析
 
@@ -669,6 +669,8 @@ if (startTagMatch) {
 }
 ```
 
+###### parseStartTag 函数解析开始标签
+
 首先调用 `parseStartTag` 函数，并获取其返回值，如果存在返回值则说明开始标签解析成功，这的的确确是一个开始标签，然后才会执行 `if` 语句块内的代码。也就是说判断是否解析到一个开始标签的工作，是由 `parseStartTag` 函数完成的，这个函数定义在 `advance` 函数的下面，我们看看它的代码：
 
 ```js
@@ -869,13 +871,182 @@ match = {
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-12-28-080651.jpg)
 
+###### handleStartTag 函数处理解析结果
 
+我们讲解完了 `parseStartTag` 函数及其返回值，现在我们回到对开始标签的 `parse` 部分：
 
+```js
+// Start tag:
+const startTagMatch = parseStartTag()
+if (startTagMatch) {
+  handleStartTag(startTagMatch)
+  if (shouldIgnoreFirstNewline(lastTag, html)) {
+    advance(1)
+  }
+  continue
+}
+```
 
+`startTagMatch` 常量存储着 `parseStartTag` 函数的返回值，在前面的分析中我们得知，只有在成功匹配到开始的情况下 `parseStartTag` 才会返回解析结果(一个对象)，否则返回 `undefined`。也就是说如果匹配失败则不会执行 `if` 语句块，现在我们假设匹配成功，那么 `if` 语句块中的代码将会被执行，此时会将解析结果作为参数传递给 `handleStartTag` 函数，`handleStartTag` 函数定义在 `parseStartTag` 函数的下方，源码如下：
 
+```js
+function handleStartTag (match) {
+  const tagName = match.tagName
+  const unarySlash = match.unarySlash
 
+  if (expectHTML) {
+    if (lastTag === 'p' && isNonPhrasingTag(tagName)) {
+      parseEndTag(lastTag)
+    }
+    if (canBeLeftOpenTag(tagName) && lastTag === tagName) {
+      parseEndTag(tagName)
+    }
+  }
 
+  const unary = isUnaryTag(tagName) || !!unarySlash
 
+  const l = match.attrs.length
+  const attrs = new Array(l)
+  for (let i = 0; i < l; i++) {
+    const args = match.attrs[i]
+    // hackish work around FF bug https://bugzilla.mozilla.org/show_bug.cgi?id=369778
+    if (IS_REGEX_CAPTURING_BROKEN && args[0].indexOf('""') === -1) {
+      if (args[3] === '') { delete args[3] }
+      if (args[4] === '') { delete args[4] }
+      if (args[5] === '') { delete args[5] }
+    }
+    const value = args[3] || args[4] || args[5] || ''
+    const shouldDecodeNewlines = tagName === 'a' && args[1] === 'href'
+      ? options.shouldDecodeNewlinesForHref
+      : options.shouldDecodeNewlines
+    attrs[i] = {
+      name: args[1],
+      value: decodeAttr(value, shouldDecodeNewlines)
+    }
+  }
+
+  if (!unary) {
+    stack.push({ tag: tagName, lowerCasedTag: tagName.toLowerCase(), attrs: attrs })
+    lastTag = tagName
+  }
+
+  if (options.start) {
+    options.start(tagName, attrs, unary, match.start, match.end)
+  }
+}
+```
+
+`handleStartTag` 函数用来处理开始标签的解析结果，所以它接收 `parseStartTag` 函数的返回值作为参数。`handleStartTag` 函数的一开始定义两个常量：`tagName` 以及 `unarySlash`：
+
+```js
+const tagName = match.tagName
+const unarySlash = match.unarySlash
+```
+
+这两个常量的值都来自于开始标签的匹配结果，以下我们统一将开始标签的匹配结果成为 `match` 对象。其中常量 `tagName` 为开始标签的标签名，常量 `unarySlash` 的值为 `'/'` 或 `undefined` 其中之一。
+
+接着是一个 `if` 语句块，`if` 语句的判断条件是 `if (expectHTML)`，前面说过 `expectHTML` 是 `parser` 选项，是一个布尔值，如果为真则该 `if` 语句块的代码将被执行。但是现在我们暂时不看这段代码，因为这段代码包含 `parseEndTag` 函数的调用，所以待我们讲解完 `parseEndTag` 函数之后，再回头来说这段代码。
+
+再往下，定义了三个常量：
+
+```js
+const unary = isUnaryTag(tagName) || !!unarySlash
+
+const l = match.attrs.length
+const attrs = new Array(l)
+```
+
+其中常量 `unary` 是一个布尔值，当它为真时代表着标签是一元标签，否则是二元标签。对于一元标签判断的方法是首先调用 `isUnaryTag` 函数，并将标签名(`tagName`)作为参数传递，其中 `isUnaryTag` 函数前面提到过它是 `parser` 选项，实际上它是编译器选项透传过来的，我们在 [7Vue的编译器初探](/note/7Vue的编译器初探) 一节中对 `isUnaryTag` 函数有过讲解，简单的说 `isUnaryTag` 函数能够判断标准 `HTML` 中规定的那些一元标签，但是仅仅使用这一个判断条件是不够的，因为在 `Vue` 中我们免不了会写组件，而组件又是以自定义标签的形式存在的，比如：
+
+```js
+<my-component />
+```
+
+对于这个标签，它的 `tagName` 是 `my-component`，由于它并不存在于标准 `HTML` 所规定的一元标签之内，所以此时调用 `isUnaryTag('my-component')` 函数会返回假，但问题是 `<my-component />` 标签确实是一元标签，所以此时需要第二个判断条件，即：**开始标签的结束部分是否使用 '/'**，如果有反斜线 `'/'`，说明这是一个一元标签。
+
+除了 `unary` 常量之外，还定义了两个常量：`l` 和 `attrs`，其中常量 `l` 的值存储着 `match.attrs` 数组的长度，而 `attrs` 常量则是一个与 `match.attrs` 数组长度相等的数组。这两个常量将被用于接下来的 `for` 循环中：
+
+```js
+for (let i = 0; i < l; i++) {
+  const args = match.attrs[i]
+  // hackish work around FF bug https://bugzilla.mozilla.org/show_bug.cgi?id=369778
+  if (IS_REGEX_CAPTURING_BROKEN && args[0].indexOf('""') === -1) {
+    if (args[3] === '') { delete args[3] }
+    if (args[4] === '') { delete args[4] }
+    if (args[5] === '') { delete args[5] }
+  }
+  const value = args[3] || args[4] || args[5] || ''
+  const shouldDecodeNewlines = tagName === 'a' && args[1] === 'href'
+    ? options.shouldDecodeNewlinesForHref
+    : options.shouldDecodeNewlines
+  attrs[i] = {
+    name: args[1],
+    value: decodeAttr(value, shouldDecodeNewlines)
+  }
+}
+```
+
+这个 `for` 循环的作用是：**格式化 `match.attrs` 数组，并将格式化后的数据存储到常量 `attrs` 中**。格式化包括两部分，第一：格式化后的数据只包含 `name` 和 `value` 两个字段，其中 `name` 是属性名，`value` 是属性的值。第二：对属性值进行 `html` 实体的解码。
+
+下面我们具体看一下循环体的代码，首先定义 `args` 常量，它的值就是每个属性的解析结果，即 `match.attrs` 数组中的元素对象。接着是一个 `if` 语句块，其第一个判断条件是 `IS_REGEX_CAPTURING_BROKEN` 为真，在本节的常量部分我们遇到过 `IS_REGEX_CAPTURING_BROKEN` 常量，它是一个布尔值，是用来判断老版本火狐浏览器的一个 `bug` 的，即当捕获组匹配不到值时那么捕获组对应变量的值应该是 `undefined` 而不是空字符串。所以 `if` 语句块对此做了变通方案，如果发现此时捕获到的属性值为空字符串那么就手动使用 `delete` 操作符将其删除。
+
+在 `if` 语句块的下面定义了常量 `value`：
+
+```js
+const value = args[3] || args[4] || args[5] || ''
+```
+
+我们在分析开始标签的解析结果时知道，解析结果是一个数组，如下：
+
+```js
+[
+  ' v-if="isSucceed"',
+  'v-if',
+  '=',
+  'isSucceed',
+  undefined,
+  undefined
+]
+```
+
+我们知道，数组的第 `3`、`4`、`5` 项其中之一可能会包含属性值，所以常量 `value` 中就保存着最终的属性值，如果第 `3`、`4`、`5` 项都没有获取到属性值，那么属性值将被设置为一个空字符串：`''`。
+
+属性值获取到了之后，就可以拼装最终的 `attrs` 数组了，如下：
+
+```js
+const shouldDecodeNewlines = tagName === 'a' && args[1] === 'href'
+  ? options.shouldDecodeNewlinesForHref
+  : options.shouldDecodeNewlines
+attrs[i] = {
+  name: args[1],
+  value: decodeAttr(value, shouldDecodeNewlines)
+}
+```
+
+与我们之前所说的一样，`attrs` 数组的每个元素对象只包含两个元素，即属性名 `name` 和属性值 `value`，对于属性名直接从 `args[1]` 中即可获取，但我们发现属性值却没有直接使用前面获取到的 `value`，而是将 `value` 传递给了 `decodeAttr` 函数，并使用该函数的返回值作为最终的属性值。
+
+实际上 `decodeAttr` 函数的作用是对属性值中所包含的 `html` 实体进行解码，将其转换为实体对应的字符。更多关于 `shouldDecodeNewlinesForHref` 与 `shouldDecodeNewlines` 的内容我们曾经提到过，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中找到详细讲解。
+
+这样 `for` 循环语句块的代码我们就讲完了，在 `for` 循环语句块的下面是这样一段代码：
+
+```js
+if (!unary) {
+  stack.push({ tag: tagName, lowerCasedTag: tagName.toLowerCase(), attrs: attrs })
+  lastTag = tagName
+}
+```
+
+判断条件是当开始标签是非一元标签时才会执行，其目的是：**如果开始标签是非一元标签，则将该开始标签的信息入栈，即 `push` 到 `stack` 数组中，并将 `lastTag` 的值设置为该标签名**。在讲解 `parseHTML` 函数开头定义的变量和常量的过程中，我们讲解过 `stack` 常量以及 `lastTage` 变量，其目的是将来判断是否缺少闭合标签，并且现在大家应该知道为什么 `lastTag` 所存储的标签名字始终保存着 `stack` 栈顶的元素了。
+
+`handleStartTag` 函数的最后一段代码是调用 `parser` 钩子函数的：
+
+```js
+if (options.start) {
+  options.start(tagName, attrs, unary, match.start, match.end)
+}
+```
+
+如果 `parser` 选项中包含 `options.start` 函数，则调用之，并将开始标签的名字(`tagName`)，格式化后的属性数组(`attrs`)，是否为一元标签(`unary`)，以及开始标签在元 `html` 中的开始和结束位置(`match.start` 和 `match.end`) 作为参数传递。
 
 
 
