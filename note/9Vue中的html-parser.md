@@ -1048,5 +1048,105 @@ if (options.start) {
 
 如果 `parser` 选项中包含 `options.start` 函数，则调用之，并将开始标签的名字(`tagName`)，格式化后的属性数组(`attrs`)，是否为一元标签(`unary`)，以及开始标签在元 `html` 中的开始和结束位置(`match.start` 和 `match.end`) 作为参数传递。
 
+##### parse 结束标签
 
+接下来我们将会讲解 `textEnd === 0` 时的最后一种情况，即可能是结束标签，`parse` 结束标签的代码如下：
+
+```js
+// End tag:
+const endTagMatch = html.match(endTag)
+if (endTagMatch) {
+  const curIndex = index
+  advance(endTagMatch[0].length)
+  parseEndTag(endTagMatch[1], curIndex, index)
+  continue
+}
+```
+
+首先调用 `html` 字符串的 `match` 函数匹配正则 `endTag`，将结果保存在常量 `endTagMatch` 中。正则 `endTag` 用来匹配结束标签，并且拥有一个捕获组用来捕获标签名字，比如有如下 `html` 字符串：
+
+```html
+<div></div>
+```
+
+则匹配后 `endTagMatch` 如下：
+
+```js
+endTagMatch = [
+  '</div>',
+  'div'
+]
+```
+
+第一个元素是整个匹配到的结束标签字符串，第二个元素是对应的标签名字。同时如果匹配成功 `if` 语句块的代码将被执行，首先使用 `curIndex` 常量存储当前 `index` 的值，然后调用 `advance` 函数，并以 `endTagMatch[0].length` 作为参数，接着调用了 `parseEndTag` 函数对结束标签进行解析，传递给 `parseEndTag` 函数的三个参数分别是：标签名以及结束标签在 `html` 字符串中起始和结束的位置，最后调用 `continue` 语句结束此次循环。
+
+关键点在于 `parseEndTag` 函数，它定义在 `handleStartTag` 函数的下面：
+
+```js
+function parseEndTag (tagName, start, end) {
+  let pos, lowerCasedTagName
+  if (start == null) start = index
+  if (end == null) end = index
+
+  if (tagName) {
+    lowerCasedTagName = tagName.toLowerCase()
+  }
+
+  // Find the closest opened tag of the same type
+  if (tagName) {
+    for (pos = stack.length - 1; pos >= 0; pos--) {
+      if (stack[pos].lowerCasedTag === lowerCasedTagName) {
+        break
+      }
+    }
+  } else {
+    // If no tag name is provided, clean shop
+    pos = 0
+  }
+
+  if (pos >= 0) {
+    // Close all the open elements, up the stack
+    for (let i = stack.length - 1; i >= pos; i--) {
+      if (process.env.NODE_ENV !== 'production' &&
+        (i > pos || !tagName) &&
+        options.warn
+      ) {
+        options.warn(
+          `tag <${stack[i].tag}> has no matching end tag.`
+        )
+      }
+      if (options.end) {
+        options.end(stack[i].tag, start, end)
+      }
+    }
+
+    // Remove the open elements from the stack
+    stack.length = pos
+    lastTag = pos && stack[pos - 1].tag
+  } else if (lowerCasedTagName === 'br') {
+    if (options.start) {
+      options.start(tagName, [], true, start, end)
+    }
+  } else if (lowerCasedTagName === 'p') {
+    if (options.start) {
+      options.start(tagName, [], false, start, end)
+    }
+    if (options.end) {
+      options.end(tagName, start, end)
+    }
+  }
+}
+```
+
+`parseEndTag` 函数的代码看上去很长，但实际上它所做的事情并没有想象的那么复杂。按照通常的逻辑，在调用 `parseEndTag` 函数之前已经获得到了结束标签的名字以及结束标签在原始 `html` 字符串中的起始和结束位置，所以完全可以直接调用 `parser` 钩子 `options.end(tagName, start, end)`，然后宣布大功告成。然而实际上 `Vue` 的 `html parser` 并没有这样做，而是又调用了 `parseEndTag` 函数，那说明必然有其他的事情需要处理，到底是什么事情呢？我们可以想象一下 `parseEndTag` 函数都会做什么事情，首先 `parseEndTag` 函数的执行说明此时正在 `parse` 结束标签，假设我们有如下 `html` 字符串：
+
+```html
+<article><section><div></section></article>
+```
+
+很明显，`<div>` 标签缺少结束标签：`</div>`，那么此时是不是应该给用户一个提示？而这就是 `parseEndTag` 函数所做的事情之一。除此之外我们再看如下 `html` 字符串：
+
+```html
+<article><section></section></article><div>
+```
 
