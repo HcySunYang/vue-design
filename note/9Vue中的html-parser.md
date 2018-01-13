@@ -1138,7 +1138,7 @@ function parseEndTag (tagName, start, end) {
 }
 ```
 
-`parseEndTag` 函数的代码看上去很长，但实际上它所做的事情并没有想象的那么复杂。按照通常的逻辑，在调用 `parseEndTag` 函数之前已经获得到了结束标签的名字以及结束标签在原始 `html` 字符串中的起始和结束位置，所以完全可以直接调用 `parser` 钩子 `options.end(tagName, start, end)`，然后宣布大功告成。然而实际上 `Vue` 的 `html parser` 并没有这样做，而是又调用了 `parseEndTag` 函数，那说明必然有其他的事情需要处理，到底是什么事情呢？我们可以想象一下 `parseEndTag` 函数都会做什么事情，首先 `parseEndTag` 函数的执行说明此时正在 `parse` 结束标签，假设我们有如下 `html` 字符串：
+`parseEndTag` 函数的代码看上去很长，但实际上它所做的事情并没有想象的那么复杂。按照通常的逻辑，在调用 `parseEndTag` 函数之前已经获得到了结束标签的名字以及结束标签在原始 `html` 字符串中的起始和结束位置，所以完全可以直接调用 `parser` 钩子 `options.end(tagName, start, end)`，并宣布大功告成。然而实际上 `Vue` 的 `html parser` 并没有这样做，而是又调用了 `parseEndTag` 函数，那说明必然有其他的事情需要处理，到底是什么事情呢？我们可以想象一下 `parseEndTag` 函数都会做什么事情，首先 `parseEndTag` 函数的执行说明此时正在 `parse` 结束标签，假设我们有如下 `html` 字符串：
 
 ```html
 <article><section><div></section></article>
@@ -1150,7 +1150,7 @@ function parseEndTag (tagName, start, end) {
 <article><section></section></article><div>
 ```
 
-在解析这段 `html` 字符串的时候，首先会遇到两个非一元标签的开始标签，即 `<article>` 和 `<section>`，并将这两个标签 `push` 到 `stack` 栈中。然后会一次遇到与 `stack` 栈中相对应的结束标签 `</section>` 和 `</article>`，在解析完这两个结束标签之后 `stack` 栈应该是空栈。紧接着又遇到一个开始标签，也就是 `<div>` 标签，这是一个非一元标签的开始标签，所以会将该标签 `push` 到 `stack` 栈中。这样上面这段 `html` 字符串就解析完成了，大家发现什么问题没有？没错问题就是：**`stack` 栈非空**。`stack` 栈中还残留最后遇到的 `<div>` 开始标签没有被处理，所以 `parseEndTag` 函数的另外一个作用就是处理剩余未被处理的标签。
+在解析这段 `html` 字符串的时候，首先会遇到两个非一元标签的开始标签，即 `<article>` 和 `<section>`，并将这两个标签 `push` 到 `stack` 栈中。然后会依次遇到与 `stack` 栈中起始标签相对应的结束标签 `</section>` 和 `</article>`，在解析完这两个结束标签之后 `stack` 栈应该是空栈。紧接着又遇到一个开始标签，也就是 `<div>` 标签，这是一个非一元标签的开始标签，所以会将该标签 `push` 到 `stack` 栈中。这样上面这段 `html` 字符串就解析完成了，大家发现什么问题没有？没错问题就是：**`stack` 栈非空**。`stack` 栈中还残留最后遇到的 `<div>` 开始标签没有被处理，所以 `parseEndTag` 函数的另外一个作用就是处理 `stack` 栈中剩余未被处理的标签。
 
 除了这些功能之外，`parseEndTag` 函数还会做一件事儿，如果你感兴趣你可以在任何 `html` 文件中写下如下内容：
 
