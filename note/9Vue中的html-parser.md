@@ -369,7 +369,7 @@ let last, lastTag
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-12-25-070202.jpg)
 
-再然后便会遇到 `section` 结束标签，我们知道：**最先遇到的结束标签，应该最后被压入 stack 栈**，也就是说此时 `stack` 栈顶的元素应该是 `section`，但是我们发现事实上 `stack` 栈顶并不是 `section` 而是 `div`，这说明 `div` 元素缺少闭合标签。这就是检测 `html` 字符串中是否缺少闭合标签的原理。
+再然后便会遇到 `section` 结束标签，我们知道：**最先遇到的结束标签，其对应的开始标签应该最后被压入 stack 栈**，也就是说此时 `stack` 栈顶的元素应该是 `section`，但是我们发现事实上 `stack` 栈顶并不是 `section` 而是 `div`，这说明 `div` 元素缺少闭合标签。这就是检测 `html` 字符串中是否缺少闭合标签的原理。
 
 讲完了 `stack` 常量，接下来第二个常量是 `expectHTML`，它的值被初始化为 `options.expectHTML`，也就是 `parser` 选项中的 `expectHTML`。它是一个布尔值，后面遇到的时候再讲解其作用。
 
@@ -1078,7 +1078,7 @@ endTagMatch = [
 ]
 ```
 
-第一个元素是整个匹配到的结束标签字符串，第二个元素是对应的标签名字。同时如果匹配成功 `if` 语句块的代码将被执行，首先使用 `curIndex` 常量存储当前 `index` 的值，然后调用 `advance` 函数，并以 `endTagMatch[0].length` 作为参数，接着调用了 `parseEndTag` 函数对结束标签进行解析，传递给 `parseEndTag` 函数的三个参数分别是：标签名以及结束标签在 `html` 字符串中起始和结束的位置，最后调用 `continue` 语句结束此次循环。
+第一个元素是整个匹配到的结束标签字符串，第二个元素是对应的标签名字。如果匹配成功 `if` 语句块的代码将被执行，首先使用 `curIndex` 常量存储当前 `index` 的值，然后调用 `advance` 函数，并以 `endTagMatch[0].length` 作为参数，接着调用了 `parseEndTag` 函数对结束标签进行解析，传递给 `parseEndTag` 函数的三个参数分别是：标签名以及结束标签在 `html` 字符串中起始和结束的位置，最后调用 `continue` 语句结束此次循环。
 
 关键点在于 `parseEndTag` 函数，它定义在 `handleStartTag` 函数的下面：
 
@@ -1163,5 +1163,223 @@ function parseEndTag (tagName, start, end) {
 
 上面的 `html` 片段中，我们分别写了 `</br>`、`</p>` 的结束标签，但注意我们并没有写起始标签，然后浏览器是能够正常解析他们的，其中 `</br>` 标签被正常解析为 `<br>` 标签，而 `</p>` 标签被正常解析为 `<p></p>`。除了 `br` 与 `p` 其他任何标签如果你只写了结束标签那么浏览器都将会忽略。所以为了与浏览器的行为相同，`parseEndTag` 函数也需要专门处理 `br` 与 `p` 的结束标签，即：`</br>` 和 `</p>`。
 
+现在我们已经知道了 `parseEndTag` 函数主要有三个作用：
 
+* 检测是否缺少闭合标签
+* 处理 `stack` 栈中剩余的标签
+* 解析 `</br>` 与 `</p>` 标签，与浏览器的行为相同
 
+当一个函数拥有两个及以上功能的时候，最常用的技巧就是通过参数进行控制，所以 `parseEndTag` 函数也不例外。`parseEndTag` 函数接收三个参数，这三个参数其实都是可选的，根据传参的不同其功能也不同。
+
+可以明确的告诉大家，在 `Vue` 的 `html-parser` 中 `parseEndTag` 函数的使用方式有三种：
+
+* 第一种是处理普通的结束标签，此时**三个参数都传递**
+* 第二种是只传递第一个参数：
+
+```js
+parseEndTag(lastTag)
+```
+
+只传递一个参数的情况我们前面遇到过，就是在 `handleStartTag` 函数中
+
+* 第三种是**不传递参数**，当不传递参数的时候，就是我们讲过的，这是在处理 `stack` 栈剩余未处理的标签。
+
+接下来我们就逐步分析 `parseEndTag` 函数的代码，从而明白 `parseEndTag` 函数是如何完成这些事情的。
+
+在 `parseEndTag` 函数的开头是这样一段代码：
+
+```js
+let pos, lowerCasedTagName
+if (start == null) start = index
+if (end == null) end = index
+```
+
+定了两个变量：`pos` 和 `lowerCasedTagName`，其中变量 `pos` 会在后面用于判断 `html` 字符串是否缺少结束标签，`lowerCasedTagName` 变量用来存储 `tagName` 的小写版。接着是两句 `if` 语句，当 `start` 和 `end` 不存在时，将这两个变量的值设置为当前字符流的读入位置，即 `index`。所以当我们看到这两个 `if` 语句时，我们就应该能够想到：`parseEndTag` 函数的第二个参数和第三个参数都是可选的，即不传。其实这种使用 `parseEndTag` 函数的方式我们在 `handleStartTag` 函数中见过，当时我们没有对其进行讲解，现在我们可以看一下这段代码了，如下：
+
+```js
+if (expectHTML) {
+  if (lastTag === 'p' && isNonPhrasingTag(tagName)) {
+    parseEndTag(lastTag)
+  }
+  if (canBeLeftOpenTag(tagName) && lastTag === tagName) {
+    parseEndTag(tagName)
+  }
+}
+```
+
+我们知道 `lastTag` 引用的是 `stack` 栈顶的元素，也就是最近(或者说上一次)遇到的开始标签，所以如下判断条件：
+
+```js
+lastTag === 'p' && isNonPhrasingTag(tagName)
+```
+
+的意思是最近一次遇到的开始标签是 `p` 标签，并且当前正在解析的开始标签必须不能是**段落式内容(`Phrasing content`)**模型，这时候 `if` 语句块的代码才会执行，即调用 `parseEndTag(lastTag)`。首先大家要知道每一个 `html` 元素都拥有一个或多个内容模型(`content model`)，其中 `p` 标签本身的内容模型是**流式内容(`Flow content`)**，并且 `p` 标签的特性是只允许包含**段落式内容(`Phrasing content`)**。所以条件成立的情况如下：
+
+```html
+<p><h2></h2></p>
+```
+
+在解析上面这段 `html` 字符串的时候，首先遇到 `p` 标签的开始标签，此时 `lastTag` 被设置为 `p`，紧接着会遇到 `h2` 标签的开始标签，由于 `h2` 标签得内容模型属于非**段落式内容(`Phrasing content`)**模型，所以会立即调用 `parseEndTag(lastTag)` 函数闭合 `p` 标签，此时由于强行插入了 `</p>` 标签，所以解析后的字符串将变为如下内容：
+
+```html
+<p></p><h2></h2></p>
+```
+
+接着，继续解析该字符串，会遇到 `<h2></h2>` 标签并正常解析之，最后解析器会遇到一个单独的 `p` 标签的结束标签，即：`</p>`。这个时候就回到了我们前面讲过的，当解析器遇到 `p` 标签或者 `br` 标签的结束标签时会补全他们，最终 `<p><h2></h2></p>` 这段 `html` 字符串将被解析为：
+
+```html
+<p></p><h2></h2><p></p>
+```
+
+而这也就是浏览器的行为。以上是第一个 `if` 分支的意义，还有第二个 `if` 分支，它的条件如下：
+
+```js
+canBeLeftOpenTag(tagName) && lastTag === tagName
+```
+
+以上条件成立的意思是：**当前正在解析的标签是一个可以省略结束标签的标签，并且与上一次解析到的开始标签相同**，如下：
+
+```html
+<p>one
+<p>two
+```
+
+`p` 标签是可以省略结束标签的标签，所以当解析到一个 `p` 标签的开始标签并且下一次遇到的标签也是 `p` 标签的开始标签时，会立即关闭第二个 `p` 标签。即调用：`parseEndTag(tagName)` 函数，然后由于第一个 `p` 标签缺少闭合标签所以会 `Vue` 会给你一个警告。但其实这是不对的，我已经提了PR：[https://github.com/vuejs/vue/pull/7510](https://github.com/vuejs/vue/pull/7510)。
+
+现在我们补充讲解了 `handleStartTag` 函数中遗留未讲解的内容，现在我们回过头来继续看 `parseEndTag` 函数的代码，接下来是这段代码：
+
+```js
+if (tagName) {
+  lowerCasedTagName = tagName.toLowerCase()
+}
+```
+
+这句代码很简单，如果存在 `tagName` 则将其转为小写并保存到之前定义的 `lowerCasedTagName` 变量中。
+
+再往下是这段代码：
+
+```js
+// Find the closest opened tag of the same type
+if (tagName) {
+  for (pos = stack.length - 1; pos >= 0; pos--) {
+    if (stack[pos].lowerCasedTag === lowerCasedTagName) {
+      break
+    }
+  }
+} else {
+  // If no tag name is provided, clean shop
+  pos = 0
+}
+```
+
+用一句话描述上面这代码的作用：寻找当前解析的结束标签所对应的开始标签在 `stack` 栈中的位置。实现方式是如果 `tagName` 存在，则开启一个 `for` 循环从后向前遍历 `stack` 栈，直到找到相应的位置，并且该位置索引会保存到 `pos` 变量中，如果 `tagName` 不存在，则直接将 `pos` 设置为 `0`。
+
+那么 `pos` 变量是用来干什么的呢？实际上 `pos` 变量会被用来判断是否有元素缺少闭合标签。我们继续查看后面的代码就明白了，即：
+
+```js
+if (pos >= 0) {
+  // Close all the open elements, up the stack
+  for (let i = stack.length - 1; i >= pos; i--) {
+    if (process.env.NODE_ENV !== 'production' &&
+      (i > pos || !tagName) &&
+      !(expectHTML && canBeLeftOpenTag(stack[i].tag)) &&
+      options.warn
+    ) {
+      options.warn(
+        `tag <${stack[i].tag}> has no matching end tag.`
+      )
+    }
+    if (options.end) {
+      options.end(stack[i].tag, start, end)
+    }
+  }
+
+  // Remove the open elements from the stack
+  stack.length = pos
+  lastTag = pos && stack[pos - 1].tag
+} else if (lowerCasedTagName === 'br') {
+  // ... 省略
+} else if (lowerCasedTagName === 'p') {
+  // ... 省略
+}
+```
+
+上面的代码是 `parseEndTag` 函数剩余的全部代码，有三部分组成，即 `if...else if...else if`。首先我们查看 `if` 语句块，当 `pos >= 0` 的时候就会走 `if` 语句块。在 `if` 语句块内开启一个 `for` 循环，同样是从后向前遍历 `stack` 数组，如果发现 `stack` 数组中存在索引大于 `pos` 的元素，那么该元素一定是缺少闭合标签的，这个时候如果是在非生产环境那么 `Vue` 便会打印一句警告，告诉你缺少闭合标签。除了打印一句警告之外，随后会调用 `options.end(stack[i].tag, start, end)` 立即将其闭合，这是为了保证解析结果的正确性。最后更新 `stack` 栈以及 `lastTag`：
+
+```js
+// Remove the open elements from the stack
+stack.length = pos
+lastTag = pos && stack[pos - 1].tag
+```
+
+接下来我们看一下后面两个 `else if` 语句块，即：
+
+```js
+if (pos >= 0) {
+  // ... 省略
+} else if (lowerCasedTagName === 'br') {
+  if (options.start) {
+    options.start(tagName, [], true, start, end)
+  }
+} else if (lowerCasedTagName === 'p') {
+  if (options.start) {
+    options.start(tagName, [], false, start, end)
+  }
+  if (options.end) {
+    options.end(tagName, start, end)
+  }
+}
+```
+
+那么什么时候才会执行第二个语句块呢？需要两个条件，第一：`pos >= 0` 不能成立，否则程序将走 `if` 分支，那么什么时候 `pos < 0` 成立呢？我们再次观察下面这段代码：
+
+```js
+if (tagName) {
+  for (pos = stack.length - 1; pos >= 0; pos--) {
+    if (stack[pos].lowerCasedTag === lowerCasedTagName) {
+      break
+    }
+  }
+} else {
+  // If no tag name is provided, clean shop
+  pos = 0
+}
+```
+
+可以发现，如果 `tagName` 不存在，那么 `pos` 将始终等于 `0`，这样 `pos >= 0` 将永远成立，所以要想使得 `pos < 0` 成立，那么 `tagName` 参数是必然存在的。也就是说 `pos` 要想等于 `0`，那么必须要执行 `for` 循环，可以发现：**当 `tagName` 没有在 `stack` 栈中找到对应的开始标签时，`pos` 为 `-1`**。这样 `pos >= 0` 的条件就不成立了，此时就会判断 `else if` 分支。
+
+现在我们还需要思考一个问题，**当 `tagName` 没有在 `stack` 栈中找到对应的开始标签时**说明什么问题？我们知道 `tagName` 是当前正在解析的结束标签，结束标签竟然没有找到对应的开始标签？那么也就是说，只写了结束标签而没写开始标签。并且我们可以发现这两个 `else if` 分支的判断条件分别是：
+
+```js
+else if (lowerCasedTagName === 'br')
+else if (lowerCasedTagName === 'p')
+```
+
+也就是说，当你写了 `br` 标签的结束标签：`</br>` 或 `p` 标签的结束标签 `</p>` 时，解析器能够正常解析他们，其中对于 `</br>` 会将其解析为正常的 `<br>` 标签，而 `</p>` 标签也会正常解析为 `<p></p>`。有兴趣的同学可以在任何一个 `html` 文件中写下如下字符串：
+
+```html
+<body>
+  </div>
+  </br>
+  </p>
+</body>
+```
+
+可以发现对于 `</br>` 和 `</p>` 标签浏览器可以将其正常解析为 `<br>` 以及 `<p></p>`，而对于 `</div>` 浏览器会将其忽略。所以 `Vue` 的 `parser` 与浏览器的行为是一致的。
+
+现在我们还剩一个问题没有讲解，即 `parseEndTag` 是如何处理 `stack` 栈中剩余未处理的标签的。其实就是调用 `parseEndTag()` 函数时不传递任何参数，也就是说此时 `tagName` 参数也不存在。这个时我们再次查看下面的代码：
+
+```js
+if (tagName) {
+  for (pos = stack.length - 1; pos >= 0; pos--) {
+    if (stack[pos].lowerCasedTag === lowerCasedTagName) {
+      break
+    }
+  }
+} else {
+  // If no tag name is provided, clean shop
+  pos = 0
+}
+```
+
+由于 `tagName` 不存在，所以此时 `pos` 为 `0`，我们知道在这段代码之后会遍历 `stack` 栈，并将 `stack` 栈中元素的索引与 `pos` 作对比。由于 `pos` 为 `0`，所以 `i >= pos` 始终成立，这个时候 `stack` 栈中如果有剩余未处理的标签，则会逐个警告缺少闭合标签，并调用 `options.end` 将其闭合。
