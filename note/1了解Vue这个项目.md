@@ -122,7 +122,6 @@
     "flow": "flow check",
     "release": "bash scripts/release.sh",
     "release:note": "node scripts/gen-release-note.js",
-    "setup": "node scripts/install-hooks.js",
     "commit": "git-cz"
   },
 ```
