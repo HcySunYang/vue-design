@@ -72,7 +72,7 @@ import Vue from 'core/index'
 import Vue from './instance/index'
 ```
 
-按照之前的逻辑，继续打开 `./instance/index.js` 文件：
+按照之前的套路，继续打开 `./instance/index.js` 文件：
 
 ```js
 // 从五个文件导入五个方法（不包括 warn）
@@ -156,7 +156,7 @@ function Vue (options) {
   Object.defineProperty(Vue.prototype, '$props', propsDef)
 ```
 
-我们先看最后两句，使用 `Object.defineProperty` 在 `Vue.prototype` 上定义了两个属性，就是大家熟悉的：`$data` 和 `$props`，这两个属性的定义分别写在了 `dataDef` 以及 `propsDef` 这两个对象里，也就是这两句代码上面的代码，首先是 `get` ：
+我们先看最后两句，使用 `Object.defineProperty` 在 `Vue.prototype` 上定义了两个属性，就是大家熟悉的：`$data` 和 `$props`，这两个属性的定义分别写在了 `dataDef` 以及 `propsDef` 这两个对象里，我们来仔细看一下这两个对象的定义，首先是 `get` ：
 
 ```js
 const dataDef = {}
@@ -227,9 +227,9 @@ export function installRenderHelpers (target: any) {
 }
 ```
 
-以上代码就是 `installRenderHelpers` 函数的源码，可以发现，这个函数的作用就是在 `Vue.prototype` 上添加一系列方法的，那么这些方法的作用大家还不需要关心，我们后面自然会知道。
+以上代码就是 `installRenderHelpers` 函数的源码，可以发现，这个函数的作用就是在 `Vue.prototype` 上添加一系列方法的，那么这些方法的作用大家还不需要关心，后面都会讲解到。
 
-`renderMixin` 方法在指定完 `installRenderHelpers` 函数之后，又在 `Vue.prototype` 上添加了两个方法，分别是：`$nextTick` 和 `_render`，最终经过 `renderMixin` 之后，`Vue.prototype` 将又被添加了如下方法：
+`renderMixin` 方法在执行完 `installRenderHelpers` 函数之后，又在 `Vue.prototype` 上添加了两个方法，分别是：`$nextTick` 和 `_render`，最终经过 `renderMixin` 之后，`Vue.prototype` 将又被添加了如下方法：
 
 ```js
 // installRenderHelpers 函数中
@@ -328,7 +328,7 @@ initGlobalAPI(Vue)
   Object.defineProperty(Vue, 'config', configDef)
 ```
 
-这段代码的作用是在 `Vue` 构造函数上添加 `config` 属性，这个属性的添加方式类似我们前面看过的 `$data` 以及 `$props`，也是一个只读的属性，并且当你试图设置其值时，在非生产环境下会给你一个友好的提示，为什么说它友好呢？因为如果是我的话，我可能会提示你：`what are you fucking doing`。
+这段代码的作用是在 `Vue` 构造函数上添加 `config` 属性，这个属性的添加方式类似我们前面看过的 `$data` 以及 `$props`，也是一个只读的属性，并且当你试图设置其值时，在非生产环境下会给你一个友好的提示。
 
 那 `Vue.config` 的值是什么呢？在 `src/core/global-api/index.js` 文件的开头有这样一句：
 
@@ -553,13 +553,15 @@ Vue.directive
 Vue.filter
 ```
 
+这三个静态方法大家都不陌生，分别用来全局注册组件，指令和过滤器。
+
 这样，`initGlobalAPI` 方法的全部功能我们就介绍完毕了，它的作用就像它的名字一样，是在 `Vue` 构造函数上添加全局的API，类似整理 `Vue.prototype` 上的属性和方法一样，我们同样对 `Vue` 静态属性和方法做一个整理，将他放到 [附录/Vue 构造函数整理-全局API](Vue构造函数整理-全局API.md) 中，便于以后查阅。
 
 至此，对于 `core/index.js` 文件的作用我们也大概清楚了，在这个文件里，它首先将核心的 `Vue`，也就是在 `core/instance/index.js` 文件中的 `Vue`，也可以说是原型被包装(添加属性和方法)后的 `Vue` 导出，然后使用 `initGlobalAPI` 方法给 `Vue` 添加静态方法和属性，除此之外，在这里文件里，也对原型进行了修改，为其添加了两个属性：`$isServer` 和 `$ssrContext`，最后添加了 `Vue.version` 属性并导出了 `Vue`。
 
 #### Vue 平台化的包装
 
-现在，在我们弄清 `Vue` 构造函数的过程中已经看了两个主要的文件，分别是：`core/instance/index.js` 文件以及 `core/index.js` 文件，前者是 `Vue` 构造函数的定义文件，我们一直都叫其 `Vue` 的出生文件，主要作用是定义 `Vue` 构造函数，并对其原型添加属性和方法。后者的主要作用是，为 `Vue` 添加全局的API，也就是静态的方法和属性。这两个文件有个共同点，就是它们都在 `core` 目录下，我们在介绍 `Vue` 项目目录结构的时候说过：`core` 目录存放的是平台无关的代码，所以无论是 `core/instance/index.js` 文件还是 `core/index.js` 文件，它们都在包装核心的 `Vue`，且这些包装是平台无关的。但是，`Vue` 是一个 `Multi-platform` 的项目（web和weex），不同平台可能会内置不同的组件、指令，或者一些平台特有的功能等等，那么这就需要对 `Vue` 根据不同的平台进行平台化的包装，这就是接下来我们要看的文件，这个文件也出现在我们寻找 `Vue` 构造函数的路线上，他就是：`platforms/web/runtime/index.js` 文件。
+现在，在我们弄清 `Vue` 构造函数的过程中已经看了两个主要的文件，分别是：`core/instance/index.js` 文件以及 `core/index.js` 文件，前者是 `Vue` 构造函数的定义文件，我们一直都叫其 `Vue` 的出生文件，主要作用是定义 `Vue` 构造函数，并对其原型添加属性和方法，即实例属性和实例方法。后者的主要作用是，为 `Vue` 添加全局的API，也就是静态的方法和属性。这两个文件有个共同点，就是它们都在 `core` 目录下，我们在介绍 `Vue` 项目目录结构的时候说过：`core` 目录存放的是平台无关的代码，所以无论是 `core/instance/index.js` 文件还是 `core/index.js` 文件，它们都在包装核心的 `Vue`，且这些包装是平台无关的。但是，`Vue` 是一个 `Multi-platform` 的项目（web和weex），不同平台可能会内置不同的组件、指令，或者一些平台特有的功能等等，那么这就需要对 `Vue` 根据不同的平台进行平台化的包装，这就是接下来我们要看的文件，这个文件也出现在我们寻找 `Vue` 构造函数的路线上，他就是：`platforms/web/runtime/index.js` 文件。
 
 在看这个文件之前，大家可以先打开 `platforms` 目录，可以发现有两个子目录 `web` 和 `weex`。这两个子目录的作用就是分别为相应的平台对核心的 `Vue` 进行包装的。而我们所要研究的 web 平台，就在 `web` 这个目录里。
 
@@ -754,7 +756,7 @@ Vue.prototype.$mount = function (
 
 首先在 `Vue.prototype` 上添加 `__patch__` 方法，如果在浏览器环境运行的话，这个方法的值为 `patch` 函数，否则是一个空函数 `noop`。然后又在 `Vue.prototype` 上添加了 `$mount` 方法，我们暂且不关心 `$mount` 方法的内容和作用。
 
-之后的一段代码是 `vue-devtools` 的全局钩子，它被包裹在 `setTimeout` 中，最后导出了 `Vue`。
+再往下的一段代码是 `vue-devtools` 的全局钩子，它被包裹在 `setTimeout` 中，最后导出了 `Vue`。
 
 现在我们就看完了 `platforms/web/runtime/index.js` 文件，该文件的作用是对 `Vue` 进行平台化的包装：
 
@@ -767,7 +769,7 @@ Vue.prototype.$mount = function (
 
 #### with compiler
 
-在看完 `runtime/index.js` 文件之后，其实 `运行时` 版本的 `Vue` 构造函数就以及成型了。我们可以打开 `entry-runtime.js` 这个入口文件，这个文件只有两行代码：
+在看完 `runtime/index.js` 文件之后，其实 `运行时` 版本的 `Vue` 构造函数就已经“成型了”。我们可以打开 `entry-runtime.js` 这个入口文件，这个文件只有两行代码：
 
 ```js
 import Vue from './runtime/index'

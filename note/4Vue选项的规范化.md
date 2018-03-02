@@ -2,6 +2,8 @@
 
 <p class="tip">注意：本节中当我们提到“以我们的例子为例”的时候，这里的“我们的例子”指的是《Vue的思路之以一个例子为线索》中的例子</p>
 
+#### 弄清楚传递给 mergeOptions 函数的三个参数
+
 这一小节我们继续前面的讨论，看一看 `mergeOptions` 都做了些什么。根据 `core/instance/init.js` 顶部的引用关系可知，`mergeOptions` 函数来自于 `core/util/options.js` 文件，事实上不仅仅是 `mergeOptions` 函数，整个文件所做的一切都为了一件事：选项的合并。
 
 不过在我们深入 `core/util/options.js` 文件之前，我们有必要搞清楚一件事，就是如下代码中：
@@ -172,6 +174,8 @@ vm.$options = mergeOptions(
 
 现在我们已经搞清楚传递给 `mergeOptions` 函数的三个参数分别是什么了，那么接下来我们就打开 `core/util/options.js` 文件并找到  `mergeOptions` 方法，看一看都发生了什么。
 
+#### 检查组件名称是否符合要求
+
 打开 `core/util/options.js` 文件，找到 `mergeOptions` 方法，这个方法上面有一段注释：
 
 ```js
@@ -227,9 +231,9 @@ export function validateComponentName (name: string) {
 `validateComponentName` 函数由两个 `if` 语句块组成，所以可想而知，对于组件的名字要满足这两条规则才行，这两条规则就是这两个 `if` 分支的条件语句：
 
 * ①：组件的名字要满足正则表达式：`/^[a-zA-Z][\w-]*$/`
-* ②：要满足：`isBuiltInTag(name) || config.isReservedTag(name)` 不成立
+* ②：要满足：条件 `isBuiltInTag(name) || config.isReservedTag(name)` 不成立
 
-对于第一条规则，`Vue` 限定组件的名字由普通的字符和中横线(-)组成，且必须以字符开头。
+对于第一条规则，`Vue` 限定组件的名字由普通的字符和中横线(-)组成，且必须以字母开头。
 
 对于第二条规则，首先将 `options.components` 对象的 `key` 小写化作为组件的名字，然后以组件的名字为参数分别调用两个方法：`isBuiltInTag` 和 `config.isReservedTag`，其中 `isBuiltInTag` 方法的作用是用来检测你所注册的组件是否是内置的标签，这个方法可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看其实现，于是我们可知：`slot` 和 `component` 这个两个名字被 `Vue` 作为内置标签而存在的，你是不能够使用的，比如这样：
 
@@ -262,9 +266,11 @@ Vue.config.isUnknownElement = isUnknownElement
 Vue.config.isReservedTag = isReservedTag
 ```
 
-就是在给 `config.isReservedTag` 赋值，其值为来自于 `platforms/web/util/element.js` 文件的 `isReservedTag` 函数，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看该方法的作用及实现，可知在 `Vue` 中 `html` 标签和部分 `SVG` 标签被认为是保留的。所以这段代码是在保证选项被合并前的合理合法。最后大家注意一点，这些工作实在非生产环境下做的，所以在非生产环境下开发者就能够发现并修正这些问题，所以在生产环境下就不需要再重复做一次校验检测了。
+就是在给 `config.isReservedTag` 赋值，其值为来自于 `platforms/web/util/element.js` 文件的 `isReservedTag` 函数，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看该方法的作用及实现，可知在 `Vue` 中 `html` 标签和部分 `SVG` 标签被认为是保留的。所以这段代码是在保证选项被合并前的合理合法。最后大家注意一点，这些工作是在非生产环境下做的，所以在非生产环境下开发者就能够发现并修正这些问题，所以在生产环境下就不需要再重复做一次校验检测了。
 
 另外要说一点，我们的例子中并没有使用 `components` 选项，但是这里还是给大家顺便介绍了一下。如果按照我们的例子的话，`mergeOptions` 函数中的很多代码都不会执行，但是为了保证让大家理解整个选项合并所做的事情，这里都会有所介绍。
+
+#### 允许合并另一个实例构造者的选项
 
 我们继续看代码，接下来的一段代码同样是一个 `if` 语句块：
 
@@ -275,6 +281,8 @@ if (typeof child === 'function') {
 ```
 
 这说明 `child` 参数除了是普通的选项对象外，还可以是一个函数，如果是函数的话就取该函数的 `options` 静态属性作为新的 `child`，我们想一想什么样的函数具有 `options` 静态属性呢？现在我们知道 `Vue` 构造函数本身就拥有这个属性，其实通过 `Vue.extend` 创造出来的子类也是拥有这个属性的。所以这就允许我们在进行选项合并的时候，去合并一个 `Vue` 实例构造者的选项了。
+
+#### 规范化 props（normalizeProps）
 
 接着看代码，接下来是三个用来规范化选项的函数调用：
 
@@ -515,6 +523,8 @@ if (Array.isArray(props)) {
 
 在警告中使用了来自 `shared/util.js` 文件的 `toRawType` 方法获取你所传递的 `props` 的真实数据类型。
 
+#### 规范化 inject（normalizeInject）
+
 现在我们已经了解了，原来 `Vue` 底层是这样处理 `props` 选项的，下面我们再来看看第二个规范化函数：`normalizeInject`，源码如下：
 
 ```js
@@ -523,6 +533,7 @@ if (Array.isArray(props)) {
  */
 function normalizeInject (options: Object, vm: ?Component) {
   const inject = options.inject
+  if (!inject) return
   const normalized = options.inject = {}
   if (Array.isArray(inject)) {
     for (let i = 0; i < inject.length; i++) {
@@ -545,14 +556,15 @@ function normalizeInject (options: Object, vm: ?Component) {
 }
 ```
 
-首先是这两句代码：
+首先是这三句代码：
 
 ```js
 const inject = options.inject
+if (!inject) return
 const normalized = options.inject = {}
 ```
 
-第一句代码使用 `inject` 变量缓存了 `options.inject`，通过这句代码和函数的名字我们能够知道，这个函数是用来规范化 `inject` 选项的。然后在第二句代码中重新了 `options.inject` 的值为一个空的 `JSON` 对象，并定义了一个值同样为空 `JSON` 对象的变量 `normalized`。现在变量 `normalized` 和 `options.inject` 将拥有相同的引用，也就是说当修改 `normalized` 的时候，`options.inject` 也将受到影响。
+第一句代码使用 `inject` 变量缓存了 `options.inject`，通过这句代码和函数的名字我们能够知道，这个函数是用来规范化 `inject` 选项的。第二句代码判断是否传递了 `inject` 选项，如果没有则直接 `return`。然后在第三句代码中重写了 `options.inject` 的值为一个空的 `JSON` 对象，并定义了一个值同样为空 `JSON` 对象的变量 `normalized`。现在变量 `normalized` 和 `options.inject` 将拥有相同的引用，也就是说当修改 `normalized` 的时候，`options.inject` 也将受到影响。
 
 在这两句代码之后，同样是判断分支语句，判断 `inject` 选项是否是数组和纯对象，类似于对 `props` 的判断一样。说到这里我们需要了解一下 `inject` 选项了，这个选项是 `2.2.0` 版本新增，它要配合 `provide` 选项一同使用，具体介绍可以查看官方文档，这里我们举一个简单的例子：
 
@@ -580,7 +592,7 @@ var vm = new Vue({
 })
 ```
 
-上面的代码中，在子组件的 `created` 钩子中我们访问了 `this.data`，但是在子组件中我们并没有定义这个数据，但是我们使用了 `inject` 选项注入了这个数据，这个数据的来源就是父组件通过 `provide` 提供的。父组件通过 `provide` 选项向子组件提供数据，然后子组件中可以使用 `inject` 选项注入数据。这里我们的 `inject` 选项使用一个字符串数组，其实我们也可以写成对象的形式，如下：
+上面的代码中，在子组件的 `created` 钩子中我们访问了 `this.data`，但是在子组件中我们并没有定义这个数据，之所以在没有定义的情况下能够使用，是因为我们使用了 `inject` 选项注入了这个数据，这个数据的来源就是父组件通过 `provide` 提供的。父组件通过 `provide` 选项向子组件提供数据，然后子组件中可以使用 `inject` 选项注入数据。这里我们的 `inject` 选项使用一个字符串数组，其实我们也可以写成对象的形式，如下：
 
 ```js
 // 子组件
@@ -610,7 +622,7 @@ if (Array.isArray(inject)) {
 }
 ```
 
-使用 `for` 循环遍历数组的每一个元素，将元素的值作为 `normalized` 的 `key`，然后将 `{ from: inject[i] }` 作为整个表达式的值。大家不要忘了一件事，那就是 `normalized` 对象和 `options.inject` 拥有相同的引用，所以 `normalized` 的改变就意味着 `options.inject` 的改变。
+使用 `for` 循环遍历数组的每一个元素，将元素的值作为 `key`，然后将 `{ from: inject[i] }` 作为值。大家不要忘了一件事，那就是 `normalized` 对象和 `options.inject` 拥有相同的引用，所以 `normalized` 的改变就意味着 `options.inject` 的改变。
 
 也就是说如果你的 `inject` 选项是这样写的：
 
@@ -647,7 +659,6 @@ if (Array.isArray(inject)) {
 有的同学可能会问：`normalized` 函数的目的不就将 `inject` 选项规范化为对象结构吗？那既然已经是对象了还规范什么呢？那是因为我们期望得到的对象是这样的：
 
 ```js
-// 这里为简写，这应该写在Vue的选项中
 inject: {
   'data1': { from: 'data1' },
   'data2': { from: 'data2' }
@@ -688,7 +699,7 @@ for (const key in inject) {
 }
 ```
 
-使用 `for in` 循环遍历 `inject` 选项，依然使用 `inject` 对象的 `key` 作为 `normalized` 的 `key`，只不过要判断一下值(即 `val`)是否为纯对象，如果是纯对象则使用 `extend` 进行混合，反则直接使用 `val` 作为 `from` 字段的值，代码总体还是很简单的。
+使用 `for in` 循环遍历 `inject` 选项，依然使用 `inject` 对象的 `key` 作为 `normalized` 的 `key`，只不过要判断一下值(即 `val`)是否为纯对象，如果是纯对象则使用 `extend` 进行混合，否则直接使用 `val` 作为 `from` 字段的值，代码总体还是很简单的。
 
 最后一个判断分支同样是在当你传递的 `inject` 选项既不是数组又不是纯对象的时候，在非生产环境下给你一个警告：
 
@@ -705,6 +716,8 @@ if (Array.isArray(inject)) {
   )
 }
 ```
+
+#### 规范化 directives（normalizeDirectives）
 
 最后一个规范化函数是 `normalizeDirectives`，源码如下：
 
