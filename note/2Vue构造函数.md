@@ -754,7 +754,7 @@ Vue.prototype.$mount = function (
 
 首先在 `Vue.prototype` 上添加 `__patch__` 方法，如果在浏览器环境运行的话，这个方法的值为 `patch` 函数，否则是一个空函数 `noop`。然后又在 `Vue.prototype` 上添加了 `$mount` 方法，我们暂且不关心 `$mount` 方法的内容和作用。
 
-之后的一段代码是 `vue-devtools` 的全局钩子，它被包裹在 `Vue.nextTick` 中(对于 `Vue.nextTick` 我们会单独讲到)，最后导出了 `Vue`。
+之后的一段代码是 `vue-devtools` 的全局钩子，它被包裹在 `setTimeout` 中，最后导出了 `Vue`。
 
 现在我们就看完了 `platforms/web/runtime/index.js` 文件，该文件的作用是对 `Vue` 进行平台化的包装：
 
