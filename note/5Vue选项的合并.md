@@ -626,7 +626,7 @@ function mergeData (to: Object, from: ?Object): Object {
 }
 ```
 
-`mergeData` 函数接收两个参数 `to` 和 `from`，根据 `mergeData` 函数被调用时参数的传递顺序我们知道，`to` 对应的是 `childVla` 产生的春对象，`from` 对应 `parentVal` 产生的纯对象，我们看 `mergeData` 第一句代码：
+`mergeData` 函数接收两个参数 `to` 和 `from`，根据 `mergeData` 函数被调用时参数的传递顺序我们知道，`to` 对应的是 `childVla` 产生的纯对象，`from` 对应 `parentVal` 产生的纯对象，我们看 `mergeData` 第一句代码：
 
 ```js
 if (!from) return to
@@ -664,7 +664,7 @@ return to
 
 这个问题是什么意思呢？我们知道合并阶段 `strats.data` 将被处理成一个函数，但是这个函数并没有被执行，而是到了后面初始化的阶段才执行的，这个时候才会调用 `mergeData` 对数据进行合并处理，那这么做的目的是什么呢？
 
-其实这么做是有原因的，后面将到 `Vue` 的初始化的时候，大家就会发现 `inject` 和 `props` 这两个选项的初始化是先于 `data` 选项的，这就保证了我们能够使用 `props` 初始化 `data` 中的数据，如下：
+其实这么做是有原因的，后面讲到 `Vue` 的初始化的时候，大家就会发现 `inject` 和 `props` 这两个选项的初始化是先于 `data` 选项的，这就保证了我们能够使用 `props` 初始化 `data` 中的数据，如下：
 
 ```js
 // 子组件：使用 props 初始化子组件的 childData 
@@ -785,7 +785,7 @@ LIFECYCLE_HOOKS.forEach(hook => {
 })
 ```
 
-使用 `forEach` 遍历 `LIFECYCLE_HOOKS` 变量，那说明这个变量应该是一个数组，我们根据 `options.js` 文件头部的引用关系可知 `LIFECYCLE_HOOKS` 变量来自于 `shared/constants.js` 文件，我们打开这个文件找到 `LIFECYCLE_HOOKS` 变量如下：
+使用 `forEach` 遍历 `LIFECYCLE_HOOKS` 常量，那说明这个常量应该是一个数组，我们根据 `options.js` 文件头部的引用关系可知 `LIFECYCLE_HOOKS` 常量来自于 `shared/constants.js` 文件，我们打开这个文件找到 `LIFECYCLE_HOOKS` 常量如下：
 
 ```js
 export const LIFECYCLE_HOOKS = [
@@ -803,7 +803,7 @@ export const LIFECYCLE_HOOKS = [
 ]
 ```
 
-可以发现 `LIFECYCLE_HOOKS` 变量实际上是由与生命周期钩子同名的字符串组成的数组。
+可以发现 `LIFECYCLE_HOOKS` 常量实际上是由与生命周期钩子同名的字符串组成的数组。
 
 所以现在再回头来看那段 `forEach` 语句可知，它的作用就是在 `strats` 策略对象上添加用来合并各个生命周期钩子选项的策略函数，并且这些生命周期钩子选项的策略函数相同：*都是 `mergeHook` 函数*。
 
@@ -836,7 +836,7 @@ retrun (是否有 childVal，即判断组件的选项中是否有对应名字的
   : 如果没有 childVal 则直接返回 parentVal
 ```
 
-如上就是对 `mergeHook` 函数的解读，我们可以发现，在经过 `mergeHook` 函数处理之后，组件选项的生命周期钩子函数被合并成一个数组。第一个三目运算符需要注意，它判断是否有 `childVal`，即组件的选项是否写了生命周期钩子函数，如果有则直接返回了 `parentVal`，这里有个问题：`parentVal` 一定是数组吗？答案是：*如果有 `parentVal` 那么其一定是数组，如果没有 `parentVal` 那么 `strats[hooks]` 函数根本不会执行*。我们以 `created` 声明周期钩子函数为例：
+如上就是对 `mergeHook` 函数的解读，我们可以发现，在经过 `mergeHook` 函数处理之后，组件选项的生命周期钩子函数被合并成一个数组。第一个三目运算符需要注意，它判断是否有 `childVal`，即组件的选项是否写了生命周期钩子函数，如果没有则直接返回了 `parentVal`，这里有个问题：`parentVal` 一定是数组吗？答案是：*如果有 `parentVal` 那么其一定是数组，如果没有 `parentVal` 那么 `strats[hooks]` 函数根本不会执行*。我们以 `created` 声明周期钩子函数为例：
 
 如下代码：
 
@@ -874,7 +874,7 @@ const Child = new Parent({
 })
 ```
 
-其中 `Child` 使用过 `new Parent` 生成的，所以对于 `Child` 来讲，`childVal` 是：
+其中 `Child` 是使用 `new Parent` 生成的，所以对于 `Child` 来讲，`childVal` 是：
 
 ```js
 created: function () {
@@ -953,7 +953,7 @@ new Vue({
 
 ##### 资源(assets)选项的合并策略
 
-在 `Vue` 中 `directives`、`filters` 以及 `components` 被认为是资源，其实很好理解，指令、过滤器和组件都是可以作为第三方应用来提供的，比如你需要一个模拟滚动的组件，你当然可以选用超级强大的三方组件 [simulation-scroll-y](https://fmover.hcysun.me/#/zh-cn/vue-components/simulation-scroll-y-vue)，所以这样看来 [simulation-scroll-y](https://fmover.hcysun.me/#/zh-cn/vue-components/simulation-scroll-y-vue) 就可以认为是资源，除了组件之外指令和过滤器也都是同样的道理。
+在 `Vue` 中 `directives`、`filters` 以及 `components` 被认为是资源，其实很好理解，指令、过滤器和组件都是可以作为第三方应用来提供的，比如你需要一个模拟滚动的组件，你当然可以选用超级强大的第三方组件 [scroll-flip-page](https://github.com/HcySunYang/scroll-flip-page)，所以这样看来 [scroll-flip-page](https://github.com/HcySunYang/scroll-flip-page) 就可以认为是资源，除了组件之外指令和过滤器也都是同样的道理。
 
 而我们接下来要看的代码就是用来合并处理 `directives`、`filters` 以及 `components` 等资源选项的，看如下代码：
 
@@ -985,7 +985,7 @@ ASSET_TYPES.forEach(function (type) {
 })
 ```
 
-与生命周期钩子的合并处理策略基本一致，以上代码段也分为两部分：`mergeAssets` 函数以及一个 `forEach` 语句。我们同样先看 `forEach` 语句，这个 `forEach` 循环用来遍历 `ASSET_TYPES` 变量，根据 `options.js` 文件头部的引用关系可知 `ASSET_TYPES` 变量来自于 `shared/constants.js` 文件，我们打开 `shared/constants.js` 文件找到 `ASSET_TYPES` 变量如下：
+与生命周期钩子的合并处理策略基本一致，以上代码段也分为两部分：`mergeAssets` 函数以及一个 `forEach` 语句。我们同样先看 `forEach` 语句，这个 `forEach` 循环用来遍历 `ASSET_TYPES` 常量，根据 `options.js` 文件头部的引用关系可知 `ASSET_TYPES` 常量来自于 `shared/constants.js` 文件，我们打开 `shared/constants.js` 文件找到 `ASSET_TYPES` 常量如下：
 
 ```js
 export const ASSET_TYPES = [
@@ -1011,7 +1011,7 @@ ASSET_TYPES.forEach(function (type) {
 })
 ```
 
-我们发现在循环内部它有手动拼接上一个 `'s'`，所以最终的结果就是在 `strats` 策略对象上添加与资源选项名字相同的策略函数，用来分别合并处理三类资源。所以接下来我们就看看它是怎么合并的，`mergeAssets` 代码如下：
+我们发现在循环内部它有手动拼接上一个 `'s'`，所以最终的结果就是在 `strats` 策略对象上添加与资源选项名字相同的策略函数，用来分别合并处理三类资源。所以接下来我们就看看它是怎么处理的，`mergeAssets` 代码如下：
 
 ```js
 function mergeAssets (
@@ -1032,7 +1032,7 @@ function mergeAssets (
 
 上面的代码本身逻辑很简单，首先以 `parentVal` 为原型创建对象 `res`，然后判断是否有 `childVal`，如果有的话使用 `extend` 函数将 `childVal` 上的属性混合到 `res` 对象上并返回。如果没有 `childVal` 则直接返回 `res`。
 
-举个例子，大家知道任何组件的模板中我们都可以直接使用 `<transition/>` 组件或者 `<keep-alive/>` 等，但是我们并没有在我们自己的组件实例的 `components` 选项中显示的声明这些组件。那么这是怎么做到的呢？其实答案就在 `mergeAssets` 函数中。一下面的代码为例：
+举个例子，大家知道任何组件的模板中我们都可以直接使用 `<transition/>` 组件或者 `<keep-alive/>` 等，但是我们并没有在我们自己的组件实例的 `components` 选项中显示的声明这些组件。那么这是怎么做到的呢？其实答案就在 `mergeAssets` 函数中。以下面的代码为例：
 
 ```js
 var v = new Vue({
@@ -1382,7 +1382,7 @@ strats.computed = function (
 策略函数内容如下：
 
 ```js
-// 如果存在 childVal，那么在非生产环境下要监测 childVal 的类型
+// 如果存在 childVal，那么在非生产环境下要检查 childVal 的类型
 if (childVal && process.env.NODE_ENV !== 'production') {
   assertObjectType(key, childVal, vm)
 }

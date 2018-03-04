@@ -87,17 +87,13 @@ var vm = new Vue({
 })
 ```
 
-这个时候 `mergeOptions` 函数将会把 `Vue.options` 作为 父选项，把我们传递的实例选项作为子选项进行合并，合并的结果我们可以通过打印 `$options` 属性得知。其实我们前面已经分析过了，`el` 选项将使用默认合并策略合并，最终的值就是字符串 `'#app'`，而 `data` 选项将变成一个函数，且这个函数的执行结果就是合并后的数据，那么在这里，合并后的数据就是 `{test: 1}` 这个对象。
+这个时候 `mergeOptions` 函数将会把 `Vue.options` 作为 父选项，把我们传递的实例选项作为子选项进行合并，合并的结果我们可以通过打印 `$options` 属性得知。其实我们前面已经分析过了，`el` 选项将使用默认合并策略合并，最终的值就是字符串 `'#app'`，而 `data` 选项将变成一个函数，且这个函数的执行结果就是合并后的数据，即： `{test: 1}`。
 
 下面是 `vm.$options` 的截图：
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-11-02-083231.jpg)
 
-我们发现 `el` 确实还是原来的值，而 `data` 也确实变成了一个函数，并且这个函数就是我们之前遇到过的 `mergedInstanceDataFn`，除此之外我们还能看到其他合并后的选项，其中 `components`、`directives`、`filters` 以及 `_base` 我们知道是存在与 `Vue.options` 中的，至于 `render` 和 `staticRenderFns` 这两个选项是在将模板编译成渲染函数时添加上去的，我们后面会遇到。另外 `_parentElm` 和 `_refElm` 这两个选项是在为虚拟DOM创建组件实例时添加的，我们后面也会讲到，这里大家不需要关心，免得失去重点。最后还有一个 `inject` 选项，我们知道无论是 `Vue.options` 中还是实例选项中都没有 `inject`，那么这个 `inject` 是哪来的呢？大家还记不记得在 [Vue的思路之选项的规范化](/note/Vue的思路之选项的规范化) 一节中，在对 `inject` 选项进行规范化的时候，即使我们的选项没有写 `inject` 选项，其内部也会将其初始化为一个空对象，也就是在 `normalizeInject` 函数中的第二句代码：
-
-```js
-const normalized = options.inject = {}
-```
+我们发现 `el` 确实还是原来的值，而 `data` 也确实变成了一个函数，并且这个函数就是我们之前遇到过的 `mergedInstanceDataFn`，除此之外我们还能看到其他合并后的选项，其中 `components`、`directives`、`filters` 以及 `_base` 我们知道是存在于 `Vue.options` 中的，至于 `render` 和 `staticRenderFns` 这两个选项是在将模板编译成渲染函数时添加上去的，我们后面会遇到。另外 `_parentElm` 和 `_refElm` 这两个选项是在为虚拟DOM创建组件实例时添加的，我们后面也会讲到，这里大家不需要关心，免得失去重点。
 
 #### 渲染函数的作用域代理
 
@@ -249,7 +245,7 @@ const hasHandler = {
 * with 检查: with(proxy) { (foo); }
 * Reflect.has()
 
-其中关键在就在可以拦截 `with` 语句块里对变量的访问，后面我们会讲到。`has` 函数内出现了两个函数，分别是 `allowedGlobals` 以及 `warnNonPresent`，这两个函数也是定义在当前文件中，首先我们看一下 `allowedGlobals`：
+其中关键点就在可以拦截 `with` 语句块里对变量的访问，后面我们会讲到。`has` 函数内出现了两个函数，分别是 `allowedGlobals` 以及 `warnNonPresent`，这两个函数也是定义在当前文件中，首先我们看一下 `allowedGlobals`：
 
 ```js
 const allowedGlobals = makeMap(
@@ -426,7 +422,7 @@ initLifecycle(vm)
 
 在 `initLifecycle` 函数执行之前，执行了 `vm._self = vm` 语句，这句话在 `Vue` 实例对象 `vm` 上添加了 `_self` 属性，指向真实的实例本身。注意 `vm._self` 和 `vm._renderProxy` 不同，首先在用途上来说寓意是不同的，另外 `vm._renderProxy` 有可能是一个代理对象，即 `Proxy` 实例。
 
-接下来执行的才是 `initLifecycle` 函数，同事将当前 `Vue` 实例 `vm` 作为参数传递。打开 `core/instance/lifecycle.js` 文件找到 `initLifecycle` 函数，如下：
+接下来执行的才是 `initLifecycle` 函数，同时将当前 `Vue` 实例 `vm` 作为参数传递。打开 `core/instance/lifecycle.js` 文件找到 `initLifecycle` 函数，如下：
 
 ```js
 export function initLifecycle (vm: Component) {
@@ -457,7 +453,7 @@ export function initLifecycle (vm: Component) {
 }
 ```
 
-上面代码是 `initLifecycle` 函数的全部内容，首先定义 `options` 常量，它是 `vm.$options` 的引用，然后将执行下面这段代码：
+上面代码是 `initLifecycle` 函数的全部内容，首先定义 `options` 常量，它是 `vm.$options` 的引用。接着将执行下面这段代码：
 
 ```js
 // locate first non-abstract parent (查找第一个非抽象的父组件)
@@ -469,7 +465,7 @@ if (parent && !options.abstract) {
   while (parent.$options.abstract && parent.$parent) {
     parent = parent.$parent
   }
-  // 经过上线的 while 循环后，parent 应该是一个非抽象的组件，将它作为当前实例的父级，所以将当前实例 vm 添加到父级的 $children 属性里
+  // 经过上面的 while 循环后，parent 应该是一个非抽象的组件，将它作为当前实例的父级，所以将当前实例 vm 添加到父级的 $children 属性里
   parent.$children.push(vm)
 }
 
@@ -486,7 +482,7 @@ vm.$root = parent ? parent.$root : vm
 let parent = options.parent
 ```
 
-通过读取 `options.parent` 获取父实例，但是问题来了，我们知道 `options` 是 `vm.$options` 的引用，所以这里的 `options.parent` 相当于 `vm.$options.parent`，这里的 `parent` 从哪里来？比如下面的例子：
+通过读取 `options.parent` 获取父实例，但是问题来了，我们知道 `options` 是 `vm.$options` 的引用，所以这里的 `options.parent` 相当于 `vm.$options.parent`，那么 `vm.$options.parent` 从哪里来？比如下面的例子：
 
 ```js
 // 子组件本身并没有指定 parent 选项
@@ -655,7 +651,7 @@ if (parent && !options.abstract) {
 }
 ```
 
-拿到父实例 `parent` 之后，进入一个判断分支，条件是：`parent && !options.abstract`，即*父实例存在，且当前实例不是抽象的*，这里大家可能会有疑问：*什么是抽象的实例*？实际上 `Vue` 内部有一些选项是没有暴露给我们的，就比如这里的 `abstract`，通过设置这个选项为 `true`，可以指定该组件式抽象的，那么通过该组件创建的实例也都是抽象的，比如：
+拿到父实例 `parent` 之后，进入一个判断分支，条件是：`parent && !options.abstract`，即*父实例存在，且当前实例不是抽象的*，这里大家可能会有疑问：*什么是抽象的实例*？实际上 `Vue` 内部有一些选项是没有暴露给我们的，就比如这里的 `abstract`，通过设置这个选项为 `true`，可以指定该组件是抽象的，那么通过该组件创建的实例也都是抽象的，比如：
 
 ```js
 AbsComponents = {
@@ -676,7 +672,7 @@ export default {
 }
 ```
 
-可以发现，它使用 `abstract` 选项来声明这是一个抽象组件。除了不渲染真实DOM，抽象组件还有一个特点，就是它们不会父子关系的路径上。这么设计也是合理的，这是由它们的性质所决定的。
+可以发现，它使用 `abstract` 选项来声明这是一个抽象组件。除了不渲染真实DOM，抽象组件还有一个特点，就是它们不会出现在父子关系的路径上。这么设计也是合理的，这是由它们的性质所决定的。
 
 所以现在大家再回看这段代码：
 
@@ -700,7 +696,7 @@ vm.$parent = parent
 vm.$root = parent ? parent.$root : vm
 ```
 
-如果 `options.abstract` 为真，那说明当前实例是抽象的，所以并不会走 `if` 分支的代码，所以会跳过 `if` 语句块直接设置 `vm.$parent` 和 `vm.$root` 的值。如果 `options.abstract` 为假，那说明当前实例不是抽象的，是一个普通的组件实例，这个时候就会走 `while` 循环，那么这个 `while` 循环是干嘛的呢？我们前面说过，抽象的组件是不能够也不应该作为父级的，所以 `while` 循环的目的就是沿着父实例链逐层向上寻找到第一个不抽象的实例作为 `parent`，也就是父级。并且在找到父级之后将当前实例添加到父实例的 `$children` 属性中，这样最终的目的就达成了。
+如果 `options.abstract` 为真，那说明当前实例是抽象的，所以并不会走 `if` 分支的代码，所以会跳过 `if` 语句块直接设置 `vm.$parent` 和 `vm.$root` 的值。如果 `options.abstract` 为假，那说明当前实例不是抽象的，是一个普通的组件实例，这个时候就会走 `while` 循环，那么这个 `while` 循环是干嘛的呢？我们前面说过，抽象的组件是不能够也不应该作为父级的，所以 `while` 循环的目的就是沿着父实例链逐层向上寻找到第一个不抽象的实例作为 `parent`（父级）。并且在找到父级之后将当前实例添加到父实例的 `$children` 属性中，这样最终的目的就达成了。
 
 在上面这段代码执行完毕之后，`initLifecycle` 函数还负责在当前实例上添加一些属性，即后面要执行的代码：
 
@@ -716,7 +712,7 @@ vm._isDestroyed = false
 vm._isBeingDestroyed = false
 ```
 
-其中 `$children` 和 `$refs` 都是我们属性的实例属性，他们都在 `initLifecycle` 函数中被初始化，其中 `$children` 被初始化为一个数组，`$refs` 被初始化为一个空 `json` 对象，除此之外，还定义了一些内部使用的属性，大家先混个脸熟，在后面的分析中自然会知道他们的用途，但是不要忘了，既然这些属性是在 `initLifecycle` 函数中定义的，那么自然会与声明周期有关。这样 `initLifecycle` 函数我们就分析完毕了，我们回到 `_init` 函数，看看接下来要做的初始化工作是什么。
+其中 `$children` 和 `$refs` 都是我们熟悉的实例属性，他们都在 `initLifecycle` 函数中被初始化，其中 `$children` 被初始化为一个数组，`$refs` 被初始化为一个空 `json` 对象，除此之外，还定义了一些内部使用的属性，大家先混个脸熟，在后面的分析中自然会知道他们的用途，但是不要忘了，既然这些属性是在 `initLifecycle` 函数中定义的，那么自然会与声明周期有关。这样 `initLifecycle` 函数我们就分析完毕了，我们回到 `_init` 函数，看看接下来要做的初始化工作是什么。
 
 
 #### 初始化之 initEvents
