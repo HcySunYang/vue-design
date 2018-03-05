@@ -1412,7 +1412,7 @@ strats.provide = mergeDataOrFn
 
 也就是说 `provide` 选项的合并策略与 `data` 选项的合并策略相同，都是使用 `mergeDataOrFn` 函数。
 
-##### 总结
+##### 选项处理小结
 
 现在我们了解了 `Vue` 中是如何合并处理选项的，接下来我们稍微做一个总结：
 
@@ -1428,7 +1428,61 @@ strats.provide = mergeDataOrFn
 
 至此，我们大概介绍完了 `Vue` 对选项的处理，但留心的同学一定注意到了，`options.js` 文件的代码我们都基本逐行分析，唯独剩下一个函数我们始终没有提到，它就是 `resolveAsset` 函数。这个函数我们暂且不在这里讲，后面随着我们的深入，自然会再次碰到它，到那个时候应该是讲它的最好时机。
 
+##### 再看 mixins 和 extends
 
+在 [4Vue选项的规范化](/note/4Vue选项的规范化) 一节中，我们讲到了 `mergeOptions` 函数中的如下这段代码：
+
+```js
+const extendsFrom = child.extends
+if (extendsFrom) {
+  parent = mergeOptions(parent, extendsFrom, vm)
+}
+if (child.mixins) {
+  for (let i = 0, l = child.mixins.length; i < l; i++) {
+    parent = mergeOptions(parent, child.mixins[i], vm)
+  }
+}
+```
+
+当时候我们并没有深入讲解，因为当时我们还不了解 `mergeOptions` 函数的作用，但是现在我们可以回头来看一下这段代码了。
+
+我们知道 `mixins` 在 `Vue` 中用于解决代码复用的问题，比如混入 `created` 生命周期钩子，用于打印一句话：
+
+```js
+const consoleMixin = {
+  created () {
+    console.log('created:mixins')
+  }
+}
+
+new Vue ({
+  mixins: [consoleMixin],
+  created () {
+    console.log('created:instance')
+  }
+})
+```
+
+运行以上代码，将打印两句话：
+
+```js
+// created:mixins
+// created:instance
+```
+
+这是因为 `mergeOptions` 函数在处理 `mixins` 选项的时候递归调用了 `mergeOptions` 函数将 `minxis` 合并到了 `parent` 中，并将合并后生成的新对象作为新的 `parent`：
+
+```js
+if (child.mixins) {
+  for (let i = 0, l = child.mixins.length; i < l; i++) {
+    parent = mergeOptions(parent, child.mixins[i], vm)
+  }
+}
+```
+
+上例中我们只涉及到 `created` 生命周期钩子的合并，所以会使用生命周期钩子的合并策略函数进行处理，现在我们已经知道 `mergeOptions` 会把生命周期选项合并为一个数组，所以所有的生命周期钩子都会被执行。那么不仅仅是生命周期钩子，任何写在 `mixins` 中的选项，都会使用 `mergeOptions` 中相应的合并策略进行处理，这就是 `mixins` 的实现方式。
+
+对于 `extends` 选项，与 `mixins` 相同，甚至由于 `extends` 选项只能是一个对象，而不能是数组，反而要比 `mixins` 的实现更为简单，连遍历都不需要。
 
 
 

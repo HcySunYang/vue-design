@@ -791,11 +791,11 @@ if (child.mixins) {
 }
 ```
 
-很显然，这段代码是处理 `extends` 选项和 `mixins` 选项的，首先使用变量 `extendsFrom` 保存了对 `child.extends` 的引用，之后的处理都是用 `extendsFrom` 来做，然后判断是否有 `extends` 选项，如果有的话就是用 `mergeOptions` 函数将 `parent` 与 `extendsFrom` 进行合并，并将结果作为新的 `parent`。这里要注意，我们之前说过 `mergeOptions` 函数将会产生一个新的对象，所以此时的 `parent` 已经被新的对象重新赋值了。
+很显然，这段代码是处理 `extends` 选项和 `mixins` 选项的，首先使用变量 `extendsFrom` 保存了对 `child.extends` 的引用，之后的处理都是用 `extendsFrom` 来做，然后判断 `extendsFrom` 是否为真，即 `child.extends` 是否存在，如果存在的话就递归调用 `mergeOptions` 函数将 `parent` 与 `extendsFrom` 进行合并，并将结果作为新的 `parent`。这里要注意，我们之前说过 `mergeOptions` 函数将会产生一个新的对象，所以此时的 `parent` 已经被新的对象重新赋值了。
 
-然后检测是否有 `child.mixins` 选项，如果有则使用同样的方法进行操作，不同的是，由于 `mixins` 是一个数组所以要遍历一下。
+接着检测是否 `child.mixins` 选项是否存在，如果存在则使用同样的方式进行操作，不同的是，由于 `mixins` 是一个数组所以要遍历一下。
 
-经过了上面两个判断分支，此时的 `parent` 很可能已经不是当初的 `parent` 的，而是经过合并后产生的新对象。关于 `extends` 与 `mixins` 的更多东西以及这里调用 `mergeOptions` 所产生的影响，等我们看完整个 `mergeOptions` 后会更容易理解，因为现在我们还不清楚 `mergeOptions` 到底怎么合并选项。
+经过了上面两个判断分支，此时的 `parent` 很可能已经不是当初的 `parent` 的，而是经过合并后产生的新对象。关于 `extends` 与 `mixins` 的更多东西以及这里递归调用 `mergeOptions` 所产生的影响，等我们看完整个 `mergeOptions` 函数对选项的处理之后会更容易理解，因为现在我们还不清楚 `mergeOptions` 到底怎么合并选项，等我们了解了 `mergeOptions` 的作用之后再回头来看一下这段代码。
 
 到目前为止我们所看到的 `mergeOptions` 的代码，还都是对选项的规范化，或者说的明显一点：现在所做的事儿还都在对 `parent` 以及 `child` 进行预处理，而这是接下来合并选项的必要步骤。
 
