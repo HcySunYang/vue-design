@@ -24,7 +24,21 @@ vm._isMounted = false
 vm._isDestroyed = false
 vm._isBeingDestroyed = false
 
-// initEvents(vm)   src/core/instance/initEvents.js **************************************************
+// initEvents(vm)   src/core/instance/events.js **************************************************
 vm._events = Object.create(null)
 vm._hasHookEvent = false
+
+// initRender(vm)   src/core/instance/render.js **************************************************
+vm._vnode = null // the root of the child tree
+vm._staticTrees = null // v-once cached trees
+
+vm.$vnode
+vm.$slots
+vm.$scopedSlots
+
+vm._c
+vm.$createElement
+
+vm.$attrs
+vm.$listeners
 ```

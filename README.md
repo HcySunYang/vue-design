@@ -19,6 +19,10 @@
 ##### [8编译器之parser](/note/8编译器之parser)
 ##### [9Vue中的html-parser](/note/9Vue中的html-parser)
 
+### 扩展阅读
+
+##### [Vue 中创建高阶组件](/note/扩展阅读/Vue中创建高阶组件)
+
 ### 附录
 
 ##### [Vue构造函数整理-原型](/note/附录/Vue构造函数整理-原型)
