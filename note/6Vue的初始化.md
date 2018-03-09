@@ -712,7 +712,7 @@ vm._isDestroyed = false
 vm._isBeingDestroyed = false
 ```
 
-其中 `$children` 和 `$refs` 都是我们熟悉的实例属性，他们都在 `initLifecycle` 函数中被初始化，其中 `$children` 被初始化为一个数组，`$refs` 被初始化为一个空 `json` 对象，除此之外，还定义了一些内部使用的属性，大家先混个脸熟，在后面的分析中自然会知道他们的用途，但是不要忘了，既然这些属性是在 `initLifecycle` 函数中定义的，那么自然会与声明周期有关。这样 `initLifecycle` 函数我们就分析完毕了，我们回到 `_init` 函数，看看接下来要做的初始化工作是什么。
+其中 `$children` 和 `$refs` 都是我们熟悉的实例属性，他们都在 `initLifecycle` 函数中被初始化，其中 `$children` 被初始化为一个数组，`$refs` 被初始化为一个空 `json` 对象，除此之外，还定义了一些内部使用的属性，大家先混个脸熟，在后面的分析中自然会知道他们的用途，但是不要忘了，既然这些属性是在 `initLifecycle` 函数中定义的，那么自然会与生命周期有关。这样 `initLifecycle` 函数我们就分析完毕了，我们回到 `_init` 函数，看看接下来要做的初始化工作是什么。
 
 
 #### 初始化之 initEvents
@@ -1017,7 +1017,7 @@ if (handlers) {
 handlers[i].call(vm)
 ```
 
-为了保证声明周期钩子函数内可以通过 `this` 访问实例对象，所以使用 `.call(vm)` 执行这些函数。另外由于声明周期钩子函数的函数体是开发者编写的，为了捕获可能出现的错误，使用 `try...catch` 语句块，并在 `catch` 语句块内使用 `handleError` 处理错误信息。其中 `handleError` 来自于 `core/util/error.js` 文件，大家可以在附录 [core/util 目录下的工具方法全解](/note/附录/core-util) 中查看关于 `handleError` 的讲解。
+为了保证生命周期钩子函数内可以通过 `this` 访问实例对象，所以使用 `.call(vm)` 执行这些函数。另外由于生命周期钩子函数的函数体是开发者编写的，为了捕获可能出现的错误，使用 `try...catch` 语句块，并在 `catch` 语句块内使用 `handleError` 处理错误信息。其中 `handleError` 来自于 `core/util/error.js` 文件，大家可以在附录 [core/util 目录下的工具方法全解](/note/附录/core-util) 中查看关于 `handleError` 的讲解。
 
 所以我们发现，对于生命周期钩子的调用，其实就是通过 `this.$options` 访问处理过的对应的生命周期钩子函数数组，遍历并执行它们。原理还是很简单的。
 
@@ -1065,6 +1065,21 @@ if (vm._hasHookEvent) {
 ```
 
 另外大家可能会疑惑，`vm._hasHookEvent` 是在什么时候被设置为 `true` 的呢？或者换句话说，`Vue` 是如何检测是否存在生命周期事件侦听器的呢？对于这个问题等我们在讲解 `Vue` 事件系统自然会知道。
+
+#### Vue 的初始化之 initState
+
+实际上根据如下代码所示：
+
+```js
+callHook(vm, 'beforeCreate')
+initInjections(vm) // resolve injections before data/props
+initState(vm)
+initProvide(vm) // resolve provide after data/props
+callHook(vm, 'created')
+```
+
+可以看到在 `initState` 函数执行之前，先执行了 `initInjections` 函数，也就是说 `inject` 选项要更早被初始化，不过由于初始化 `inject` 选项的时候涉及到 `defineReactive` 函数以及控制是否应该转换为响应式属性的状态标识 `observerState.shouldConvert`，所以我们决定先讲解 `initState`，之后再来讲解 `initInjections` 和 `initProvide`，这才是一个合理的顺序，并且从 `Vue` 的时间线上来看 `inject/provide` 选项确实是后来才添加的。
+
 
 
 

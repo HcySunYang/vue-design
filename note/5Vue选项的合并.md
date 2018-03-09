@@ -777,7 +777,7 @@ LIFECYCLE_HOOKS.forEach(hook => {
 })
 ```
 
-看上去，这段代码貌似是用来合并声明周期钩子的，事实上的确是这样，我们看看它是怎么做的，首先上面的代码由两部分组成：`mergeHook` 函数和一个 `forEach` 语句。我们先看下面的 `forEach` 语句：
+看上去，这段代码貌似是用来合并生命周期钩子的，事实上的确是这样，我们看看它是怎么做的，首先上面的代码由两部分组成：`mergeHook` 函数和一个 `forEach` 语句。我们先看下面的 `forEach` 语句：
 
 ```js
 LIFECYCLE_HOOKS.forEach(hook => {
@@ -836,7 +836,7 @@ retrun (是否有 childVal，即判断组件的选项中是否有对应名字的
   : 如果没有 childVal 则直接返回 parentVal
 ```
 
-如上就是对 `mergeHook` 函数的解读，我们可以发现，在经过 `mergeHook` 函数处理之后，组件选项的生命周期钩子函数被合并成一个数组。第一个三目运算符需要注意，它判断是否有 `childVal`，即组件的选项是否写了生命周期钩子函数，如果没有则直接返回了 `parentVal`，这里有个问题：`parentVal` 一定是数组吗？答案是：*如果有 `parentVal` 那么其一定是数组，如果没有 `parentVal` 那么 `strats[hooks]` 函数根本不会执行*。我们以 `created` 声明周期钩子函数为例：
+如上就是对 `mergeHook` 函数的解读，我们可以发现，在经过 `mergeHook` 函数处理之后，组件选项的生命周期钩子函数被合并成一个数组。第一个三目运算符需要注意，它判断是否有 `childVal`，即组件的选项是否写了生命周期钩子函数，如果没有则直接返回了 `parentVal`，这里有个问题：`parentVal` 一定是数组吗？答案是：*如果有 `parentVal` 那么其一定是数组，如果没有 `parentVal` 那么 `strats[hooks]` 函数根本不会执行*。我们以 `created` 生命周期钩子函数为例：
 
 如下代码：
 
