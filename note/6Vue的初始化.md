@@ -967,6 +967,8 @@ callHook(vm, 'created')
 
 ```js
 export function callHook (vm: Component, hook: string) {
+  // #7573 disable dep collection when invoking lifecycle hooks
+  pushTarget()
   const handlers = vm.$options[hook]
   if (handlers) {
     for (let i = 0, j = handlers.length; i < j; i++) {
@@ -980,12 +982,13 @@ export function callHook (vm: Component, hook: string) {
   if (vm._hasHookEvent) {
     vm.$emit('hook:' + hook)
   }
+  popTarget()
 }
 ```
 
-以上是 `callHook` 函数的全部代码，它接收两个参数：实例对象和要调用的生命周期钩子额名称。接下来我们就看看 `callHook` 是如何实现的。
+以上是 `callHook` 函数的全部代码，它接收两个参数：实例对象和要调用的生命周期钩子的名称。接下来我们就看看 `callHook` 是如何实现的。
 
-首先获取要调用的生命周期钩子：
+大家可能注意到了 `callHook` 函数体的代码以 `pushTarget()` 开头，并以 `popTarget()` 结尾，这里我们暂且不讲这么做的目的，这其实是为了避免在某些生命周期钩子中使用 `props` 数据导致收集冗余的依赖，我们在 `Vue` 响应系统的章节会回过头来仔细给大家讲解。下面我们开始分析 `callHook` 函数的代码，首先获取要调用的生命周期钩子：
 
 ```js
 const handlers = vm.$options[hook]
