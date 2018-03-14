@@ -49,6 +49,11 @@ Vue.filter = function (
   definition: Function | Object
 ): Function | Object | void {}
 
+// expose FunctionalRenderContext for ssr runtime helper installation
+Object.defineProperty(Vue, 'FunctionalRenderContext', {
+  value: FunctionalRenderContext
+})
+
 Vue.version = '__VERSION__'
 
 // entry-runtime-with-compiler.js

@@ -263,6 +263,7 @@ Vue.prototype._render = function (): VNode {}
 import Vue from './instance/index'
 import { initGlobalAPI } from './global-api/index'
 import { isServerRendering } from 'core/util/env'
+import { FunctionalRenderContext } from 'core/vdom/create-functional-component'
 
 // 将 Vue 构造函数作为参数，传递给 initGlobalAPI 方法，该方法来自 ./global-api/index.js 文件
 initGlobalAPI(Vue)
@@ -280,6 +281,11 @@ Object.defineProperty(Vue.prototype, '$ssrContext', {
   }
 })
 
+// expose FunctionalRenderContext for ssr runtime helper installation
+Object.defineProperty(Vue, 'FunctionalRenderContext', {
+  value: FunctionalRenderContext
+})
+
 // Vue.version 存储了当前 Vue 的版本号
 Vue.version = '__VERSION__'
 
@@ -287,11 +293,12 @@ Vue.version = '__VERSION__'
 export default Vue
 ```
 
-上面的代码中，首先从 `Vue` 的出生文件，也就是 `instance/index.js` 文件导入 `Vue`，然后分别从两个文件导入了两个变量，如下：
+上面的代码中，首先从 `Vue` 的出生文件，也就是 `instance/index.js` 文件导入 `Vue`，然后分别从三个文件导入了三个变量，如下：
 
 ```js
 import { initGlobalAPI } from './global-api/index'
 import { isServerRendering } from 'core/util/env'
+import { FunctionalRenderContext } from 'core/vdom/create-functional-component'
 ```
 
 其中 `initGlobalAPI` 是一个函数，并且以 `Vue` 构造函数作为参数进行调用：
@@ -300,7 +307,7 @@ import { isServerRendering } from 'core/util/env'
 initGlobalAPI(Vue)
 ```
 
-然后在 `Vue.prototype` 上分别添加了两个只读的属性，分别是：`$isServer` 和 `$ssrContext`。
+然后在 `Vue.prototype` 上分别添加了两个只读的属性，分别是：`$isServer` 和 `$ssrContext`。接着又在 `Vue` 构造函数上定义了 `FunctionalRenderContext` 静态属性，并且 `FunctionalRenderContext` 属性的值为来自 `core/vdom/create-functional-component.js` 文件的 `FunctionalRenderContext`，之所以在 `Vue` 构造函数上暴露该属性，是为了在 `ssr` 中使用它。
 
 最后，在 `Vue` 构造函数上添加了一个静态属性 `version`，存储了当前 `Vue` 的版本值，但是这里的 `'__VERSION__'` 是什么鬼？打开 `scripts/config.js` 文件，找到 `genConfig` 方法，其中有这么一句话：`__VERSION__: version`。这句话被写在了 `rollup` 的 `replace` 插件中，也就是说，`__VERSION__` 最终将被 `version` 的值替换，而 `version` 的值就是 `Vue` 的版本号。
 

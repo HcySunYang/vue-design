@@ -209,7 +209,7 @@ const { render, staticRenderFns } = compileToFunctions(template, {
 
 另外 `delimiters` 和 `comments` 这两个选项大家在 `Vue` 的官方文档都能够找到讲解。而这里我要强调的是在 `Vue` 官方文档中有特殊说明，即这两个选项只在完整版的 `Vue` 中可用。这是为什么呢？可能有的同学已经知道了，其原因是这两个选项只有在创建完整版 `Vue` 的时候才会用到，大家不要忘了 `entry-runtime-with-compiler.js` 这个文件是完整版 `Vue` 的入口，也就是说运行时版的 `Vue` 压根不存在这些内容所以自然不会起作用。
 
-现在我们知道了传递给 `compileToFunctions` 的选项参数都包括些什么了，同时我们也知道这里的 `compileToFunctions` 函数实际上就是 `src/compiler/to-function.js` 文件中的 `compileToFunctions`，所以下一步我们将实现转移到 `src/compiler/to-function.js` 文件中的 `compileToFunctions` 函数，不过在这之前我还要啰嗦一句，大家注意 `compileToFunctions` 函数是接收三个参数的，第三个参数是当前 `Vue` 实例。
+现在我们知道了传递给 `compileToFunctions` 的选项参数都包括些什么了，同时我们也知道这里的 `compileToFunctions` 函数实际上就是 `src/compiler/to-function.js` 文件中的 `compileToFunctions`，所以下一步我们将视线转移到 `src/compiler/to-function.js` 文件中的 `compileToFunctions` 函数，不过在这之前我还要啰嗦一句，大家注意 `compileToFunctions` 函数是接收三个参数的，第三个参数是当前 `Vue` 实例。
 
 打开 `src/compiler/to-function.js` 文件，找到 `compileToFunctions` 函数，首先是这三行代码：
 
@@ -795,7 +795,7 @@ return compiled
 * 2、对错误的收集
 * 3、调用 `baseCompile` 编译模板
 
-补充：上面的分析中，我们并有深入讲解 `detectErrors` 函数是如何根据抽象语法树(AST)检查模板中是否存在表达式错误的，这是因为现在对于大家来讲还不清楚抽象语法树的模样，且这并不会对大家的理解造成障碍，所以我们将这部分的讲解后移，等我们对 AST 心知肚明之后再来看这部分内容也不迟。
+补充：上面的分析中，我们并没有深入讲解 `detectErrors` 函数是如何根据抽象语法树(AST)检查模板中是否存在表达式错误的，这是因为现在对于大家来讲还不清楚抽象语法树的模样，且这并不会对大家的理解造成障碍，所以我们将这部分的讲解后移，等我们对 AST 心知肚明之后再来看这部分内容也不迟。
 
 
 
