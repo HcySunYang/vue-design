@@ -1,4 +1,4 @@
-## Vue 的初始化
+## Vue 的初始化（一）
 
 #### 用于初始化的最终选项 $options
 
@@ -31,7 +31,7 @@ vm.$options = mergeOptions(
 return options
 ```
 
-这说明 `mergeOptions` 函数最终将合并处理后的选项返回，并以该返回值作为 `vm.$options` 的值。`vm.$options` 在 `Vue` 的官方文档中是可以找到的，它作为实例属性暴露给开发者，那么现在你应该知道 `vm.$options` 到底是什么了。并且你看文档的时候你应该更能够理解其作用，比如官方文档是这样介绍 `$options` 实例属性的：
+这说明 `mergeOptions` 函数最终将合并处理后的选项返回，并以该返回值作为 `vm.$options` 的值。`vm.$options` 在 `Vue` 的官方文档中是可以找到的，它作为实例属性暴露给开发者，那么现在你应该知道 `vm.$options` 到底是什么了。并且看文档的时候你应该更能够理解其作用，比如官方文档是这样介绍 `$options` 实例属性的：
 
 > 用于当前 Vue 实例的初始化选项。需要在选项中包含自定义属性时会有用处
 
@@ -93,7 +93,7 @@ var vm = new Vue({
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-11-02-083231.jpg)
 
-我们发现 `el` 确实还是原来的值，而 `data` 也确实变成了一个函数，并且这个函数就是我们之前遇到过的 `mergedInstanceDataFn`，除此之外我们还能看到其他合并后的选项，其中 `components`、`directives`、`filters` 以及 `_base` 我们知道是存在于 `Vue.options` 中的，至于 `render` 和 `staticRenderFns` 这两个选项是在将模板编译成渲染函数时添加上去的，我们后面会遇到。另外 `_parentElm` 和 `_refElm` 这两个选项是在为虚拟DOM创建组件实例时添加的，我们后面也会讲到，这里大家不需要关心，免得失去重点。
+我们发现 `el` 确实还是原来的值，而 `data` 也确实变成了一个函数，并且这个函数就是我们之前遇到过的 `mergedInstanceDataFn`，除此之外我们还能看到其他合并后的选项，其中 `components`、`directives`、`filters` 以及 `_base` 是存在于 `Vue.options` 中的，这些是我们所知道的，至于 `render` 和 `staticRenderFns` 这两个选项是在将模板编译成渲染函数时添加上去的，我们后面会遇到。另外 `_parentElm` 和 `_refElm` 这两个选项是在为虚拟DOM创建组件实例时添加的，我们后面也会讲到，这里大家不需要关心，免得失去重点。
 
 #### 渲染函数的作用域代理
 
@@ -112,7 +112,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 这段代码是一个判断分支，如果是非生产环境的话则执行 `initProxy(vm)` 函数，如果在生产环境则直接在实例上添加 `_renderProxy` 实例属性，该属性的值就是当前实例。
 
-现在有一个问题需要大家思考一下，目前我们还没有看 `initProxy` 函数的具体内容，那么你能猜到 `initProxy` 函数的主要作用是什么吗？我可以直接告诉大家，这个函数的主要作用其实还是在实例对象 `vm` 上添加 `_renderProxy` 属性。为什么呢？因为生产环境和非生产环境下要保持功能一直。在上面的代码中生产环境下直接执行这句：
+现在有一个问题需要大家思考一下，目前我们还没有看 `initProxy` 函数的具体内容，那么你能猜到 `initProxy` 函数的主要作用是什么吗？我可以直接告诉大家，这个函数的主要作用其实就是在实例对象 `vm` 上添加 `_renderProxy` 属性。为什么呢？因为生产环境和非生产环境下要保持功能一致。在上面的代码中生产环境下直接执行这句：
 
 ```js
 vm._renderProxy = vm
@@ -457,7 +457,7 @@ export function initLifecycle (vm: Component) {
 
 ```js
 // locate first non-abstract parent (查找第一个非抽象的父组件)
-// 定义 parent，它引用当前实例的父组件
+// 定义 parent，它引用当前实例的父实例
 let parent = options.parent
 // 如果当前实例有父组件，且当前实例不是抽象的
 if (parent && !options.abstract) {
@@ -558,7 +558,7 @@ var vm = new Vue({
 })
 ```
 
-上面的代码中，我们的子组件 `ChildComponent` 说白了就是一个 `json` 对象，或者叫做组件选项对象，在父组件的 `components` 选项中把这个子组件选项对象注册了进去，实际上在 `Vue` 内部，会首先以子组件选项对象作为参数通过 `Vue.extend` 函数创建一个子类出来，然后在通过实例化子类来创建子组件，而 `createComponentInstanceForVnode` 函数的作用，在这里大家就可以简单理解为实例化子组件，只不过这个过程是在虚拟DOM中进行的，我们后边会详细去讲。所以我们看 `createComponentInstanceForVnode` 函数内部有这样一段代码：
+上面的代码中，我们的子组件 `ChildComponent` 说白了就是一个 `json` 对象，或者叫做组件选项对象，在父组件的 `components` 选项中把这个子组件选项对象注册了进去，实际上在 `Vue` 内部，会首先以子组件选项对象作为参数通过 `Vue.extend` 函数创建一个子类出来，然后在通过实例化子类来创建子组件，而 `createComponentInstanceForVnode` 函数的作用，在这里大家就可以简单理解为实例化子组件，只不过这个过程是在虚拟DOM的 `patch` 算法中进行的，我们后边会详细去讲。我们看 `createComponentInstanceForVnode` 函数内部有这样一段代码：
 
 ```js
 const options: InternalComponentOptions = {
@@ -696,7 +696,7 @@ vm.$parent = parent
 vm.$root = parent ? parent.$root : vm
 ```
 
-如果 `options.abstract` 为真，那说明当前实例是抽象的，所以并不会走 `if` 分支的代码，所以会跳过 `if` 语句块直接设置 `vm.$parent` 和 `vm.$root` 的值。如果 `options.abstract` 为假，那说明当前实例不是抽象的，是一个普通的组件实例，这个时候就会走 `while` 循环，那么这个 `while` 循环是干嘛的呢？我们前面说过，抽象的组件是不能够也不应该作为父级的，所以 `while` 循环的目的就是沿着父实例链逐层向上寻找到第一个不抽象的实例作为 `parent`（父级）。并且在找到父级之后将当前实例添加到父实例的 `$children` 属性中，这样最终的目的就达成了。
+如果 `options.abstract` 为真，那说明当前实例是抽象的，所以并不会走 `if` 分支的代码，所以会跳过 `if` 语句块直接设置 `vm.$parent` 和 `vm.$root` 的值。跳过 `if` 语句块的结果将导致改抽象实例不会被添加到父实例的 `$children` 中。如果 `options.abstract` 为假，那说明当前实例不是抽象的，是一个普通的组件实例，这个时候就会走 `while` 循环，那么这个 `while` 循环是干嘛的呢？我们前面说过，抽象的组件是不能够也不应该作为父级的，所以 `while` 循环的目的就是沿着父实例链逐层向上寻找到第一个不抽象的实例作为 `parent`（父级）。并且在找到父级之后将当前实例添加到父实例的 `$children` 属性中，这样最终的目的就达成了。
 
 在上面这段代码执行完毕之后，`initLifecycle` 函数还负责在当前实例上添加一些属性，即后面要执行的代码：
 
@@ -875,7 +875,7 @@ render: function () {
 }
 ```
 
-上面两端代码是完全等价的。而对于 `vm._c` 方法，则用于编译器根据模板字符串生成的渲染函数的。`vm._c` 和 `vm.$createElement` 的不同之处就在于调用 `createElement` 函数时传递的第六个参数不同，至于这么做的原因，我们放到后面讲解。注意即 `$createElement` 看上去像对外暴露的接口，但其实文档上并没有体现。
+上面两段代码是完全等价的。而对于 `vm._c` 方法，则用于编译器根据模板字符串生成的渲染函数的。`vm._c` 和 `vm.$createElement` 的不同之处就在于调用 `createElement` 函数时传递的第六个参数不同，至于这么做的原因，我们放到后面讲解。有一点需要注意，即 `$createElement` 看上去像对外暴露的接口，但其实文档上并没有体现。
 
 再往下，就是 `initRender` 函数的最后一段代码了：
 
@@ -910,7 +910,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 ```
 
-可以看到，当 `!isUpdatingChildComponent` 成立是，会提示你 `$attrs` 是只读属性，你不应该手动设置它的值。同样的，对于 `$listeners` 属性也做了同样的处理。
+可以看到，当 `!isUpdatingChildComponent` 成立是，会提示你 `$attrs` 是只读属性，你不应该手动设置它的值。同样的，对于 `$listeners` 属性也做了这样的处理。
 
 这里使用到了 `isUpdatingChildComponent` 变量，根据引用关系，该变量来自于 `lifecycle.js` 文件，代开 `lifecycle.js` 文件，可以发现有三个地方使用了这个变量：
 
@@ -988,7 +988,7 @@ export function callHook (vm: Component, hook: string) {
 
 以上是 `callHook` 函数的全部代码，它接收两个参数：实例对象和要调用的生命周期钩子的名称。接下来我们就看看 `callHook` 是如何实现的。
 
-大家可能注意到了 `callHook` 函数体的代码以 `pushTarget()` 开头，并以 `popTarget()` 结尾，这里我们暂且不讲这么做的目的，这其实是为了避免在某些生命周期钩子中使用 `props` 数据导致收集冗余的依赖，我们在 `Vue` 响应系统的章节会回过头来仔细给大家讲解。下面我们开始分析 `callHook` 函数的代码，首先获取要调用的生命周期钩子：
+大家可能注意到了 `callHook` 函数体的代码以 `pushTarget()` 开头，并以 `popTarget()` 结尾，这里我们暂且不讲这么做的目的，这其实是为了避免在某些生命周期钩子中使用 `props` 数据导致收集冗余的依赖，我们在 `Vue` 响应系统的章节会回过头来仔细给大家讲解。下面我们开始分析 `callHook` 函数的代码的中间部分，首先获取要调用的生命周期钩子：
 
 ```js
 const handlers = vm.$options[hook]
@@ -1067,7 +1067,7 @@ if (vm._hasHookEvent) {
 }
 ```
 
-另外大家可能会疑惑，`vm._hasHookEvent` 是在什么时候被设置为 `true` 的呢？或者换句话说，`Vue` 是如何检测是否存在生命周期事件侦听器的呢？对于这个问题等我们在讲解 `Vue` 事件系统自然会知道。
+另外大家可能会疑惑，`vm._hasHookEvent` 是在什么时候被设置为 `true` 的呢？或者换句话说，`Vue` 是如何检测是否存在生命周期事件侦听器的呢？对于这个问题等我们在讲解 `Vue` 事件系统时自然会知道。
 
 #### Vue 的初始化之 initState
 
@@ -1081,7 +1081,7 @@ initProvide(vm) // resolve provide after data/props
 callHook(vm, 'created')
 ```
 
-可以看到在 `initState` 函数执行之前，先执行了 `initInjections` 函数，也就是说 `inject` 选项要更早被初始化，不过由于初始化 `inject` 选项的时候涉及到 `defineReactive` 函数以及控制是否应该转换为响应式属性的状态标识 `observerState.shouldConvert`，所以我们决定先讲解 `initState`，之后再来讲解 `initInjections` 和 `initProvide`，这才是一个合理的顺序，并且从 `Vue` 的时间线上来看 `inject/provide` 选项确实是后来才添加的。
+可以看到在 `initState` 函数执行之前，先执行了 `initInjections` 函数，也就是说 `inject` 选项要更早被初始化，不过由于初始化 `inject` 选项的时候涉及到 `defineReactive` 函数，并且调用了 `toggleObserving` 函数操作了用于控制是否应该转换为响应式属性的状态标识 `observerState.shouldConvert`，所以我们决定先讲解 `initState`，之后再来讲解 `initInjections` 和 `initProvide`，这才是一个合理的顺序，并且从 `Vue` 的时间线上来看 `inject/provide` 选项确实是后来才添加的。
 
 
 
