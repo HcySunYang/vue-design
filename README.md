@@ -14,10 +14,11 @@
 ##### [3Vue的思路之以一个例子为线索](/note/3Vue的思路之以一个例子为线索)
 ##### [4Vue选项的规范化](/note/4Vue选项的规范化)
 ##### [5Vue选项的合并](/note/5Vue选项的合并)
-##### [6Vue的初始化（一）](/note/6Vue的初始化)
-##### [7Vue的编译器初探](/note/7Vue的编译器初探)
-##### [8编译器之parser](/note/8编译器之parser)
-##### [9Vue中的html-parser](/note/9Vue中的html-parser)
+##### [6Vue的初始化](/note/6Vue的初始化)
+##### [7Vue的初始化之数据响应系统](/note/7Vue的初始化之数据响应系统)
+##### [8Vue的编译器初探](/note/7Vue的编译器初探)
+##### [9编译器之parser](/note/8编译器之parser)
+##### [10Vue中的html-parser](/note/9Vue中的html-parser)
 
 ### 扩展阅读
 
