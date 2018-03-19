@@ -41,4 +41,7 @@ vm.$createElement
 
 vm.$attrs
 vm.$listeners
+
+// initState(vm)   src/core/instance/state.js **************************************************
+vm._watchers = []
 ```
