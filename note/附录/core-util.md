@@ -312,6 +312,35 @@ if (capture) return
 
 #### lang.js 文件代码说明
 
+#### isReserved
+
+* 源码如下：
+
+```js
+/**
+ * Check if a string starts with $ or _
+ */
+export function isReserved (str: string): boolean {
+  const c = (str + '').charCodeAt(0)
+  return c === 0x24 || c === 0x5F
+}
+```
+
+* 描述：`isReserved` 函数用来检测一个字符串是否以 `$` 或者 `_` 开头，主要用来判断一个字段的键名是否保留的，比如在 `Vue` 中不允许使用以 `$` 或 `_` 开头的字符串作为 `data` 数据的字段名，如：
+
+```js
+new Vue({
+  data: {
+    $a: 1,  // 不允许
+    _b: 2   // 不允许
+  }
+})
+```
+
+* 源码分析：
+
+判断一个字符串是否以 `$` 或 `_` 开头还是比较容易的，只不过 `isReserved` 函数的实现方式是通过字符串的 `charCodeAt` 方法获得该字符串第一个字符串的 `unicode`，然后与 `0x24` 和 `0x5F` 作比较。其中 `$` 对应的 `unicode` 码为 `36`，对应的十六进制值为 `0x24`；`_` 对应的 `unicode` 码为 `95`，对应的十六进制值为 `0x5F`。有的同学可能会有疑问为什么不直接用字符 `$` 和 `_` 作比较，而是用这两个字符对应的 `unicode` 码作比较，其实无论哪种比较方法差别不大，看作者更倾向于哪一种。
+
 #### options.js 文件代码说明
 
 *该文件的讲解集中在 [4Vue选项的规范化](/note/4Vue选项的规范化) 以及 [5Vue选项的合并](/note/5Vue选项的合并) 这两个小节中*。
