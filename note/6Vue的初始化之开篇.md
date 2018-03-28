@@ -151,7 +151,7 @@ if (process.env.NODE_ENV !== 'production') {
 export { initProxy }
 ```
 
-上面的代码是简化后的，可以发现在文件的开头声明了 `initProxy` 变量，但并未初始化，所以目前 `initProxy` 还是 `undefined`，随后，在文件的结尾将 `initProxy` 导出，那么 `initProxy` 到底是什么呢？实际上变量 `initProxy` 的初始化赋值是在 `if` 语句块内进行的，这个 `if` 语句块进行环境判断，如果是非生产环境的话，那么才会对 `initProxy` 变量赋值，也就是说在生产环境下我们导出的 `initProxy` 实际上就是 `undefined`。只有在非生产环境下导出的 `initProxy` 才会有值，其值就是这个函数：
+上面的代码是简化后的，可以发现在文件的开头声明了 `initProxy` 变量，但并未初始化，所以目前 `initProxy` 还是 `undefined`，随后，在文件的结尾将 `initProxy` 导出，那么 `initProxy` 到底是什么呢？实际上变量 `initProxy` 的赋值是在 `if` 语句块内进行的，这个 `if` 语句块进行环境判断，如果是非生产环境的话，那么才会对 `initProxy` 变量赋值，也就是说在生产环境下我们导出的 `initProxy` 实际上就是 `undefined`。只有在非生产环境下导出的 `initProxy` 才会有值，其值就是这个函数：
 
 ```js
 initProxy = function initProxy (vm) {
@@ -190,7 +190,7 @@ const hasProxy =
     Proxy.toString().match(/native code/)
 ```
 
-上面的代码相信大家都能看得懂，所以就不做过多解释，接下来我们就看看它是如何做代理的，并且有什么作用。
+上面代码的作用是判断当前宿主环境是否支持原生 `Proxy`，相信大家都能看得懂，所以就不做过多解释，接下来我们就看看它是如何做代理的，并且有什么作用。
 
 查看 `initProxy` 函数的 `if` 语句块，内容如下：
 
@@ -227,8 +227,8 @@ const hasHandler = {
     has (target, key) {
         // has 变量是真实经过 in 运算符得来的结果
         const has = key in target
-        // 如果 key 在 allowedGlobals 之内，或者 key 以下划线 _ 开头，则为真
-        const isAllowed = allowedGlobals(key) || key.charAt(0) === '_'
+        // 如果 key 在 allowedGlobals 之内，或者 key 以下划线 _ 开头的字符串，则为真
+        const isAllowed = allowedGlobals(key) || (typeof key === 'string' && key.charAt(0) === '_')
         // 如果 has 和 isAllowed 都为假，使用 warnNonPresent 函数打印错误
         if (!has && !isAllowed) {
             warnNonPresent(target, key)
@@ -245,7 +245,9 @@ const hasHandler = {
 * with 检查: with(proxy) { (foo); }
 * Reflect.has()
 
-其中关键点就在可以拦截 `with` 语句块里对变量的访问，后面我们会讲到。`has` 函数内出现了两个函数，分别是 `allowedGlobals` 以及 `warnNonPresent`，这两个函数也是定义在当前文件中，首先我们看一下 `allowedGlobals`：
+其中关键点就在 `has` 可以拦截 `with` 语句块里对变量的访问，后面我们会讲到。
+
+`has` 函数内出现了两个函数，分别是 `allowedGlobals` 以及 `warnNonPresent`，这两个函数也是定义在当前文件中，首先我们看一下 `allowedGlobals`：
 
 ```js
 const allowedGlobals = makeMap(
@@ -273,7 +275,7 @@ const warnNonPresent = (target, key) => {
 }
 ```
 
-这个函数就是通过 `warn` 打印一段警告信息，警告信息提示你“在渲染的时候引用了 `key`，但是在实例上并没有定义 `key` 这个属性或方法”。其实我们很容易就可以看到这个信息，比如下面的代码：
+这个函数就是通过 `warn` 打印一段警告信息，警告信息提示你“在渲染的时候引用了 `key`，但是在实例对象上并没有定义 `key` 这个属性或方法”。其实我们很容易就可以看到这个信息，比如下面的代码：
 
 ```js
 const vm = new Vue({
@@ -380,7 +382,30 @@ var vm = new Vue({
 
 为什么会这么设计呢？这也许是 `Vue` 留的一个后门吧。
 
-现在，我们基本知道了 `initProxy` 的目的，就是设置渲染函数的作用域代理，其目的是为我们提供更好的提示信息。不过对于 `proxy.js` 文件内的代码，还有一段使我们没有讲过的，就是下面这段：
+现在，我们基本知道了 `initProxy` 的目的，就是设置渲染函数的作用域代理，其目的是为我们提供更好的提示信息。但是我们忽略了一些细节没有讲清楚，回到下面这段代码：
+
+```js
+// has 变量是真实经过 in 运算符得来的结果
+const has = key in target
+// 如果 key 在 allowedGlobals 之内，或者 key 以下划线 _ 开头的字符串，则为真
+const isAllowed = allowedGlobals(key) || (typeof key === 'string' && key.charAt(0) === '_')
+// 如果 has 和 isAllowed 都为假，使用 warnNonPresent 函数打印错误
+if (!has && !isAllowed) {
+    warnNonPresent(target, key)
+}
+```
+
+上面这段代码中的 `if` 语句的判断条件是 `(!has && !isAllowed)`，其中 `!has` 我们可以理解为**你访问了一个没有定义在实例对象上(或原型链上)的属性**，所以这个时候提示错误信息是合理。但是即便 `!has` 成立也不一定要提示错误信息，因为必须要满足 `!isAllowed`，也就是说当你访问了一个**虽然不在实例对象上(或原型链上)的属性，但如果你访问的是全局对象**那么也是被允许的。这样我们就可以在模板中使用全局对象了，如：
+
+```html
+<template>
+  {{Number(b) + 2}}
+</template>
+```
+
+其中 `Number` 为全局对象，如果去掉 `!isAllowed` 这个判断条件，那么上面模板的写法将会得到警告信息。除了允许使用全局对象之外，还允许方法以 `_` 开头的属性，这么做是由于渲染函数中会包含很多以 `_` 开头的内部方法，如之前我们查看渲染函数时遇到的 `_c`、`_v` 等等。
+
+最后对于 `proxy.js` 文件内的代码，还有一段使我们没有讲过的，就是下面这段：
 
 ```js
 if (hasProxy) {
