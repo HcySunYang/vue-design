@@ -12,7 +12,7 @@ if (opts.data) {
 }
 ```
 
-首先判断 `opts.data` 是否存在，即 `data` 选项是否存在，如果存在则调用 `initData(vm)` 函数初始化 `data` 选项，否则通过 `observe` 函数观测一个空的对象，并且 `vm._data` 引用了该空对象。其中 `observe` 函数是将 `data` 转换成响应式数据的核心入口，另外实例对象上的 `_data` 属性我们在前面的章节中讲解 `$data` 属性的时候讲到过，`$data` 属性是一个访问器属性，其代理的值就是 `_data`，所以 `$data` 与 `_data` 是完全等价的。
+首先判断 `opts.data` 是否存在，即 `data` 选项是否存在，如果存在则调用 `initData(vm)` 函数初始化 `data` 选项，否则通过 `observe` 函数观测一个空的对象，并且 `vm._data` 引用了该空对象。其中 `observe` 函数是将 `data` 转换成响应式数据的核心入口，另外实例对象上的 `_data` 属性我们在前面的章节中讲解 `$data` 属性的时候讲到过，`$data` 属性是一个访问器属性，其代理的值就是 `_data`。
 
 下面我们就从 `initData(vm)` 开始开启数据响应系统的探索之旅。
 
@@ -27,13 +27,15 @@ data = vm._data = typeof data === 'function'
   : data || {}
 ```
 
-首先定义 `data` 变量，它是 `vm.$options.data` 的引用。在 [5Vue选项的合并](/note/5Vue选项的合并) 一节中我们知道 `vm.$options.data` 其实最终被处理成了一个函数，且该函数的执行结果才是真正的数据。在上面的代码中我们发现其中依然存在一个使用 `typeof` 语句判断 `data` 数据类型的操作，实际上这个判断是完全没有必要的，原始是当 `data` 选项存在的时候，那么经过 `mergeOptions` 函数处理后，`data` 选项必然是一个函数，只有当 `data` 选项不存在的时候它的值是 `undefined`，而在 `initState` 函数中如果 `opts.data` 不存在则根本不会执行 `initData` 函数，所以既然执行了 `initData` 函数那么 `vm.$options.data` 必然是一个函数，所以这里的判断是没有必要的。所以可以直接写成：
+首先定义 `data` 变量，它是 `vm.$options.data` 的引用。在 [5Vue选项的合并](/note/5Vue选项的合并) 一节中我们知道 `vm.$options.data` 其实最终被处理成了一个函数，且该函数的执行结果才是真正的数据。在上面的代码中我们发现其中依然存在一个使用 `typeof` 语句判断 `data` 数据类型的操作，实际上这个判断是完全没有必要的，原因是当 `data` 选项存在的时候，那么经过 `mergeOptions` 函数处理后，`data` 选项必然是一个函数，只有当 `data` 选项不存在的时候它的值是 `undefined`，而在 `initState` 函数中如果 `opts.data` 不存在则根本不会执行 `initData` 函数，所以既然执行了 `initData` 函数那么 `vm.$options.data` 必然是一个函数，所以这里的判断是没有必要的。所以可以直接写成：
 
 ```js
 data = vm._data = getData(data, vm)
 ```
 
-这句话的调用了 `getData` 函数，`getData` 函数就定义在 `initData` 函数的下面，我们看看其作用是什么：
+关于这个问题，我提交了一个 `PR`，详情可以查看这里：[https://github.com/vuejs/vue/pull/7875](https://github.com/vuejs/vue/pull/7875)
+
+回到上面那句代码，这句话的调用了 `getData` 函数，`getData` 函数就定义在 `initData` 函数的下面，我们看看其作用是什么：
 
 ```js
 export function getData (data: Function, vm: Component): any {
@@ -117,7 +119,7 @@ while (i--) {
 }
 ```
 
-上面的代码中首先使用 `Object.keys` 函数获取 `data` 对象的所有键，并将由 `data` 对象的键所组成的数组赋值给 `keys` 常量。接着分别用 `props` 常量和 `methods` 常量引用 `vm.$options.props` 和 `vm.$options.methods`。然后开启一个 `while` 循环，该循环的作用是便利 `keys` 数组，那么这个循环的作用是什么呢？我们来看循环体内的第一段 `if` 语句：
+上面的代码中首先使用 `Object.keys` 函数获取 `data` 对象的所有键，并将由 `data` 对象的键所组成的数组赋值给 `keys` 常量。接着分别用 `props` 常量和 `methods` 常量引用 `vm.$options.props` 和 `vm.$options.methods`。然后开启一个 `while` 循环，该循环的用来遍历 `keys` 数组，那么遍历 `keys` 数组的目的是什么呢？我们来看循环体内的第一段 `if` 语句：
 
 ```js
 const key = keys[i]
@@ -199,7 +201,7 @@ const ins = new Vue ({
 
 当我们访问 `ins.a` 时实际访问的是 `ins._data.a`。而 `ins._data` 才是真正的数据对象。
 
-最后经过一些列的处理，`initData` 函数来到了最后一句代码：
+最后经过一系列的处理，`initData` 函数来到了最后一句代码：
 
 ```js
 // observe data
@@ -208,12 +210,14 @@ observe(data, true /* asRootData */)
 
 调用 `observe` 函数将 `data` 数据对象转换成响应式的，可以说这句代码才是响应系统的开始，不过在我们讲解 `observe` 函数之前我们有必要总结一下 `initData` 函数所做的事情，通过前面分析 `initData` 函数主要完成如下工作：
 
-* 根据 `vm.$options.data` 选项获取真正想要的数据
+* 根据 `vm.$options.data` 选项获取真正想要的数据（注意：此时 `vm.$options.data` 是函数）
 * 校验得到的数据是否是一个纯对象
 * 检查数据对象 `data` 上的键是否与 `props` 冲突
 * 检查 `methods` 对象上的键是否与 `data` 上的键冲突
 * 在 `Vue` 实例对象上添加代理访问数据对象的同名属性
-* 调用 `observe` 函数开启响应式之路
+* 最后调用 `observe` 函数开启响应式之路
+
+
 
 
 
