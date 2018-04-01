@@ -319,15 +319,15 @@ Object.defineProperty(data, 'a', {
 
 // Target 是全局变量
 let Target = null
-function $watch (path, fn) {
+function $watch (exp, fn) {
   // 将 Target 的值设置为 fn
   Target = fn
   // 读取字段值，触发 set 函数
-  data[path]
+  data[exp]
 }
 ```
 
-上面的代码中，首先我们定义了全局变量 `Target`，然后在 `$watch` 中将 `Target` 的值设置为 `fn` 也就是依赖，接着读取字段的值 `data[path]` 从而触发 `set` 函数，在 `set` 函数中，由于此时 `Target` 变量就是我们要收集的依赖，所以将 `Target` 添加到 `dep` 数组。现在我们添加如下测试代码：
+上面的代码中，首先我们定义了全局变量 `Target`，然后在 `$watch` 中将 `Target` 的值设置为 `fn` 也就是依赖，接着读取字段的值 `data[exp]` 从而触发 `set` 函数，在 `set` 函数中，由于此时 `Target` 变量就是我们要收集的依赖，所以将 `Target` 添加到 `dep` 数组。现在我们添加如下测试代码：
 
 ```js
 $watch('a', () => {
@@ -438,9 +438,96 @@ $watch('a.b', () => {
 })
 ```
 
+来看看目前 `$watch` 函数的代码：
 
+```js
+function $watch (exp, fn) {
+  Target = fn
+  // 读取字段值，触发 set 函数
+  data[exp]
+}
+```
 
+读取字段值的时候我们直接使用 `data[exp]`，如果按照 `$watch('a.b', fn)` 这样调用 `$watch` 函数，那么 `data[exp]` 等价于 `data['a.b']`，这显然是不正确的，正确的读取字段值的方式应该是 `data['a']['b']`。所以我们需要稍微做一点小小的改造：
 
+```js
+const data = {
+  a: {
+    b: 1
+  }
+}
+
+function $watch (exp, fn) {
+  Target = fn
+  let pathArr,
+      obj = data
+  // 检查 exp 中是否包含 .
+  if (/\./.test(exp)) {
+    // 将字符串转为数组，例：'a.b' => ['a', 'b']
+    pathArr = exp.split('.')
+    // 使用循环读取到 data.a.b
+    pathArr.forEach(p => {
+      obj = obj[p]
+    })
+    return
+  }
+  data[exp]
+}
+```
+
+我们对 `$watch` 函数做了一些改造，首先检查要读取的字段是否包含 `.`，如果包含 `.` 说明读取嵌套对象的字段，这时候我们使用字符串的 `split('.')` 函数将字符串转为数组，所以如果访问的路径是 `a.b` 那么转换后的数组就是 `['a', 'b']`，然后使用一个循环从而读取到嵌套对象的属性值，不过需要注意的是读取到嵌套对象的属性值之后应该立即返回 `return`，不需要再执行后面的代码。
+
+下面我们再进一步，我们思考一下 `$watch` 函数的原理的是什么？其实 `$watch` 函数所做的事情就是想方设法的访问到你要观测的字段，从而触发该字段的 `get` 函数，进而收集观察者(依赖)。现在我们传递给 `$watch` 函数的第一个参数是一个字符串，代表要访问数据的哪一个字段属性，那么除了字符串之外可以不可以是一个函数呢？假设我们有一个函数叫做 `render`，如下
+
+```js
+const data = {
+  name: '霍春阳',
+  age: 24
+}
+
+function render () {
+  return document.write(`姓名：${data.name}; 年龄：${data.age}`)
+}
+```
+
+可以看到 `render` 函数依赖了数据对象 `data`，那么 `render` 函数的执行是不是会触发 `data.name` 和 `data.age` 这两个字段的 `get` 拦截器呢？答案是肯定的，当然会！所以我们可以将 `render` 函数作为 `$watch` 函数的第一个参数：
+
+```js
+$watch(render, render)
+```
+
+为了能够保证 `$watch` 函数正常执行，我们需要对 `$watch` 函数做如下修改：
+
+```js
+function $watch (exp, fn) {
+  Target = fn
+  let pathArr,
+      obj = data
+  // 如果 exp 是函数，直接执行该函数
+  if (typeof exp === 'function') {
+    exp()
+    return
+  }
+  if (/\./.test(exp)) {
+    pathArr = exp.split('.')
+    pathArr.forEach(p => {
+      obj = obj[p]
+    })
+    return
+  }
+  data[exp]
+}
+```
+
+在上面的代码中，我们检测了 `exp` 的类型，如果是函数则直接执行之，由于 `render` 函数的执行会触发数据字段的 `get` 拦截器，所以依赖会被收集。同时我们要注意传递给 `$watch` 函数的第二个参数：
+
+```js
+$watch(render, render)
+```
+
+第二个参数依然是 `render` 函数，也就是说当依赖发生变化时，会重新执行 `render` 函数，这样我们就实现了数据变化，并将变化自动应用到 `DOM`。其实这大概就是 `Vue` 的原理，但我们做的还远远不够，比如上面这句代码，第一个参数中 `render` 函数的执行使得我们能够收集依赖，当依赖变化时会重新执行第二个参数中的 `render` 函数，但不要忘了这又会触发一次数据字段的 `get` 拦截器，所以此时已经收集了两遍依赖，那么我们是不是要想办法避免依赖冗余呢？我们将这些问题留到后面，看看在 `Vue` 中它是如何处理的。
+
+现在我们这个不严谨的实现暂时就到这里，意图在于让大家明白数据响应系统的整体思路，为接下来真正进入 `Vue` 源码做必要的铺垫。
 
 #### 看看访问器属性的模样
 
