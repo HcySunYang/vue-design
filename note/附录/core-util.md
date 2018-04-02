@@ -80,6 +80,49 @@ export const nativeWatch = ({}).watch
 
 * 描述：在 `Firefox` 中原生提供了 `Object.prototype.watch` 函数，所以当运行在 `Firefox` 中时 `nativeWatch` 为原生提供的函数，在其他浏览器中 `nativeWatch` 为 `undefined`。这个变量主要用于 `Vue` 处理 `watch` 选项时与其冲突。
 
+##### isServerRendering
+
+源码如下：
+
+```js
+// this needs to be lazy-evaled because vue may be required before
+// vue-server-renderer can set VUE_ENV
+let _isServer
+export const isServerRendering = () => {
+  if (_isServer === undefined) {
+    /* istanbul ignore if */
+    if (!inBrowser && !inWeex && typeof global !== 'undefined') {
+      // detect presence of vue-server-renderer and avoid
+      // Webpack shimming the process
+      _isServer = global['process'].env.VUE_ENV === 'server'
+    } else {
+      _isServer = false
+    }
+  }
+  return _isServer
+}
+```
+
+* 描述：`isServerRendering` 函数的执行结果是一个布尔值，用来判断是否是服务端渲染。
+
+* 源码解析：
+
+根据 `if` 语句：
+
+```js
+if (!inBrowser && !inWeex && typeof global !== 'undefined') {...}
+```
+
+可知如果不在浏览器中(`!inBrowser`)也不是weex(`!inWeex`)，同时 `global` 有定义，则可能是服务端渲染，那么继续判断：
+
+```js
+global['process'].env.VUE_ENV === 'server'
+```
+
+是否成立，其中 `global['process'.env.VUE_ENV]` 是 `vue-server-renderer` 注入的。如果成立那么说明是服务端渲染。如果上面的条件有一项不成立，那么都不认为是服务端渲染。
+
+注意，在 `isServerRendering` 中使用全局变量 `_isServer` 保存了最终的值，如果发现 `_isServer` 有定义，那么就不会重新计算，从而提升性能。毕竟环境是不会改变的，只需要求值一次即可。
+
 #### error.js 文件代码说明
 
 该文件只导出一个函数：`handleError`，在看这个函数的实现之前，我们需要回顾一下 `Vue` 的文档，我们知道 `Vue` 提供了一个全局配置 `errorHandler`，用来捕获组件生命周期函数等的内部错误，使用方法如下：
