@@ -355,7 +355,9 @@ if (capture) return
 
 #### lang.js 文件代码说明
 
-#### isReserved
+
+
+##### isReserved
 
 * 源码如下：
 
@@ -383,6 +385,30 @@ new Vue({
 * 源码分析：
 
 判断一个字符串是否以 `$` 或 `_` 开头还是比较容易的，只不过 `isReserved` 函数的实现方式是通过字符串的 `charCodeAt` 方法获得该字符串第一个字符串的 `unicode`，然后与 `0x24` 和 `0x5F` 作比较。其中 `$` 对应的 `unicode` 码为 `36`，对应的十六进制值为 `0x24`；`_` 对应的 `unicode` 码为 `95`，对应的十六进制值为 `0x5F`。有的同学可能会有疑问为什么不直接用字符 `$` 和 `_` 作比较，而是用这两个字符对应的 `unicode` 码作比较，其实无论哪种比较方法差别不大，看作者更倾向于哪一种。
+
+##### def
+
+* 源码如下：
+
+```js
+/**
+ * Define a property.
+ */
+export function def (obj: Object, key: string, val: any, enumerable?: boolean) {
+  Object.defineProperty(obj, key, {
+    value: val,
+    enumerable: !!enumerable,
+    writable: true,
+    configurable: true
+  })
+}
+```
+
+* 描述：`def` 函数是对 `Object.defineProperty` 函数的简单包装，为了调用方便
+
+* 源码分析：
+
+`def` 函数接收四个参数，分别是 源对象，要在对象上定义的键名，对应的值，以及是否可枚举，如果不传递 `enumerable` 参数则代表定义的属性是不可枚举的。
 
 #### options.js 文件代码说明
 
