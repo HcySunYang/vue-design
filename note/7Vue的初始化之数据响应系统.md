@@ -1088,7 +1088,119 @@ Vue.set(data.a, 'c', 1)
 
 所以 `__ob__` 属性以及 `__ob__.dep` 的主要作用是为了添加、删除属性时有能力触发依赖，而这就是 `Vue.set` 或 `Vue.delete` 的原理。
 
+在 `childOb.dep.depend()` 这句话的下面，还有一个 `if` 条件语句，如下：
+
+```js
+if (Array.isArray(value)) {
+  dependArray(value)
+}
+```
+
+如果读取的属性值是数组，那么需要调用 `dependArray` 函数逐个触发数组每个元素的依赖收集，为什么这么做呢？那是因为 `Observer` 类在定义响应式属性时对于纯对象和数组的处理方式是不同，对于上面这段 `if` 语句的目的等到我们讲解完对于数组的处理之后，会详细说明。
+
 ###### 在 set 函数中如何触发依赖
+
+在 `get` 函数中收集了依赖之后，接下来我们就要看一下在 `set` 函数中是如何触发依赖的，即当属性被修改的时候如何触发依赖。`set` 函数如下：
+
+```js
+set: function reactiveSetter (newVal) {
+  const value = getter ? getter.call(obj) : val
+  /* eslint-disable no-self-compare */
+  if (newVal === value || (newVal !== newVal && value !== value)) {
+    return
+  }
+  /* eslint-enable no-self-compare */
+  if (process.env.NODE_ENV !== 'production' && customSetter) {
+    customSetter()
+  }
+  if (setter) {
+    setter.call(obj, newVal)
+  } else {
+    val = newVal
+  }
+  childOb = !shallow && observe(newVal)
+  dep.notify()
+}
+```
+
+与 `get` 函数类似，我们知道 `get` 函数主要完成了两部分重要的工作，一个是返回正确的属性值，另一个是收集依赖。同样的 `set` 函数也要完成两个重要的事情，第一正确的为属性设置新值，第二是能够触发相应的依赖。
+
+首先 `set` 函数接收一个参数 `newVal`，即该属性被设置的新值。在函数体内，先执行了这样一句话：
+
+```js
+const value = getter ? getter.call(obj) : val
+
+```
+
+这句话与 `get` 函数体的第一句话相同，即取得属性原有的值，为什么要取得属性原来的值呢？很简单，因为我们需要拿到原有的值与新的值作比较，并且只有在原有值与新设置的值不相等的情况下才需要触发依赖和重新设置属性值，否则意味着属性值并没有改变，当然不需要做额外的处理。如下代码：
+
+```js
+/* eslint-disable no-self-compare */
+if (newVal === value || (newVal !== newVal && value !== value)) {
+  return
+}
+```
+
+这里就对比了新值和旧值：`newVal === value`。如果新旧值全等，那么函数直接返回(`return`)，不做任何处理。但是除了对比新旧值之外，我们还注意到，另外一个条件：
+
+```js
+(newVal !== newVal && value !== value)
+```
+
+如果满足该条件，同样不做任何处理，那么这个条件什么意思呢？`newVal !== newVal` 说明新值与新值自身都不全等，同时旧值与旧值自身也不全等，大家想一下在 `js` 中什么时候会出现一个值与自身都不全等的？答案就是 `NaN`：
+
+```js
+NaN === NaN // false
+```
+
+所以我们现在重新分析一下这个条件，首先 `value !== value` 成立那说明该属性的原有值就是 `NaN`，同时 `newVal !== newVal` 说明为该属性设置的新值也是 `NaN`，所以这个时候新旧值都是 `NaN`，那么等价于属性的值没有变化，所以自然不需要做额外的处理了，`set` 函数直接返回(`return`)。
+
+再往下又是一个 `if` 语句块：
+
+```js
+/* eslint-enable no-self-compare */
+if (process.env.NODE_ENV !== 'production' && customSetter) {
+  customSetter()
+}
+```
+
+上面这段代码的作用是，如果 `customSetter` 函数存在，那么在非生产环境下执行 `customSetter` 函数。其中 `customSetter` 函数是 `defineReactive` 函数的第四个参数。那么 `customSetter` 函数的作用是什么呢？其实我们在讲解 `initRender` 函数的时候就讲解过 `customSetter` 的作用，如下是 `initRender` 函数中的一段代码：
+
+```js
+defineReactive(vm, '$attrs', parentData && parentData.attrs || emptyObject, () => {
+  !isUpdatingChildComponent && warn(`$attrs is readonly.`, vm)
+}, true)
+```
+
+上面的代码中使用 `defineReactive` 在 `Vue` 实例对象 `vm` 上定义了 `$attrs` 属性，可以看到传递给 `defineReactive` 函数的第四个参数是一个箭头函数，这个函数就是 `customSetter`，这个箭头函数的作用是当你尝试修改 `vm.$attrs` 属性的值时，打印一段信息即：**`$attrs` 属性是只读的**。这就是 `customSetter` 函数的作用，用来打印辅助信息，当然除此之外你可以将 `customSetter` 用在任何适合使用它的地方。
+
+我们回到 `set` 函数，再往下是这样一段代码：
+
+```js
+if (setter) {
+  setter.call(obj, newVal)
+} else {
+  val = newVal
+}
+```
+
+上面这段代码的意图很明显，即正确的设置属性值，首先判断 `setter` 是否存在，我们知道 `setter` 常量存储的是属性原有的 `set` 函数。即如果属性原来拥有自身的 `set` 函数，那么应该继续使用该函数来设置属性的值，从而保证属性原有的设置操作不受影响。如果属性原本就没有 `set` 函数，那么就设置 `val` 的值：`val = newVal`。
+
+接下来就是 `set` 函数的最后两句代码，如下：
+
+```js
+childOb = !shallow && observe(newVal)
+dep.notify()
+```
+
+我们知道，由于属性被设置了新的值，那么假如我们为属性设置的新值是一个数组或者纯对象，那么该数组或纯对象是未被观测的，所以需要对新值进行观测，这就是第一句代码的作用，同时使用新的观测对象重写 `childOb` 的值。当然了，这些操作都是在 `!shallow` 为真的情况下，即需要深度观测的时候才会执行。最后是时候触发依赖了，我们知道 `dep` 是属性用来收集依赖的”筐“，现在我们需要把”筐“里的依赖都执行以下，而这就是 `dep.notify()` 的作用。
+
+至此 `set` 函数我们就讲解完毕了。
+
+###### 保证程序行为的一致性
+
+
+
 
 
 
