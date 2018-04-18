@@ -27,7 +27,7 @@ data = vm._data = typeof data === 'function'
   : data || {}
 ```
 
-首先定义 `data` 变量，它是 `vm.$options.data` 的引用。在 [5Vue选项的合并](/note/5Vue选项的合并) 一节中我们知道 `vm.$options.data` 其实最终被处理成了一个函数，且该函数的执行结果才是真正的数据。在上面的代码中我们发现其中依然存在一个使用 `typeof` 语句判断 `data` 数据类型的操作，实际上这个判断是完全没有必要的，原因是当 `data` 选项存在的时候，那么经过 `mergeOptions` 函数处理后，`data` 选项必然是一个函数，只有当 `data` 选项不存在的时候它的值是 `undefined`，而在 `initState` 函数中如果 `opts.data` 不存在则根本不会执行 `initData` 函数，所以既然执行了 `initData` 函数那么 `vm.$options.data` 必然是一个函数，所以这里的判断是没有必要的。所以可以直接写成：
+首先定义 `data` 变量，它是 `vm.$options.data` 的引用。在 [5Vue选项的合并](/note/5Vue选项的合并) 一节中我们知道 `vm.$options.data` 其实最终被处理成了一个函数，且该函数的执行结果才是真正的数据。在上面的代码中我们发现其中依然存在一个使用 `typeof` 语句判断 `data` 数据类型的操作，实际上这个判断是完全没有必要的，原因是当 `data` 选项存在的时候，那么经过 `mergeOptions` 函数处理后，`data` 选项必然是一个函数，只有当 `data` 选项不存在的时候它的值是 `undefined`，而在 `initState` 函数中如果 `opts.data` 不存在则根本不会执行 `initData` 函数，所以既然执行了 `initData` 函数那么 `vm.$options.data` 必然是一个函数，所以这里的判断是没有必要的。可以直接写成：
 
 ```js
 data = vm._data = getData(data, vm)
@@ -1199,7 +1199,7 @@ dep.notify()
 
 ###### 保证定义响应式数据行为的一致性
 
-本节我们主要讲解 `defineReactive` 函数中一段代码，即：
+本节我们主要讲解 `defineReactive` 函数中的一段代码，即：
 
 ```js
 if ((!getter || setter) && arguments.length === 2) {
@@ -1310,7 +1310,7 @@ if (!getter && arguments.length === 2) {
 
 这么做难道不会有什么问题吗？当然有问题，我们知道当数据对象的某一个属性只拥有 `get` 拦截器函数而没有 `set` 拦截器函数时，此时该属性不会被深度观测。但是经过 `defineReactive` 函数的处理之后，该属性将被重新定义 `getter` 和 `setter`，此时该属性变成了既拥有 `get` 函数又拥有 `set` 函数。并且当我们尝试给该属性重新赋值时，那么新的值将会被观测。这时候矛盾就产生了：**原本该属性不会被深度观测，但是重新赋值之后，新的值却被观测了**。
 
-这就是所谓的**定义响应式数据时行为的不一致**，为了解决这个问题，我们的解决办法是当属性拥有原本的 `setter` 时，即使拥有 `getter` 也要获取属性值并观测之，这样代码就变成了最终这个样子：
+这就是所谓的**定义响应式数据时行为的不一致**，为了解决这个问题，采用的办法是当属性拥有原本的 `setter` 时，即使拥有 `getter` 也要获取属性值并观测之，这样代码就变成了最终这个样子：
 
 ```js
 if ((!getter || setter) && arguments.length === 2) {
@@ -1319,6 +1319,7 @@ if ((!getter || setter) && arguments.length === 2) {
 ```
 
 ##### 响应式数据之数组的处理
+
 
 
 
