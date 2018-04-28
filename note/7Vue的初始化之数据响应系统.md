@@ -272,7 +272,7 @@ Object.defineProperty(data, 'a', {
 })
 ```
 
-这样我们就实现了对属性 `a` 的设置和获取操作的拦截，有了它我们就可以大胆的思考一些事情，比如：**能不能在获取属性 `a` 的时候收集依赖，然后在设置属性 `a` 的时候触发之前收集的依赖呢？**嗯，这是一个好思路，不过既然要收集依赖，我们起码需要一个”筐“，然后将所有收集到的依赖通通放到这个”筐”里，当属性被设置的时候将“筐”里所有的依赖都拿出来执行，落实的代码如下：
+这样我们就实现了对属性 `a` 的设置和获取操作的拦截，有了它我们就可以大胆的思考一些事情，比如：**能不能在获取属性 `a` 的时候收集依赖，然后在设置属性 `a` 的时候触发之前收集的依赖呢？**嗯，这是一个好思路，不过既然要收集依赖，我们起码需要一个”筐“，然后将所有收集到的依赖通通放到这个”筐”里，当属性被设置的时候将“筐”里所有的依赖都拿出来执行就可以了，落实到代码如下：
 
 ```js
 // dep 数组就是我们所谓的“筐”
@@ -291,7 +291,7 @@ Object.defineProperty(data, 'a', {
 
 如上代码所示，我们定义了常量 `dep`，它是一个数组，这个数组就是我们所说的“筐”，当获取属性 `a` 的值时将触发 `get` 函数，在 `get` 函数中，我们将收集到的依赖放入“筐”内，当设置属性 `a` 的值时将触发 `set` 函数，在 `set` 函数内我们将“筐”里的依赖全部拿出来执行。
 
-但是新的问题出现了：**如何在获取属性 `a` 的值时收集依赖呢？**为了解决这个问题我们需要思考一下我们现在都掌握哪些条件，这个时候我们就需要在 `$watch` 函数中做文章了，我们知道 `$watch` 函数接收两个参数，第一个参数是一个字符串，即数据字段名,比如 `'a'`，第二个参数是依赖该字段的函数：
+但是新的问题出现了，上面的代码中我们假设 `fn` 函数就是我们需要收集的依赖(`观察者`)，但 `fn` 从何而来呢？**也就是说如何在获取属性 `a` 的值时收集依赖呢？**为了解决这个问题我们需要思考一下我们现在都掌握哪些条件，这个时候我们就需要在 `$watch` 函数中做文章了，我们知道 `$watch` 函数接收两个参数，第一个参数是一个字符串，即数据字段名,比如 `'a'`，第二个参数是依赖该字段的函数：
 
 ```js
 $watch('a', () => {
@@ -327,7 +327,7 @@ function $watch (exp, fn) {
 }
 ```
 
-上面的代码中，首先我们定义了全局变量 `Target`，然后在 `$watch` 中将 `Target` 的值设置为 `fn` 也就是依赖，接着读取字段的值 `data[exp]` 从而触发 `set` 函数，在 `set` 函数中，由于此时 `Target` 变量就是我们要收集的依赖，所以将 `Target` 添加到 `dep` 数组。现在我们添加如下测试代码：
+上面的代码中，首先我们定义了全局变量 `Target`，然后在 `$watch` 中将 `Target` 的值设置为 `fn` 也就是依赖，接着读取字段的值 `data[exp]` 从而触发被设置的属性的 `set` 函数，在 `set` 函数中，由于此时 `Target` 变量就是我们要收集的依赖，所以将 `Target` 添加到 `dep` 数组。现在我们添加如下测试代码：
 
 ```js
 $watch('a', () => {
@@ -387,9 +387,9 @@ for (let key in data) {
 }
 ```
 
-只需要在使用 `Object.defineProperty` 函数定义属性之前缓存一下原来的值即 `val`，然后在 `get` 函数中将 `val` 返回即可，除此之外还要记得在 `set` 函数中使用新值(`newVal`)重写旧值(`val`)。
+只需要在使用 `Object.defineProperty` 函数定义访问器属性之前缓存一下原来的值即 `val`，然后在 `get` 函数中将 `val` 返回即可，除此之外还要记得在 `set` 函数中使用新值(`newVal`)重写旧值(`val`)。
 
-但这样就完美了吗？当然没有，这距离完美可以说还相差十万八千里，比如当数据 `data` 是嵌套的对象时，我们的程序只能检测到第一层对象的属性，比如数据对象如下：
+但这样就完美了吗？当然没有，这距离完美可以说还相差十万八千里，比如当数据 `data` 是嵌套的对象时，我们的程序只能检测到第一层对象的属性，如果数据对象如下：
 
 ```js
 const data = {
@@ -477,7 +477,7 @@ function $watch (exp, fn) {
 
 我们对 `$watch` 函数做了一些改造，首先检查要读取的字段是否包含 `.`，如果包含 `.` 说明读取嵌套对象的字段，这时候我们使用字符串的 `split('.')` 函数将字符串转为数组，所以如果访问的路径是 `a.b` 那么转换后的数组就是 `['a', 'b']`，然后使用一个循环从而读取到嵌套对象的属性值，不过需要注意的是读取到嵌套对象的属性值之后应该立即返回 `return`，不需要再执行后面的代码。
 
-下面我们再进一步，我们思考一下 `$watch` 函数的原理的是什么？其实 `$watch` 函数所做的事情就是想方设法的访问到你要观测的字段，从而触发该字段的 `get` 函数，进而收集观察者(依赖)。现在我们传递给 `$watch` 函数的第一个参数是一个字符串，代表要访问数据的哪一个字段属性，那么除了字符串之外可以不可以是一个函数呢？假设我们有一个函数叫做 `render`，如下
+下面我们再进一步，我们思考一下 `$watch` 函数的原理的是什么？其实 `$watch` 函数所做的事情就是想方设法的访问到你要观测的字段，从而触发该字段的 `get` 函数，进而收集依赖(观察者)。现在我们传递给 `$watch` 函数的第一个参数是一个字符串，代表要访问数据的哪一个字段属性，那么除了字符串之外可以不可以是一个函数呢？假设我们有一个函数叫做 `render`，如下
 
 ```js
 const data = {
@@ -525,7 +525,7 @@ function $watch (exp, fn) {
 $watch(render, render)
 ```
 
-第二个参数依然是 `render` 函数，也就是说当依赖发生变化时，会重新执行 `render` 函数，这样我们就实现了数据变化，并将变化自动应用到 `DOM`。其实这大概就是 `Vue` 的原理，但我们做的还远远不够，比如上面这句代码，第一个参数中 `render` 函数的执行使得我们能够收集依赖，当依赖变化时会重新执行第二个参数中的 `render` 函数，但不要忘了这又会触发一次数据字段的 `get` 拦截器，所以此时已经收集了两遍依赖，那么我们是不是要想办法避免收集冗余的依赖呢？除此之外我么也没有对数组做处理，我们将这些问题留到后面，看看在 `Vue` 中它是如何处理的。
+第二个参数依然是 `render` 函数，也就是说当依赖发生变化时，会重新执行 `render` 函数，这样我们就实现了数据变化，并将变化自动应用到 `DOM`。其实这大概就是 `Vue` 的原理，但我们做的还远远不够，比如上面这句代码，第一个参数中 `render` 函数的执行使得我们能够收集依赖，当依赖变化时会重新执行第二个参数中的 `render` 函数，但不要忘了这又会触发一次数据字段的 `get` 拦截器，所以此时已经收集了两遍重复的依赖，那么我们是不是要想办法避免收集冗余的依赖呢？除此之外我么也没有对数组做处理，我们将这些问题留到后面，看看在 `Vue` 中它是如何处理的。
 
 现在我们这个不严谨的实现暂时就到这里，意图在于让大家明白数据响应系统的整体思路，为接下来真正进入 `Vue` 源码做必要的铺垫。
 
@@ -620,7 +620,7 @@ export function toggleObserving (value: boolean) {
 
 * 第四个条件是 `Object.isExtensible(value)` 必须为真
 
-也就是说要被观测的数据对象必须是**可扩展的**。一个普通的对象默认就是可扩展的，一下三个方法都可以使得一个对象变得不可扩展：`Object.preventExtensions()`、`Object.freeze()` 以及 `Object.seal()`。
+也就是说要被观测的数据对象必须是**可扩展的**。一个普通的对象默认就是可扩展的，以下三个方法都可以使得一个对象变得不可扩展：`Object.preventExtensions()`、`Object.freeze()` 以及 `Object.seal()`。
 
 * 第五个条件是 `!value._isVue` 必须为真
 
@@ -780,35 +780,10 @@ export function defineReactive (
     enumerable: true,
     configurable: true,
     get: function reactiveGetter () {
-      const value = getter ? getter.call(obj) : val
-      if (Dep.target) {
-        dep.depend()
-        if (childOb) {
-          childOb.dep.depend()
-          if (Array.isArray(value)) {
-            dependArray(value)
-          }
-        }
-      }
-      return value
+      // 省略...
     },
     set: function reactiveSetter (newVal) {
-      const value = getter ? getter.call(obj) : val
-      /* eslint-disable no-self-compare */
-      if (newVal === value || (newVal !== newVal && value !== value)) {
-        return
-      }
-      /* eslint-enable no-self-compare */
-      if (process.env.NODE_ENV !== 'production' && customSetter) {
-        customSetter()
-      }
-      if (setter) {
-        setter.call(obj, newVal)
-      } else {
-        val = newVal
-      }
-      childOb = !shallow && observe(newVal)
-      dep.notify()
+      // 省略...
     }
   })
 }
@@ -914,7 +889,7 @@ if ((!getter || setter) && arguments.length === 2) {
 let childOb = !shallow && observe(val)
 ```
 
-这段代码的前两句定义了 `getter` 和 `setter` 常量，分别保存了来自 `property` 对象的 `get` 和 `set` 函数，我们知道 `property` 对象是属性的描述对象，一个对象的属性很可能已经是一个访问器属性了，所以该属性很可能已经存在 `get` 或 `set` 方法。由于接下来会使用 `Object.defineProperty` 函数重新定义属性的 `setter/getter`，这会导致属性原有的 `set` 和 `get` 方法被覆盖，所以要将属性原有的 `setter/getter` 缓存，并在重新定义的 `set` 和 `get` 方法中调用缓存的函数，从而做到不影响属性的原有读取操作。
+这段代码的前两句定义了 `getter` 和 `setter` 常量，分别保存了来自 `property` 对象的 `get` 和 `set` 函数，我们知道 `property` 对象是属性的描述对象，一个对象的属性很可能已经是一个访问器属性了，所以该属性很可能已经存在 `get` 或 `set` 方法。由于接下来会使用 `Object.defineProperty` 函数重新定义属性的 `setter/getter`，这会导致属性原有的 `set` 和 `get` 方法被覆盖，所以要将属性原有的 `setter/getter` 缓存，并在重新定义的 `set` 和 `get` 方法中调用缓存的函数，从而做到不影响属性的原有读写操作。
 
 上面这段代码中比较难理解的是 `if` 条件语句：
 
@@ -937,7 +912,7 @@ defineReactive(vm, '$attrs', parentData && parentData.attrs || emptyObject, null
 defineReactive(vm, '$listeners', options._parentListeners || emptyObject, null, true)
 ```
 
-大家要注意一个问题，即使用 `observe(val)` 深度观测数据对象时，这里的 `val` 未必有值，因为必须在满足条件 `(!getter || setter) && arguments.length === 2` 时，才会触发取值的动作：`val = obj[key]`，所以一旦不满足条件即使属性是有值的但是由于没有触发取值的动作，所以 `val` 依然是 `undefined`。这就会导致深度观测无效，因为我们在分析 `observe` 函数的时候知道，只有当数据对象是数组或对象时才会成功被观测。对于这个问题我们后面还会详细的说。
+大家要注意一个问题，即使用 `observe(val)` 深度观测数据对象时，这里的 `val` 未必有值，因为必须在满足条件 `(!getter || setter) && arguments.length === 2` 时，才会触发取值的动作：`val = obj[key]`，所以一旦不满足条件即使属性是有值的但是由于没有触发取值的动作，所以 `val` 依然是 `undefined`。这就会导致深度观测无效。
 
 ###### 被观测后的数据对象的样子
 
@@ -1007,7 +982,7 @@ get: function reactiveGetter () {
 }
 ```
 
-首先既然是 `getter`，那么当然要能够正确的返回属性的值，其次我们知道依赖的收集时机就是属性被读取的时候，所以 `get` 函数做了两件事：正确的返回属性值以及收集依赖，我们具体看一下代码，`get` 函数的第一句代码如下：
+既然是 `getter`，那么当然要能够正确的返回属性的值才能，我们知道依赖的收集时机就是属性被读取的时候，所以 `get` 函数做了两件事：正确的返回属性值以及收集依赖，我们具体看一下代码，`get` 函数的第一句代码如下：
 
 ```js
 const value = getter ? getter.call(obj) : val
@@ -1029,7 +1004,7 @@ if (Dep.target) {
 }
 ```
 
-首先判断 `Dep.target` 是否存在，那么 `Dep.target` 是什么呢？其实 `Dep.target` 与我们在数据响应系统基本思路一节中所讲的 `Target` 作用相同，所以 `Dep.target` 中保存的值就是要被收集的依赖(函数)。所以如果 `Dep.target` 存在的话说明有依赖需要被收集，这个时候才需要执行 `if` 语句块内的代码，如果 `Dep.target` 不存在就意味着没有需要被收集的依赖，所以当然就不需要执行 `if` 语句块内的代码了。
+首先判断 `Dep.target` 是否存在，那么 `Dep.target` 是什么呢？其实 `Dep.target` 与我们在数据响应系统基本思路一节中所讲的 `Target` 作用相同，所以 `Dep.target` 中保存的值就是要被收集的依赖(观察者)。所以如果 `Dep.target` 存在的话说明有依赖需要被收集，这个时候才需要执行 `if` 语句块内的代码，如果 `Dep.target` 不存在就意味着没有需要被收集的依赖，所以当然就不需要执行 `if` 语句块内的代码了。
 
 在 `if` 语句块内第一句执行的代码就是：`dep.depend()`，执行 `dep` 对象的 `depend` 方法将依赖收集到 `dep` 这个“筐”中，这里的 `dep` 对象就是属性的 `getter/setter` 通过闭包引用的“筐”。
 
@@ -1055,7 +1030,7 @@ const data = {
 }
 ```
 
-对于属性 `a` 来讲，访问器属性 `a` 的 `setter/getter` 通过闭包引用了一个 `Dep` 实例对象，即属性 `a` 用来收集依赖的“筐”。除此之外访问器属性 `a` 的 `setter/getter` 还闭包引用着 `childOb`，且 `childOb === data.a.__ob__` 所以 `childOb.dep === data.a.__ob__.dep`。所以 `childOb.dep.depend()` 这句话的执行就说明，除了要将依赖收集到属性 `a` 自己的“筐”里之外，还要将同样的依赖收集到 `data.a.__ob__.dep` 这里”筐“里，为什么要将同样的依赖分别收集到这两个不同的”筐“里呢？其实答案就在于这两个”筐“里收集的依赖的触发时机是不同的，即作用不同，两个”筐“如下：
+对于属性 `a` 来讲，访问器属性 `a` 的 `setter/getter` 通过闭包引用了一个 `Dep` 实例对象，即属性 `a` 用来收集依赖的“筐”。除此之外访问器属性 `a` 的 `setter/getter` 还闭包引用着 `childOb`，且 `childOb === data.a.__ob__` 所以 `childOb.dep === data.a.__ob__.dep`。也就是说 `childOb.dep.depend()` 这句话的执行说明除了要将依赖收集到属性 `a` 自己的“筐”里之外，还要将同样的依赖收集到 `data.a.__ob__.dep` 这里”筐“里，为什么要将同样的依赖分别收集到这两个不同的”筐“里呢？其实答案就在于这两个”筐“里收集的依赖的触发时机是不同的，即作用不同，两个”筐“如下：
 
 * 第一个”筐“是 `dep`
 * 第二个”筐“是 `childOb.dep`
@@ -1088,7 +1063,7 @@ Vue.set(data.a, 'c', 1)
 
 所以 `__ob__` 属性以及 `__ob__.dep` 的主要作用是为了添加、删除属性时有能力触发依赖，而这就是 `Vue.set` 或 `Vue.delete` 的原理。
 
-在 `childOb.dep.depend()` 这句话的下面，还有一个 `if` 条件语句，如下：
+在 `childOb.dep.depend()` 这句话的下面还有一个 `if` 条件语句，如下：
 
 ```js
 if (Array.isArray(value)) {
@@ -1096,7 +1071,7 @@ if (Array.isArray(value)) {
 }
 ```
 
-如果读取的属性值是数组，那么需要调用 `dependArray` 函数逐个触发数组每个元素的依赖收集，为什么这么做呢？那是因为 `Observer` 类在定义响应式属性时对于纯对象和数组的处理方式是不同，对于上面这段 `if` 语句的目的等到我们讲解完对于数组的处理之后，会详细说明。
+如果读取的属性值是数组，那么需要调用 `dependArray` 函数逐个触发数组每个元素的依赖收集，为什么这么做呢？那是因为 `Observer` 类在定义响应式属性时对于纯对象和数组的处理方式是不同，对于上面这段 `if` 语句的目的等到我们讲解到对于数组的处理时，会详细说明。
 
 ###### 在 set 函数中如何触发依赖
 
@@ -1153,7 +1128,7 @@ if (newVal === value || (newVal !== newVal && value !== value)) {
 NaN === NaN // false
 ```
 
-所以我们现在重新分析一下这个条件，首先 `value !== value` 成立那说明该属性的原有值就是 `NaN`，同时 `newVal !== newVal` 说明为该属性设置的新值也是 `NaN`，所以这个时候新旧值都是 `NaN`，那么等价于属性的值没有变化，所以自然不需要做额外的处理了，`set` 函数直接返回(`return`)。
+所以我们现在重新分析一下这个条件，首先 `value !== value` 成立那说明该属性的原有值就是 `NaN`，同时 `newVal !== newVal` 说明为该属性设置的新值也是 `NaN`，所以这个时候新旧值都是 `NaN`，等价于属性的值没有变化，所以自然不需要做额外的处理了，`set` 函数直接返回(`return`)。
 
 再往下又是一个 `if` 语句块：
 
@@ -1298,7 +1273,7 @@ const ins = new Vue({
 
 我们仅仅修改了定义数据对象 `data` 的方式，此时 `data.getterProp` 本身已经是一个访问器属性，且拥有 `get` 方法。此时当我们尝试修改 `getterProp.a` 的值时，在 `watch` 中观察 `getterProp.a` 的函数不会被执行。这是因为属性 `getterProp` 是一个拥有 `get` 拦截器函数的访问器属性，而当 `Vue` 发现该属性拥有原本的 `getter` 时，是不会深度观测的。
 
-那么为什么当属性拥有自己的 `getter` 时就不会对其深度观测了呢？有两方面的原因，第一：由于当属性存在原本的 `getter` 时在深度观测之前不会取值，所以在在深度观测语句执行之前取不到属性值从而无法深度观测。第二：之所以在深度观测之前不取值是因为属性原本的 `getter` 由用户定义，用户可能在 `getter` 中做任何意想不到的事情，这么做是出于避免引发不必要的行为的考虑。
+那么为什么当属性拥有自己的 `getter` 时就不会对其深度观测了呢？有两方面的原因，第一：由于当属性存在原本的 `getter` 时在深度观测之前不会取值，所以在在深度观测语句执行之前取不到属性值从而无法深度观测。第二：之所以在深度观测之前不取值是因为属性原本的 `getter` 由用户定义，用户可能在 `getter` 中做任何意想不到的事情，这么做是出于避免引发不可预见行为的考虑。
 
 我们回过头来再看这段 `if` 语句块：
 
@@ -1319,6 +1294,93 @@ if ((!getter || setter) && arguments.length === 2) {
 ```
 
 ##### 响应式数据之数组的处理
+
+以上就是响应式数据对于纯对象的处理方式，接下来我们将会对数组展开详细的讨论。回到 `Observer` 类的 `constructor` 函数，找到如下代码：
+
+```js
+if (Array.isArray(value)) {
+  const augment = hasProto
+    ? protoAugment
+    : copyAugment
+  augment(value, arrayMethods, arrayKeys)
+  this.observeArray(value)
+} else {
+  this.walk(value)
+}
+```
+
+在 `if` 条件语句中，使用 `Array.isArray` 函数检测被观测的值 `value` 是否是数组，如果是数组则会执行 `if` 语句块内的代码，从而实现对数组的观测。处理数组的方式与纯对象不同，我们知道数组是一个特殊的数据结构，它有很多实例方法，并且有些方法会改变数组自身的值，我们称其为变异方法，这些方法有：`push`、`pop`、`shift`、`unshift`、`splice`、`sort` 以及 `reverse` 等。这个时候我们就要考虑一件事，即当用户调用这些变异方法改变数组时需要触发依赖。换句话说我们需要知道开发者何时调用了这些变异方法，只有这样我们才有可能在这些方法被调用时做出反应。
+
+###### 拦截数组变异方法的思路
+
+那么怎么样才能知道开发者何时调用了数组的变异方法呢？其实很简单，我们来思考这样一个问题，如下代码中 `sayHello` 函数用来打印字符串 `'hello'`：
+
+```js
+function sayHello () {
+  console.log('hello')
+}
+```
+
+但是我们有这样一个需求，在不改动 `sayHello` 函数源码的情况下，在打印字符串 `'hello'` 之前先输出字符串 `'Hi'`。这时候我们可以这样做：
+
+```js
+const originalSayHello = sayHello
+sayHello = function () {
+  console.log('Hi')
+  originalSayHello()
+}
+```
+
+看，这样就完美的实现了我们的需求，首先使用 `originalSayHello` 变量缓存原来的 `sayHello` 函数，然后重新定义 `sayHello` 函数，并在新定义的 `sayHello` 函数中调用缓存下来的 `originalSayHello`。这样我们就保证了在不改变 `sayHello` 函数行为的前提现对其进行了功能扩展。
+
+这其实是一个很通用也很常见的技巧，而 `Vue` 正是通过这个技巧实现了对数据变异方法的拦截，即保持数组变异方法原有功能不变的前提下对其进行功能扩展。我们知道数组实例的变异方法是来自于数组构造函数的原型，如下图：
+
+![http://7xlolm.com1.z0.glb.clouddn.com/2018-04-28-133359.jpg](http://7xlolm.com1.z0.glb.clouddn.com/2018-04-28-133359.jpg)
+
+数组本身也是一个对象，所以它实例的 `__proto__` 属性指向的就是数组构造函数的原型，即 `arr.__proto__ === Array.prototype` 为真。我们的一个思路是通过设置 `__proto__` 属性的值为一个新的对象，且该新对象的原型是数组构造函数原来的原型对象，如下图所示：
+
+![http://7xlolm.com1.z0.glb.clouddn.com/2018-04-28-153539.jpg](http://7xlolm.com1.z0.glb.clouddn.com/2018-04-28-153539.jpg)
+
+我们知道数组本身也是一个对象，既然是对象那么当然可以访问其 `__proto__` 属性，上图中数组实例的 `__proto__` 属性指向了 `arrayMethods` 对象，同时 `arrayMethods` 对象的 `__proto__` 属性指向了真正的数组原型对象。并且 `arrayMethods` 对象上定义了与数组变异方法同名的函数，这样当通过数组实例调用变异方法时，首先执行的是 `arrayMethods` 上的同名函数，这样就能够实现对数组变异方法的拦截。用代码实现上图所示内容很简单，如下：
+
+```js
+// 要拦截的数组变异方法
+const mutationMethods = [
+  'push',
+  'pop',
+  'shift',
+  'unshift',
+  'splice',
+  'sort',
+  'reverse'
+]
+
+const arrayMethods = Object.create(Array.prototype) // 实现 arrayMethods.__proto__ === Array.prototype
+const arrayProto = Array.prototype  // 缓存 Array.prototype
+
+mutationMethods.forEach(method => {
+  arrayMethods[method] = function (...args) {
+    const result = arrayProto[method].apply(this, args)
+
+    console.log(`执行了代理原型的 ${method} 函数`)
+
+    return result
+  }
+})
+```
+
+如上代码所示，我们通过 `Object.create(Array.prototype)` 创建了 `arrayMethods` 对象，这样就保证了 `arrayMethods.__proto__ === Array.prototype`。然后通过一个循环在 `arrayMethods` 对象上定义了与数组变异方法同名的函数，并在这些函数内调用了真正数组原型上的相应方法。我们可以测试一下，如下代码：
+
+```js
+const arr = []
+arr.__proto__ = arrayMethods
+
+arr.push(1)
+```
+
+可以发现控制台中打印了一句话：`执行了代理原型的 push 函数`。很完美，但是这实际上是存在问题的，因为 `__proto__` 属性是在 `IE11+` 才开始支持，所以如果是低版本的 `IE` 怎么办？比如 `IE9/10`，所以处于兼容考虑，我们需要做能力检测，如果当前环境支持 `__proto__` 时我们就采用上述方式来实现对数组变异方法的拦截，如果当前环境不支持 `__proto__` 那我们就需要另想办法了，接下来我们就介绍一下兼容的处理方案。
+
+
 
 
 
