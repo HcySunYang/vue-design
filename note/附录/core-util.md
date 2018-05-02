@@ -69,6 +69,21 @@ console.log(classify('aaa-bbb-ccc')) // AaaBbbCcc
 
 #### env.js 文件代码说明
 
+##### hasProto
+
+源码如下：
+
+```js
+// can we use __proto__?
+export const hasProto = '__proto__' in {}
+```
+
+* 描述：`hasProto` 用来检查当前环境是否可以使用对象的 `__proto__` 属性。我们知道，一个对象的 `__proto__` 属性指向了它构造函数的原型，但这是一个在 `ES2015` 中才被标准化的属性，`IE11` 及更高版本才能够使用。
+
+* 源码解析：
+
+判断当前环境是否可以使用 `__proto__` 属性很简单，正如源码所示那样，使用 `in` 运算符从一个空的对象字面量开始沿着原型链逐级检查，看其是否存在即可。
+
 ##### nativeWatch
 
 源码如下：

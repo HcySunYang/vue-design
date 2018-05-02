@@ -1378,7 +1378,289 @@ arr.__proto__ = arrayMethods
 arr.push(1)
 ```
 
-可以发现控制台中打印了一句话：`执行了代理原型的 push 函数`。很完美，但是这实际上是存在问题的，因为 `__proto__` 属性是在 `IE11+` 才开始支持，所以如果是低版本的 `IE` 怎么办？比如 `IE9/10`，所以处于兼容考虑，我们需要做能力检测，如果当前环境支持 `__proto__` 时我们就采用上述方式来实现对数组变异方法的拦截，如果当前环境不支持 `__proto__` 那我们就需要另想办法了，接下来我们就介绍一下兼容的处理方案。
+可以发现控制台中打印了一句话：`执行了代理原型的 push 函数`。很完美，但是这实际上是存在问题的，因为 `__proto__` 属性是在 `IE11+` 才开始支持，所以如果是低版本的 `IE` 怎么办？比如 `IE9/10`，所以出于兼容考虑，我们需要做能力检测，如果当前环境支持 `__proto__` 时我们就采用上述方式来实现对数组变异方法的拦截，如果当前环境不支持 `__proto__` 那我们就需要另想办法了，接下来我们就介绍一下兼容的处理方案。
+
+实际上兼容的方案有很多，其中一个比较好的方案是直接在数组实例上定义与变异方法同名的函数，如下代码：
+
+```js
+const arr = []
+const arrayKeys = Object.getOwnPropertyNames(arrayMethods)
+
+arrayKeys.forEach(method => {
+  arr[method] = arrayMethods[method]
+})
+```
+
+上面代码中，我们通过 `Object.getOwnPropertyNames` 函数获取所有属于 `arrayMethods` 对象自身的键，然后通过一个循环在数组实例上定义与变异方法同名的函数，这样当我们尝试调用 `arr.push()` 时，首先执行的是定义在数组实例上的 `push` 函数，也就是 `arrayMethods.push` 函数。这样我们就实现了兼容版本的拦截。不过细心的同学可能已经注意到了，上面这种直接在数组实例上定义的属性是可枚举的，所以更好的做法是使用 `Object.defineProperty`：
+
+```js
+arrayKeys.forEach(method => {
+  Object.defineProperty(arr, method, {
+    enumerable: false,
+    writable: true,
+    configurable: true,
+    value: arrayMethods[method]
+  })
+})
+```
+
+这样就完美了。
+
+###### Vue 的实现
+
+我们已经了解了拦截数组变异方法的思路，接下来我们就可以具体的看一下 `Vue` 源码是如何实现的。在这个过程中我们会讲解数组是如何通过变异方法触发依赖(`观察者`)的。
+
+我们回到 `Observer` 类的 `constructor` 函数：
+
+```js
+constructor (value: any) {
+  this.value = value
+  this.dep = new Dep()
+  this.vmCount = 0
+  def(value, '__ob__', this)
+  if (Array.isArray(value)) {
+    const augment = hasProto
+      ? protoAugment
+      : copyAugment
+    augment(value, arrayMethods, arrayKeys)
+    this.observeArray(value)
+  } else {
+    this.walk(value)
+  }
+}
+```
+
+首先大家注意一点：无论是对象还是数组，都将通过 `def` 函数为其定义 `__ob__` 属性。接着我们来看一下 `if` 语句块的内容，如果被观测的值是一个数组，那么 `if` 语句块内的代码将被执行，即如下代码：
+
+```js
+const augment = hasProto
+  ? protoAugment
+  : copyAugment
+augment(value, arrayMethods, arrayKeys)
+this.observeArray(value)
+```
+
+首先定义了 `augment` 常量，这个常量的值根据 `hasProto` 的真假而定，如果 `hasProto` 为真则 `augment` 的值为 `protoAugment`，否则值为 `copyAugment`。那么 `hasProto` 是什么呢？大家可以在附录 [core/util 目录下的工具方法全解](/note/附录/core-util) 中查看其讲解，其实 `hasProto` 是一个布尔值，它用来检测当前环境是否可以使用 `__proto__` 属性，如果 `hasProto` 为真则当前环境支持 `__proto__` 属性，否则意味着当前环境不能够使用 `__proto__` 属性。
+
+如果当前环境支持使用 `__proto__` 属性，那么 `augment` 的值是 `protoAugment`，其中 `protoAugment` 就定义在 `Observer` 类的下方。源码如下：
+
+```js
+/**
+ * Augment an target Object or Array by intercepting
+ * the prototype chain using __proto__
+ */
+function protoAugment (target, src: Object, keys: any) {
+  /* eslint-disable no-proto */
+  target.__proto__ = src
+  /* eslint-enable no-proto */
+}
+```
+
+那么 `protoAugment` 函数的作用是什么呢？相信大家已经猜到了，正如我们在讲解拦截数据变异方法的思路中所说的那样，可以通过设置数组实例的 `__proto__` 属性，让其指向一个代理原型，从而做到拦截。我们看下一 `protoAugment` 函数是如何被调用的：
+
+```js
+const augment = hasProto
+  ? protoAugment
+  : copyAugment
+augment(value, arrayMethods, arrayKeys)
+```
+
+当 `hasProto` 为真时，`augment` 引用的就是 `protoAugment` 函数，所以调用 `augment` 函数等价于调用 `protoAugment` 函数，可以看到传递给 `protoAugment` 函数的参数有三个。第一个参数是 `value`，其实就是数组实例本身；第二个参数是 `arrayMethods`，这里的 `arrayMethods` 与我们在截数据变异方法的思路中所讲解的 `arrayMethods` 是一样的，它就是代理原型；第三个参数是 `arrayKeys`，我们可以在 `src/core/observer/array.js` 文件中找到这样一行代码：
+
+```js
+const arrayKeys = Object.getOwnPropertyNames(arrayMethods)
+```
+
+其实 `arrayKeys` 是一个包含了所有定义在 `arrayMethods` 对象上的 `key`，其实也就是所有我们要拦截的数组变异方法的名字：
+
+```js
+arrayKeys = [
+  'push',
+  'pop',
+  'shift',
+  'unshift',
+  'splice',
+  'sort',
+  'reverse'
+]
+```
+
+但实际上 `protoAugment` 函数虽然接收三个参数，但它并没有使用第三个参数。可能有的同学会问为什么 `protoAugment` 函数没有使用第三个参数却依然生命了第三个参数呢？原因是为了让 `flow` 更好的工作。
+
+我们回到 `protoAugment` 函数，如下：
+
+```js
+/**
+ * Augment an target Object or Array by intercepting
+ * the prototype chain using __proto__
+ */
+function protoAugment (target, src: Object, keys: any) {
+  /* eslint-disable no-proto */
+  target.__proto__ = src
+  /* eslint-enable no-proto */
+}
+```
+
+该函数的函数体只有一行代码：`target.__proto__ = src`。这行代码用来将数组实例的原型指向代理原型(`arrayMethods`)。下面我们具体看一下 `arrayMethods` 是如何实现的。打开 `src/core/observer/array.js` 文件：
+
+```js
+/*
+ * not type checking this file because flow doesn't play well with
+ * dynamically accessing methods on Array prototype
+ */
+
+import { def } from '../util/index'
+
+const arrayProto = Array.prototype
+export const arrayMethods = Object.create(arrayProto)
+
+const methodsToPatch = [
+  'push',
+  'pop',
+  'shift',
+  'unshift',
+  'splice',
+  'sort',
+  'reverse'
+]
+
+/**
+ * Intercept mutating methods and emit events
+ */
+methodsToPatch.forEach(function (method) {
+  // cache original method
+  const original = arrayProto[method]
+  def(arrayMethods, method, function mutator (...args) {
+    const result = original.apply(this, args)
+    const ob = this.__ob__
+    let inserted
+    switch (method) {
+      case 'push':
+      case 'unshift':
+        inserted = args
+        break
+      case 'splice':
+        inserted = args.slice(2)
+        break
+    }
+    if (inserted) ob.observeArray(inserted)
+    // notify change
+    ob.dep.notify()
+    return result
+  })
+})
+```
+
+如上是 `src/core/observer/array.js` 文件的全部代码，该文件只做了一件事情，那就是导出 `arrayMethods` 对象：
+
+```js
+const arrayProto = Array.prototype
+export const arrayMethods = Object.create(arrayProto)
+```
+
+可以发现，`arrayMethods` 对象的原型是真正的数组构造函数的原型。接着定义了 `methodsToPatch` 常量：
+
+```js
+const methodsToPatch = [
+  'push',
+  'pop',
+  'shift',
+  'unshift',
+  'splice',
+  'sort',
+  'reverse'
+]
+```
+
+`methodsToPatch` 常量是一个数组，包含了所有需要拦截的数组变异方法的名字。再往下是一个 `forEach` 循环，用来遍历 `methodsToPatch` 数组。该循环的主要目的就是使用 `def` 函数在 `arrayMethods` 对象上定义与数组变异方法同名的函数，从而做到拦截的目的，如下是简化后的代码：
+
+```js
+methodsToPatch.forEach(function (method) {
+  // cache original method
+  const original = arrayProto[method]
+  def(arrayMethods, method, function mutator (...args) {
+    const result = original.apply(this, args)
+    const ob = this.__ob__
+    
+    // 省略中间部分...
+
+    // notify change
+    ob.dep.notify()
+    return result
+  })
+})
+```
+
+上面的代码中，首先缓存了数组原本的变异方法：
+
+```js
+const original = arrayProto[method]
+```
+
+然后使用 `def` 函数在 `arrayMethods` 上定义与数组变异方法同名的函数，在函数体内优先调用了缓存下来的数组变异方法：
+
+```js
+const result = original.apply(this, args)
+```
+
+并将数组原本变异方法的返回值赋值给 `result` 常量，并且我们发现函数体的最后一行代码将 `result` 作为返回值返回。这就保证了拦截函数的功能与数组原本变异方法的功能是一致的。
+
+关键要注意这两句代码：
+
+```js
+const ob = this.__ob__
+    
+// 省略中间部分...
+
+// notify change
+ob.dep.notify()
+```
+
+定义了 `ob` 常量，它是 `this.__ob__` 的引用，其中 `this` 其实就是数组实例本身，我们知道无论是数组还是对象，都将会被定义一个 `__ob__` 属性，并且 `__ob__.dep` 中收集了所以该对象(或数组)的依赖(观察者)。所以上面两句代码的目的其实很简单，当调用数组变异方法时，必然修改了数组，所以这个时候需要将该数组的所有依赖(观察者)全部拿出来执行，即：`ob.dep.notify()`。
+
+注意上面的讲解中我们省略了中间部分，那么这部分代码的作用是什么呢？如下：
+
+```js
+def(arrayMethods, method, function mutator (...args) {
+  // 省略...
+  let inserted
+  switch (method) {
+    case 'push':
+    case 'unshift':
+      inserted = args
+      break
+    case 'splice':
+      inserted = args.slice(2)
+      break
+  }
+  if (inserted) ob.observeArray(inserted)
+  // 省略...
+})
+```
+
+首先我们需要思考一下数组变异方法对数组的影响是什么？无非是**增加元素**、**删除元素**以及**变更元素顺序**。有的同学可能会说还有**替换元素**，实际上替换可以理解为删除和增加的复合操作。那么在这些变更中，我们需要重点关注的是**增加元素**的操作，即 `push`、`unshift` 和 `splice`，这三个变异方法都可以为数组添加新的元素，那么为什么要重点关注呢？原因很简单，因为新增加的元素是非响应式的，所以我们需要获取到这些新元素，并将其变为响应式数据才行，而这就是上面代码的目的。下面我们看下一具体实现，首先定义了 `inserted` 变量，这个变量用来保存那些被新添加进来的数组元素：`let inserted`。接着是一个 `switch` 语句，在 `switch` 语句中，当遇到 `push` 和 `unshift` 操作时，那么新增的元素实际上就是传递给这两个方法的参数，所以可以直接将 `inserted` 的值设置为 `args`：`inserted = args`。当遇到 `splice` 操作时，我们知道 `splice` 函数从第三个参数开始到最后一个参数都是数组的新增元素，所以直接使用 `args.slice(2)` 作为 `inserted` 的值即可。最后 `inserted` 变量中所保存的就是新增的数组元素，我们只需要调用 `observeArray` 函数对其进行观测即可：
+
+```js
+if (inserted) ob.observeArray(inserted)
+```
+
+以上是在当前环境支持 `__proto__` 属性的情况，如果不支持则 `augment` 的值为 `copyAugment` 函数，`copyAugment` 定义在 `protoAugment` 函数的下方：
+
+```js
+/**
+ * Augment an target Object or Array by defining
+ * hidden properties.
+ */
+/* istanbul ignore next */
+function copyAugment (target: Object, src: Object, keys: Array<string>) {
+  for (let i = 0, l = keys.length; i < l; i++) {
+    const key = keys[i]
+    def(target, key, src[key])
+  }
+}
+```
+
+`copyAugment` 函数接收的参数与 `protoAugment` 函数相同，不同的是 `copyAugment` 使用到了全部三个参数。在拦截数组变异方法的思路一节中我么讲解了在当前环境不支持 `__proto__` 属性的时候如何做兼容处理，实际上这就是 `copyAugment` 函数的作用。
 
 
 
