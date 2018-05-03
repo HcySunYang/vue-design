@@ -736,7 +736,7 @@ if (Array.isArray(value)) {
 }
 ```
 
-该判断用来区分数据对象到底是数组还是一个纯对象的，因为对于数组和纯对象的处理方式是不同的，为了更好理解我们先看数据对象是一个纯对象的情况，这个时候代码会走 `else` 分支，即执行 `this.walk(value)` 函数，我们知道这个函数实例对象方法，找到这个方法：
+该判断用来区分数据对象到底是数组还是一个纯对象的，因为对于数组和纯对象的处理方式是不同的，为了更好理解我们先看数据对象是一个纯对象的情况，这个时候代码会走 `else` 分支，即执行 `this.walk(value)` 函数，我们知道这个函数是实例对象方法，找到这个方法：
 
 ```js
 walk (obj: Object) {
@@ -912,7 +912,7 @@ defineReactive(vm, '$attrs', parentData && parentData.attrs || emptyObject, null
 defineReactive(vm, '$listeners', options._parentListeners || emptyObject, null, true)
 ```
 
-大家要注意一个问题，即使用 `observe(val)` 深度观测数据对象时，这里的 `val` 未必有值，因为必须在满足条件 `(!getter || setter) && arguments.length === 2` 时，才会触发取值的动作：`val = obj[key]`，所以一旦不满足条件即使属性是有值的但是由于没有触发取值的动作，所以 `val` 依然是 `undefined`。这就会导致深度观测无效。
+大家要注意一个问题，使用 `observe(val)` 深度观测数据对象时，这里的 `val` 未必有值，因为必须在满足条件 `(!getter || setter) && arguments.length === 2` 时，才会触发取值的动作：`val = obj[key]`，所以一旦不满足条件即使属性是有值的但是由于没有触发取值的动作，所以 `val` 依然是 `undefined`。这就会导致深度观测无效。
 
 ###### 被观测后的数据对象的样子
 
@@ -950,7 +950,7 @@ const data = {
 
 ###### 在 get 函数中如何收集依赖
 
-我们回过头来继续查看 `defineReactive` 函数的代码，接下来是 `defineReactive` 函数的关键代码，即使用 `Object.defineProperty` 函数定义访问器属性：
+我们回过头来继续查看 `defineReactive` 函数的代码，接下来是 `defineReactive` 函数的关键代码，使用 `Object.defineProperty` 函数定义访问器属性：
 
 ```js
 Object.defineProperty(obj, key, {
