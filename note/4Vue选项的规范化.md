@@ -1,3 +1,7 @@
+# 目录
+
+[[toc]]
+
 ## Vue 的思路之选项的规范化
 
 <p class="tip">注意：本节中当我们提到“以我们的例子为例”的时候，这里的“我们的例子”指的是《Vue的思路之以一个例子为线索》中的例子</p>
@@ -104,7 +108,7 @@ export function resolveConstructorOptions (Ctor: Class<Component>) {
 }
 ```
 
-所以，根据我们的例子，此时的 `mergeOptions` 函数的第一个参数就是 `Vue.options`，那么大家还记得 `Vue.options` 长成什么样子吗？不记得也没关系，这就得益于我们整理的 [附录/Vue构造函数整理-全局API](/note/附录/Vue构造函数整理-全局API) 了，通过查看我们可知 `Vue.options` 如下：
+所以，根据我们的例子，此时的 `mergeOptions` 函数的第一个参数就是 `Vue.options`，那么大家还记得 `Vue.options` 长成什么样子吗？不记得也没关系，这就得益于我们整理的 [附录/Vue构造函数整理-全局API](/note/附录/Vue构造函数整理-全局API.md) 了，通过查看我们可知 `Vue.options` 如下：
 
 ```js
 Vue.options = {
@@ -235,7 +239,7 @@ export function validateComponentName (name: string) {
 
 对于第一条规则，`Vue` 限定组件的名字由普通的字符和中横线(-)组成，且必须以字母开头。
 
-对于第二条规则，首先将 `options.components` 对象的 `key` 小写化作为组件的名字，然后以组件的名字为参数分别调用两个方法：`isBuiltInTag` 和 `config.isReservedTag`，其中 `isBuiltInTag` 方法的作用是用来检测你所注册的组件是否是内置的标签，这个方法可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看其实现，于是我们可知：`slot` 和 `component` 这个两个名字被 `Vue` 作为内置标签而存在的，你是不能够使用的，比如这样：
+对于第二条规则，首先将 `options.components` 对象的 `key` 小写化作为组件的名字，然后以组件的名字为参数分别调用两个方法：`isBuiltInTag` 和 `config.isReservedTag`，其中 `isBuiltInTag` 方法的作用是用来检测你所注册的组件是否是内置的标签，这个方法可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util.md) 中查看其实现，于是我们可知：`slot` 和 `component` 这个两个名字被 `Vue` 作为内置标签而存在的，你是不能够使用的，比如这样：
 
 ```js
 new Vue({
@@ -266,7 +270,7 @@ Vue.config.isUnknownElement = isUnknownElement
 Vue.config.isReservedTag = isReservedTag
 ```
 
-就是在给 `config.isReservedTag` 赋值，其值为来自于 `platforms/web/util/element.js` 文件的 `isReservedTag` 函数，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看该方法的作用及实现，可知在 `Vue` 中 `html` 标签和部分 `SVG` 标签被认为是保留的。所以这段代码是在保证选项被合并前的合理合法。最后大家注意一点，这些工作是在非生产环境下做的，所以在非生产环境下开发者就能够发现并修正这些问题，所以在生产环境下就不需要再重复做一次校验检测了。
+就是在给 `config.isReservedTag` 赋值，其值为来自于 `platforms/web/util/element.js` 文件的 `isReservedTag` 函数，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util.md) 中查看该方法的作用及实现，可知在 `Vue` 中 `html` 标签和部分 `SVG` 标签被认为是保留的。所以这段代码是在保证选项被合并前的合理合法。最后大家注意一点，这些工作是在非生产环境下做的，所以在非生产环境下开发者就能够发现并修正这些问题，所以在生产环境下就不需要再重复做一次校验检测了。
 
 另外要说一点，我们的例子中并没有使用 `components` 选项，但是这里还是给大家顺便介绍了一下。如果按照我们的例子的话，`mergeOptions` 函数中的很多代码都不会执行，但是为了保证让大家理解整个选项合并所做的事情，这里都会有所介绍。
 
@@ -457,7 +461,7 @@ name = camelize(val)
 res[name] = { type: null }
 ```
 
-首先将数组的元素传递给 `camelize` 函数，这个函数来自于 `shared/util.js` 文件，可以在附录 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看详细解析，这个函数的作用是将中横线转驼峰。
+首先将数组的元素传递给 `camelize` 函数，这个函数来自于 `shared/util.js` 文件，可以在附录 [shared/util.js 文件工具方法全解](/note/附录/shared-util.md) 中查看详细解析，这个函数的作用是将中横线转驼峰。
 
 然后在 `res` 对象上添加了与转驼峰后的 `props` 同名的属性，其值为 `{ type: null }`，这就是实现了对字符串数组的规范化，将其规范为对象的写法，只不过 `type` 的值为 `null`。
 
@@ -479,7 +483,7 @@ if (Array.isArray(props)) {
 }
 ```
 
-首先使用 `isPlainObject` 函数判断 `props` 是否是一个纯的对象，其中 `isPlainObject` 函数来自于 `shared/util.js` 文件，可以在附录 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看详细解析。
+首先使用 `isPlainObject` 函数判断 `props` 是否是一个纯的对象，其中 `isPlainObject` 函数来自于 `shared/util.js` 文件，可以在附录 [shared/util.js 文件工具方法全解](/note/附录/shared-util.md) 中查看详细解析。
 
 如果是一个纯对象，也是需要规范化的，我们知道即使是纯对象也是有两种写法的如下：
 

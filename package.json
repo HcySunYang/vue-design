@@ -1,0 +1,15 @@
+{
+  "name": "analyze-vue",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/HcySunYang/analyze-vue.git",
+  "author": "HcySunYang <HcySunYang@outlook.com>",
+  "scripts": {
+    "dev": "vuepress dev .",
+    "build": "vuepress build ."
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "vuepress": "^0.8.4"
+  }
+}

@@ -1,3 +1,7 @@
+# 目录
+
+[[toc]]
+
 ## Vue的初始化之数据响应系统
 
 相信很多同学都对 `Vue` 的数据响应系统有或多或少的了解，本章将完整的覆盖 `Vue` 响应系统的边边角角，让你对其拥有一个完善的认识。接下来我们还是接着上一章的话题，从 `initState` 函数开始。我们知道 `initState` 函数是很多选项初始化的汇总，在 `initState` 函数内部使用 `initProps` 函数初始化 `props` 属性；使用 `initMethods` 函数初始化 `methods` 属性；使用 `initData` 函数初始化 `data` 选项；使用 `initComputed` 函数和 `initWatch` 函数初始化 `computed` 和 `watch` 选项。那么我们从哪里开始讲起呢？这里我们决定以 `initData` 为切入点为大家讲解 `Vue` 的响应系统，因为 `initData` 几乎涉及了全部的数据响应相关的内容，这样将会让大家在理解 `props`、`computed`、`watch` 等选项时不费吹灰之力，且会有一种水到渠成的感觉。
@@ -27,7 +31,7 @@ data = vm._data = typeof data === 'function'
   : data || {}
 ```
 
-首先定义 `data` 变量，它是 `vm.$options.data` 的引用。在 [5Vue选项的合并](/note/5Vue选项的合并) 一节中我们知道 `vm.$options.data` 其实最终被处理成了一个函数，且该函数的执行结果才是真正的数据。在上面的代码中我们发现其中依然存在一个使用 `typeof` 语句判断 `data` 数据类型的操作，实际上这个判断是完全没有必要的，原因是当 `data` 选项存在的时候，那么经过 `mergeOptions` 函数处理后，`data` 选项必然是一个函数，只有当 `data` 选项不存在的时候它的值是 `undefined`，而在 `initState` 函数中如果 `opts.data` 不存在则根本不会执行 `initData` 函数，所以既然执行了 `initData` 函数那么 `vm.$options.data` 必然是一个函数，所以这里的判断是没有必要的。可以直接写成：
+首先定义 `data` 变量，它是 `vm.$options.data` 的引用。在 [5Vue选项的合并](/note/5Vue选项的合并.md) 一节中我们知道 `vm.$options.data` 其实最终被处理成了一个函数，且该函数的执行结果才是真正的数据。在上面的代码中我们发现其中依然存在一个使用 `typeof` 语句判断 `data` 数据类型的操作，实际上这个判断是完全没有必要的，原因是当 `data` 选项存在的时候，那么经过 `mergeOptions` 函数处理后，`data` 选项必然是一个函数，只有当 `data` 选项不存在的时候它的值是 `undefined`，而在 `initState` 函数中如果 `opts.data` 不存在则根本不会执行 `initData` 函数，所以既然执行了 `initData` 函数那么 `vm.$options.data` 必然是一个函数，所以这里的判断是没有必要的。可以直接写成：
 
 ```js
 data = vm._data = getData(data, vm)
@@ -167,7 +171,7 @@ if (props && hasOwn(props, key)) {
 
 同样的 `Vue` 实例对象除了代理访问 `data` 数据和 `methods` 中的方法之外，还代理访问了 `props` 中的数据，所以上面这段代码的作用是如果发现 `data` 数据字段的 `key` 已经在 `props` 中有定义了，那么就会打印警告。另外这里有一个优先级的关系：**props优先级 > data优先级 > methods优先级**。即如果一个 `key` 在 `props` 中有定义了那么就不能在 `data` 中出现；如果一个 `key` 在 `data` 中出现了那么就不能在 `methods` 中出现了。
 
-另外上面的代码中当 `if` 语句的条件不成立，则会判断 `else if` 语句中的条件：`!isReserved(key)`，该条件的意思是判断定义在 `data` 中的 `key` 是否是保留键，大家可以在 [core/util 目录下的工具方法全解](/note/附录/core-util) 中查看对于 `isReserved` 函数的讲解。`isReserved` 函数通过判断一个字符串的第一个字符是不是 `$` 或 `_` 来决定其是否是保留的，`Vue` 是不会代理那些键名以 `$` 或 `_` 开头的字段的，因为 `Vue` 自身的属性和方法都是以 `$` 或 `_` 开头的，所以这么做是为了避免与 `Vue` 自身的属性和方法相冲突。
+另外上面的代码中当 `if` 语句的条件不成立，则会判断 `else if` 语句中的条件：`!isReserved(key)`，该条件的意思是判断定义在 `data` 中的 `key` 是否是保留键，大家可以在 [core/util 目录下的工具方法全解](/note/附录/core-util.md) 中查看对于 `isReserved` 函数的讲解。`isReserved` 函数通过判断一个字符串的第一个字符是不是 `$` 或 `_` 来决定其是否是保留的，`Vue` 是不会代理那些键名以 `$` 或 `_` 开头的字段的，因为 `Vue` 自身的属性和方法都是以 `$` 或 `_` 开头的，所以这么做是为了避免与 `Vue` 自身的属性和方法相冲突。
 
 如果 `key` 既不是以 `$` 开头，又不是以 `_` 开头，那么将执行 `proxy` 函数，实现实例对象的代理访问：
 
@@ -1440,7 +1444,7 @@ augment(value, arrayMethods, arrayKeys)
 this.observeArray(value)
 ```
 
-首先定义了 `augment` 常量，这个常量的值根据 `hasProto` 的真假而定，如果 `hasProto` 为真则 `augment` 的值为 `protoAugment`，否则值为 `copyAugment`。那么 `hasProto` 是什么呢？大家可以在附录 [core/util 目录下的工具方法全解](/note/附录/core-util) 中查看其讲解，其实 `hasProto` 是一个布尔值，它用来检测当前环境是否可以使用 `__proto__` 属性，如果 `hasProto` 为真则当前环境支持 `__proto__` 属性，否则意味着当前环境不能够使用 `__proto__` 属性。
+首先定义了 `augment` 常量，这个常量的值根据 `hasProto` 的真假而定，如果 `hasProto` 为真则 `augment` 的值为 `protoAugment`，否则值为 `copyAugment`。那么 `hasProto` 是什么呢？大家可以在附录 [core/util 目录下的工具方法全解](/note/附录/core-util.md) 中查看其讲解，其实 `hasProto` 是一个布尔值，它用来检测当前环境是否可以使用 `__proto__` 属性，如果 `hasProto` 为真则当前环境支持 `__proto__` 属性，否则意味着当前环境不能够使用 `__proto__` 属性。
 
 如果当前环境支持使用 `__proto__` 属性，那么 `augment` 的值是 `protoAugment`，其中 `protoAugment` 就定义在 `Observer` 类的下方。源码如下：
 

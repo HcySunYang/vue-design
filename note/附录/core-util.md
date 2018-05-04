@@ -1,3 +1,7 @@
+# 目录
+
+[[toc]]
+
 ## core/util 目录下的工具方法全解
 
 #### debug.js 文件代码说明
@@ -427,7 +431,7 @@ export function def (obj: Object, key: string, val: any, enumerable?: boolean) {
 
 #### options.js 文件代码说明
 
-*该文件的讲解集中在 [4Vue选项的规范化](/note/4Vue选项的规范化) 以及 [5Vue选项的合并](/note/5Vue选项的合并) 这两个小节中*。
+*该文件的讲解集中在 [4Vue选项的规范化](/note/4Vue选项的规范化.md) 以及 [5Vue选项的合并](/note/5Vue选项的合并.md) 这两个小节中*。
 
 #### perf.js 文件代码说明
 
