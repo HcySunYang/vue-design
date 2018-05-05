@@ -1,7 +1,3 @@
-# 目录
-
-[[toc]]
-
 ## 创建编译器
 
 #### 寻找 compileToFunctions
@@ -207,7 +203,7 @@ const { render, staticRenderFns } = compileToFunctions(template, {
 }
 ```
 
-其中 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个变量来自于 `platforms/web/util.js` 文件，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util.md) 中查看这两个变量的作用，其目的是对浏览器的怪癖做兼容，具体在附录中都有讲到，并且这两个变量的类型都是布尔值。
+其中 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个变量来自于 `platforms/web/util.js` 文件，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看这两个变量的作用，其目的是对浏览器的怪癖做兼容，具体在附录中都有讲到，并且这两个变量的类型都是布尔值。
 
 对于 `options.delimiters` 和 `options.comments`，其中 `options` 就是当前 `Vue` 实例的 `$options` 属性，并且 `delimiters` 和 `comments` 都是 `Vue` 提供的选项。所以这两只是简单的将这两个选项透传了过去。
 
@@ -437,7 +433,7 @@ const compiled = compile(template, options)
 }
 ```
 
-其中 `warn` 属性被 `delete` 操作符删除。这里只是给大家做一个简短的回顾，并且我们对 `Vue` 的编译器所接收的参数进行归纳，并整理了附录 [编译器选项整理](/note/附录/compiler-options.md)，后面遇到的任何编译器选项都会整理到该附录里，大家可以在这里查阅 `Vue` 编译器所接收的选项。
+其中 `warn` 属性被 `delete` 操作符删除。这里只是给大家做一个简短的回顾，并且我们对 `Vue` 的编译器所接收的参数进行归纳，并整理了附录 [编译器选项整理](/note/附录/compiler-options)，后面遇到的任何编译器选项都会整理到该附录里，大家可以在这里查阅 `Vue` 编译器所接收的选项。
 
 知道了这些我们就可以去看 `compile` 函数的代码了，我们知道 `compile` 函数是 `createCompileToFunctionFn` 函数的形参，也就是说，`compile` 函数是被从其他地方传递过来了，其实前面我们都分析过，这里的 `compile` 函数就是 `src/compiler/create-compiler.js` 文件中定义在 `createCompiler` 函数内的 `compile` 函数，如下：
 
@@ -631,7 +627,7 @@ export default function text (el: ASTElement, dir: ASTDirective) {
 
 它是一个包含三个属性的对象，且属性的值都是函数。
 
-`baseOptions` 的第四个属性是 `isPreTag`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util.md) 中查看其实现讲解，其作用是通过给定的标签名字检查标签是否是 `'pre'` 标签。
+`baseOptions` 的第四个属性是 `isPreTag`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看其实现讲解，其作用是通过给定的标签名字检查标签是否是 `'pre'` 标签。
 
 `baseOptions` 的第五个属性是 `isUnaryTag`，它来自于与 `options.js` 文件同级目录下的 `util.js` 文件，即 `src/platforms/web/compiler/util.js` 文件，带看这个文件，找到 `isUnaryTag` 如下：
 
@@ -644,7 +640,7 @@ export const isUnaryTag = makeMap(
 
 可以看到 `isUnaryTag` 是一个通过 `makeMap` 生成的函数，该函数的作用是检测给定的标签是否是一元标签。
 
-`baseOptions` 的第六个属性是 `mustUseProp`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util.md) 中查看其实现讲解，其作用是用来检测一个属性在标签中是否要使用 `props` 进行绑定。
+`baseOptions` 的第六个属性是 `mustUseProp`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看其实现讲解，其作用是用来检测一个属性在标签中是否要使用 `props` 进行绑定。
 
 `baseOptions` 的第七个属性是 `canBeLeftOpenTag`，它也是一个函数，来自于 `src/platforms/web/compiler/util.js` 文件，源码如下：
 
@@ -658,11 +654,11 @@ export const canBeLeftOpenTag = makeMap(
 
 该函数也是一个使用 `makeMap` 生成的函数，它的作用是检测一个标签是否是那些虽然不是一元标签，但却可以自己补全并闭合的标签。比如 `p` 标签是一个双标签，你需要这样使用 `<p>Some content</p>`，但是你依然可以省略闭合标签，直接这样写：`<p>Some content`，且浏览器会自动补全。但是有些标签你不可以这样用，它们是严格的双标签。
 
-`baseOptions` 的第八个属性是 `isReservedTag`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util.md) 中查看其实现讲解，其作用是检查给定的标签是否是保留的标签。
+`baseOptions` 的第八个属性是 `isReservedTag`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看其实现讲解，其作用是检查给定的标签是否是保留的标签。
 
-`baseOptions` 的第九个属性是 `getTagNamespace`，它也是一个函数，同样可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util.md) 中查看其实现讲解，其作用是获取元素(标签)的命名空间。
+`baseOptions` 的第九个属性是 `getTagNamespace`，它也是一个函数，同样可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看其实现讲解，其作用是获取元素(标签)的命名空间。
 
-`baseOptions` 的第十个属性是 `staticKeys`，它的值是通过以 `modules` 为参数调用 `genStaticKeys` 函数的返回值得到的。其中 `modules` 就是 `baseOptions` 的第二个属性，而 `genStaticKeys` 来自于 `src/shared/util.js` 文件，大家可以在附录 [shared/util.js 文件工具方法全解](/note/附录/shared-util.md) 中查看该函数的讲解，其作用是根据编译器选项的 `modules` 选项生成一个静态键字符串。
+`baseOptions` 的第十个属性是 `staticKeys`，它的值是通过以 `modules` 为参数调用 `genStaticKeys` 函数的返回值得到的。其中 `modules` 就是 `baseOptions` 的第二个属性，而 `genStaticKeys` 来自于 `src/shared/util.js` 文件，大家可以在附录 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看该函数的讲解，其作用是根据编译器选项的 `modules` 选项生成一个静态键字符串。
 
 现在我们已经弄清楚 `baseOptions` 对象的各个属性都是什么了，这些属性作为编译器的基本参数选项，但是我们还不清楚其各个属性的意义，比如 `modules` 数组和 `directives` 对象等，不过不急，随着后面的深入，这些疑惑都将慢慢解开。
 

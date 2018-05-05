@@ -1,12 +1,8 @@
-# 目录
-
-[[toc]]
-
 ## Vue 的初始化之开篇
 
 #### 用于初始化的最终选项 $options
 
-在 [Vue的思路之以一个例子为线索](/note/Vue的思路之以一个例子为线索.md) 一节中，我们写了一个很简单的例子，这个例子如下：
+在 [Vue的思路之以一个例子为线索](/note/Vue的思路之以一个例子为线索) 一节中，我们写了一个很简单的例子，这个例子如下：
 
 ```js
 var vm = new Vue({
@@ -27,7 +23,7 @@ vm.$options = mergeOptions(
 )
 ```
 
-正是因为上面的代码，使得我们花了大篇章来讲解其内部实现和运作，也就是 [Vue的思路之选项的规范化](/note/Vue的思路之选项的规范化.md) 和 [Vue的思路之选项的合并](/note/Vue的思路之选项的合并.md) 这两节所介绍的内容。现在我们已经知道了 `mergeOptions` 函数是如何对父子选项进行合并处理的，也知道了它的作用。
+正是因为上面的代码，使得我们花了大篇章来讲解其内部实现和运作，也就是 [Vue的思路之选项的规范化](/note/Vue的思路之选项的规范化) 和 [Vue的思路之选项的合并](/note/Vue的思路之选项的合并) 这两节所介绍的内容。现在我们已经知道了 `mergeOptions` 函数是如何对父子选项进行合并处理的，也知道了它的作用。
 
 我们打开 `core/util/options.js` 文件，找到 `mergeOptions` 函数，看其最后一句代码：
 
@@ -873,7 +869,7 @@ vm.$slots
 vm.$scopedSlots
 ```
 
-我们把这些属性都整理到 [Vue实例的设计](/note/附录/Vue实例的设计.md) 中。
+我们把这些属性都整理到 [Vue实例的设计](/note/附录/Vue实例的设计) 中。
 
 再往下是这段代码：
 
@@ -927,7 +923,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 ```
 
-上面的代码主要作用就是在 `Vue` 实例对象上定义两个属性：`vm.$attrs` 以及 `vm.$listeners`。这两个属性在 `Vue` 的文档中是有说明的，由于这两个属性的存在使得在 `Vue` 中创建高阶组件变得更容易，感兴趣的同学可以阅读 [Vue 中创建高阶组件](/note/扩展阅读/Vue中创建高阶组件.md)。
+上面的代码主要作用就是在 `Vue` 实例对象上定义两个属性：`vm.$attrs` 以及 `vm.$listeners`。这两个属性在 `Vue` 的文档中是有说明的，由于这两个属性的存在使得在 `Vue` 中创建高阶组件变得更容易，感兴趣的同学可以阅读 [Vue 中创建高阶组件](/note/扩展阅读/Vue中创建高阶组件)。
 
 我们注意到，在为实例对象定义 `$attrs` 属性和 `$listeners` 属性时，使用了 `defineReactive` 函数，该函数的作用就是为一个对象定义响应式的属性，所以 `$attrs` 和 `$listeners` 这两个属性是相应式的，至于 `defineReactive` 函数的讲解，我们会放到 `Vue` 的响应系统中讲解。
 
@@ -1029,7 +1025,7 @@ const handlers = vm.$options[hook]
 const handlers = vm.$options.created
 ```
 
-在 [5Vue选项的合并](/note/5Vue选项的合并.md) 一节中我们讲过，对于生命周期钩子选项最终会被合并处理成一个数组，所以得到的 `handlers` 就是对应生命周期钩子的数组。接着执行的是这段代码：
+在 [5Vue选项的合并](/note/5Vue选项的合并) 一节中我们讲过，对于生命周期钩子选项最终会被合并处理成一个数组，所以得到的 `handlers` 就是对应生命周期钩子的数组。接着执行的是这段代码：
 
 ```js
 if (handlers) {
@@ -1049,7 +1045,7 @@ if (handlers) {
 handlers[i].call(vm)
 ```
 
-为了保证生命周期钩子函数内可以通过 `this` 访问实例对象，所以使用 `.call(vm)` 执行这些函数。另外由于生命周期钩子函数的函数体是开发者编写的，为了捕获可能出现的错误，使用 `try...catch` 语句块，并在 `catch` 语句块内使用 `handleError` 处理错误信息。其中 `handleError` 来自于 `core/util/error.js` 文件，大家可以在附录 [core/util 目录下的工具方法全解](/note/附录/core-util.md) 中查看关于 `handleError` 的讲解。
+为了保证生命周期钩子函数内可以通过 `this` 访问实例对象，所以使用 `.call(vm)` 执行这些函数。另外由于生命周期钩子函数的函数体是开发者编写的，为了捕获可能出现的错误，使用 `try...catch` 语句块，并在 `catch` 语句块内使用 `handleError` 处理错误信息。其中 `handleError` 来自于 `core/util/error.js` 文件，大家可以在附录 [core/util 目录下的工具方法全解](/note/附录/core-util) 中查看关于 `handleError` 的讲解。
 
 所以我们发现，对于生命周期钩子的调用，其实就是通过 `this.$options` 访问处理过的对应的生命周期钩子函数数组，遍历并执行它们。原理还是很简单的。
 

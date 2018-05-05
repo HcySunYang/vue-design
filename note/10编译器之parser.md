@@ -1,10 +1,6 @@
-# 目录
-
-[[toc]]
-
 ## 编译器之 parser
 
-在 [7Vue的编译器初探](/note/7Vue的编译器初探.md) 这一章节中，我们对 `Vue` 如何创建编译器，以及在这个过程中经历过的几个重要的函数做了分析，比如 `compileToFunctions` 函数以及 `compile` 函数，并且我们知道真正对模板进行编译工作的实际是 `baseCompile` 函数，而接下来我们任务就是搞清楚 `baseCompile` 函数的内容。
+在 [7Vue的编译器初探](/note/7Vue的编译器初探) 这一章节中，我们对 `Vue` 如何创建编译器，以及在这个过程中经历过的几个重要的函数做了分析，比如 `compileToFunctions` 函数以及 `compile` 函数，并且我们知道真正对模板进行编译工作的实际是 `baseCompile` 函数，而接下来我们任务就是搞清楚 `baseCompile` 函数的内容。
 
 `baseCompile` 函数是在 `src/compiler/index.js` 中作为 `createCompilerCreator` 函数参数使用的，代码如下：
 
@@ -27,7 +23,7 @@ export const createCompiler = createCompilerCreator(function baseCompile (
 })
 ```
 
-可以看到 `baseCompile` 函数接收两个参数，分别是字符串模板(`template`)和选项参数(`options`)，其中选项参数 `options` 我们已经分析过了，并且我们有对应的附录专门整理编译器的选项参数，可以在 [编译器选项整理](/note/附录/compiler-options.md) 中查看。
+可以看到 `baseCompile` 函数接收两个参数，分别是字符串模板(`template`)和选项参数(`options`)，其中选项参数 `options` 我们已经分析过了，并且我们有对应的附录专门整理编译器的选项参数，可以在 [编译器选项整理](/note/附录/compiler-options) 中查看。
 
 `baseCompile` 函数很简短，由三句代码和一个 `return` 语句组成，这三句代码的作用如以下：
 

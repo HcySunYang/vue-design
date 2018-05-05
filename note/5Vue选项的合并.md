@@ -1,7 +1,3 @@
-# 目录
-
-[[toc]]
-
 ## Vue 的思路之选项的合并
 
 上一章节我们了解了 `Vue` 对选项的规范化，而接下来才是真正的合并阶段，我们继续看 `mergeOptions` 函数的代码，接下来的一段代码如下：
@@ -70,7 +66,7 @@ for (key in child) {
 if (!hasOwn(parent, key))
 ```
 
-其中 `hasOwn` 函数来自于 `shared/util.js` 文件，可以再 [shared/util.js 文件工具方法全解](/note/附录/shared-util.md) 中查看其详解，其作用是用来判断一个属性是否是对象自身的属性(不包括原型上的)。所以这个判断语句的意思是，如果 `child` 对象的键也在 `parent` 上出现，那么就不要再调用 `mergeField` 的了，因为在上一个 `for in` 循环中已经调用过了，这就避免了重复调用。
+其中 `hasOwn` 函数来自于 `shared/util.js` 文件，可以再 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看其详解，其作用是用来判断一个属性是否是对象自身的属性(不包括原型上的)。所以这个判断语句的意思是，如果 `child` 对象的键也在 `parent` 上出现，那么就不要再调用 `mergeField` 的了，因为在上一个 `for in` 循环中已经调用过了，这就避免了重复调用。
 
 总之这两个 `for in` 循环的目的就是使用在 `parent` 或者 `child` 对象中出现的 `key(即选项的名字)` 作为参数调用 `mergeField` 函数，真正合并的操作实际在 `mergeField` 函数中。
 
@@ -1180,7 +1176,7 @@ if (parentVal === nativeWatch) parentVal = undefined
 if (childVal === nativeWatch) childVal = undefined
 ```
 
-其中 `nativeWatch` 来自于 `core/util/env.js` 文件，大家可以在 [core/util 目录下的工具方法全解](/note/附录/core-util.md) 中查看其作用。在 `Firefox` 浏览器中 `Object.prototype` 拥有原生的 `watch` 函数，所以即便一个普通的对象你没有定义 `watch` 属性，但是依然可以通过原型链访问到原生的 `watch` 属性，这就会给 `Vue` 在处理选项的时候造成迷惑，因为 `Vue` 也提供了一个叫做 `watch` 的选项，即使你的组件选项中没有写 `watch` 选项，但是 `Vue` 通过原型访问到了原生的 `watch`。这不是我们想要的，所以上面两句代码的目的是一个变通方案，当发现组件选项是浏览器原生的 `watch` 时，那说明用户并没有提供 `Vue` 的 `watch` 选项，直接重置为 `undefined`。
+其中 `nativeWatch` 来自于 `core/util/env.js` 文件，大家可以在 [core/util 目录下的工具方法全解](/note/附录/core-util) 中查看其作用。在 `Firefox` 浏览器中 `Object.prototype` 拥有原生的 `watch` 函数，所以即便一个普通的对象你没有定义 `watch` 属性，但是依然可以通过原型链访问到原生的 `watch` 属性，这就会给 `Vue` 在处理选项的时候造成迷惑，因为 `Vue` 也提供了一个叫做 `watch` 的选项，即使你的组件选项中没有写 `watch` 选项，但是 `Vue` 通过原型访问到了原生的 `watch`。这不是我们想要的，所以上面两句代码的目的是一个变通方案，当发现组件选项是浏览器原生的 `watch` 时，那说明用户并没有提供 `Vue` 的 `watch` 选项，直接重置为 `undefined`。
 
 然后是这句代码：
 
@@ -1381,7 +1377,7 @@ strats.computed = function (
 
 这段代码的作用是在 `strats` 策略对象上添加 `props`、`methods`、`inject` 以及 `computed` 策略函数，顾名思义这些策略函数分别用来合并处理同名选项的，并且所使用的策略相同。
 
-对于 `props`、`methods`、`inject` 以及 `computed` 这四个选项有一个共同点，就是它们的结构都是纯对象，虽然我们在书写 `props` 或者 `inject` 选项的时候可能是一个数组，但是在 [Vue的思路之选项的规范化](/note/Vue的思路之选项的规范化.md) 一节中我们知道，`Vue` 内部都将其规范化为了一个对象。所以我们看看 `Vue` 是如何处理这些对象散列的。
+对于 `props`、`methods`、`inject` 以及 `computed` 这四个选项有一个共同点，就是它们的结构都是纯对象，虽然我们在书写 `props` 或者 `inject` 选项的时候可能是一个数组，但是在 [Vue的思路之选项的规范化](/note/Vue的思路之选项的规范化) 一节中我们知道，`Vue` 内部都将其规范化为了一个对象。所以我们看看 `Vue` 是如何处理这些对象散列的。
 
 策略函数内容如下：
 
@@ -1434,7 +1430,7 @@ strats.provide = mergeDataOrFn
 
 ##### 再看 mixins 和 extends
 
-在 [4Vue选项的规范化](/note/4Vue选项的规范化.md) 一节中，我们讲到了 `mergeOptions` 函数中的如下这段代码：
+在 [4Vue选项的规范化](/note/4Vue选项的规范化) 一节中，我们讲到了 `mergeOptions` 函数中的如下这段代码：
 
 ```js
 const extendsFrom = child.extends

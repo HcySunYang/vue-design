@@ -1,7 +1,3 @@
-# 目录
-
-[[toc]]
-
 ## Vue 构造函数
 
 我们知道，我们在使用 `Vue` 的时候，要使用 `new` 操作符进行调用，这说明 `Vue` 应该是一个构造函数，所以我们要做的第一件事就是：把 `Vue` 构造函数搞清楚。
@@ -432,7 +428,7 @@ Vue.options = {
 extend(Vue.options.components, builtInComponents)
 ```
 
-`extend` 来自于 `shared/util.js` 文件，可以在 [附录/shared/util.js 文件工具方法全解](/note/附录/shared-util.md) 中查看其作用，总之这句话的意思就是将 `builtInComponents` 的属性混合到 `Vue.options.components` 中，其中 `builtInComponents` 来自于 `core/components/index.js` 文件，该文件如下：
+`extend` 来自于 `shared/util.js` 文件，可以在 [附录/shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看其作用，总之这句话的意思就是将 `builtInComponents` 的属性混合到 `Vue.options.components` 中，其中 `builtInComponents` 来自于 `core/components/index.js` 文件，该文件如下：
 
 ```js
 import KeepAlive from './keep-alive'
@@ -650,7 +646,7 @@ Vue.options = {
 }
 ```
 
-`extend` 方法我们见过，这里就不说明其作用了，可以查看 [附录/shared/util.js 文件工具方法全解](/note/附录/shared-util.md)，那么经过这两句代码之后的 `Vue.options` 长什么样呢？要想知道这个问题，我们就要知道 `platformDirectives` 和 `platformComponents` 长什么样。
+`extend` 方法我们见过，这里就不说明其作用了，可以查看 [附录/shared/util.js 文件工具方法全解](/note/附录/shared-util)，那么经过这两句代码之后的 `Vue.options` 长什么样呢？要想知道这个问题，我们就要知道 `platformDirectives` 和 `platformComponents` 长什么样。
 
 根据文件开头的 `import` 语句：
 

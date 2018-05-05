@@ -1,7 +1,3 @@
-# 目录
-
-[[toc]]
-
 ## Vue 中的 html-parser
 
 <p class="tip">本节中大量出现 `parse` 以及 `parser` 这两个单词，不要混淆这两个单词，`parse` 是动词，代表“解析”的过程，`parser` 是名词，代表“解析器”。</p>
@@ -960,7 +956,7 @@ const l = match.attrs.length
 const attrs = new Array(l)
 ```
 
-其中常量 `unary` 是一个布尔值，当它为真时代表着标签是一元标签，否则是二元标签。对于一元标签判断的方法是首先调用 `isUnaryTag` 函数，并将标签名(`tagName`)作为参数传递，其中 `isUnaryTag` 函数前面提到过它是 `parser` 选项，实际上它是编译器选项透传过来的，我们在 [7Vue的编译器初探](/note/7Vue的编译器初探.md) 一节中对 `isUnaryTag` 函数有过讲解，简单的说 `isUnaryTag` 函数能够判断标准 `HTML` 中规定的那些一元标签，但是仅仅使用这一个判断条件是不够的，因为在 `Vue` 中我们免不了会写组件，而组件又是以自定义标签的形式存在的，比如：
+其中常量 `unary` 是一个布尔值，当它为真时代表着标签是一元标签，否则是二元标签。对于一元标签判断的方法是首先调用 `isUnaryTag` 函数，并将标签名(`tagName`)作为参数传递，其中 `isUnaryTag` 函数前面提到过它是 `parser` 选项，实际上它是编译器选项透传过来的，我们在 [7Vue的编译器初探](/note/7Vue的编译器初探) 一节中对 `isUnaryTag` 函数有过讲解，简单的说 `isUnaryTag` 函数能够判断标准 `HTML` 中规定的那些一元标签，但是仅仅使用这一个判断条件是不够的，因为在 `Vue` 中我们免不了会写组件，而组件又是以自定义标签的形式存在的，比如：
 
 ```js
 <my-component />
@@ -1029,7 +1025,7 @@ attrs[i] = {
 
 与我们之前所说的一样，`attrs` 数组的每个元素对象只包含两个元素，即属性名 `name` 和属性值 `value`，对于属性名直接从 `args[1]` 中即可获取，但我们发现属性值却没有直接使用前面获取到的 `value`，而是将 `value` 传递给了 `decodeAttr` 函数，并使用该函数的返回值作为最终的属性值。
 
-实际上 `decodeAttr` 函数的作用是对属性值中所包含的 `html` 实体进行解码，将其转换为实体对应的字符。更多关于 `shouldDecodeNewlinesForHref` 与 `shouldDecodeNewlines` 的内容我们曾经提到过，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util.md) 中找到详细讲解。
+实际上 `decodeAttr` 函数的作用是对属性值中所包含的 `html` 实体进行解码，将其转换为实体对应的字符。更多关于 `shouldDecodeNewlinesForHref` 与 `shouldDecodeNewlines` 的内容我们曾经提到过，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中找到详细讲解。
 
 这样 `for` 循环语句块的代码我们就讲完了，在 `for` 循环语句块的下面是这样一段代码：
 

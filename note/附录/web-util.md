@@ -1,7 +1,3 @@
-# 目录
-
-[[toc]]
-
 ## platforms/web/util 目录下的工具方法全解
 
 #### index.js 文件
@@ -211,7 +207,7 @@ export const isHTMLTag = makeMap(
 
 * 源码分析
 
-`isHTMLTag` 是一个使用 `makeMap` 生成的函数，可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util.md) 中查看 `makeMap` 方法。
+`isHTMLTag` 是一个使用 `makeMap` 生成的函数，可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看 `makeMap` 方法。
 
 ##### isSVG
 
@@ -232,7 +228,7 @@ export const isSVG = makeMap(
 
 * 源码分析
 
-`isSVG` 是一个使用 `makeMap` 生成的函数，可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util.md) 中查看 `makeMap` 方法。
+`isSVG` 是一个使用 `makeMap` 生成的函数，可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看 `makeMap` 方法。
 
 ##### isPreTag
 
