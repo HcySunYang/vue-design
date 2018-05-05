@@ -1,6 +1,6 @@
-## shared/util.js 文件工具方法全解
+# shared/util.js 文件工具方法全解
 
-#### extend
+## extend
 
 源码如下：
 
@@ -28,7 +28,7 @@ export function extend (to: Object, _from: ?Object): Object {
 
 `extend` 函数的实现还是挺简单的，使用一个 `for in` 语句实现。大家基本都能看得懂
 
-#### makeMap
+## makeMap
 
 源码如下：
 
@@ -100,7 +100,7 @@ isVowel('e')  // true
 isVowel('b')  // false
 ```
 
-#### isBuiltInTag
+## isBuiltInTag
 
 * 源码如下：
 
@@ -123,7 +123,7 @@ makeMap('slot,component', true)
 
 可知：`slot` 和 `component` 为 `Vue` 内置的标签
 
-#### cached
+## cached
 
 * 源码如下：
 
@@ -180,7 +180,7 @@ return hit || (cache[str] = fn(str))
 
 可以看到，这就是一个函数式编程的玩法，也是比较简单的。
 
-##### emptyObject
+## emptyObject
 
 * 源码如下：
 
@@ -192,7 +192,7 @@ export const emptyObject = Object.freeze({})
 
 * 源码分析：通过以空 `json` 对象 `{}` 为参数调用 `Object.freeze` 函数实现。
 
-#### camelize
+## camelize
 
 * 源码如下：
 
@@ -218,7 +218,7 @@ export const camelize = cached((str: string): string => {
 camelize('aaa-bbb')   // aaaBbb
 ```
 
-#### noop
+## noop
 
 * 源码如下：
 
@@ -237,7 +237,7 @@ export function noop (a?: any, b?: any, c?: any) {}
 
 就是简单的写了一个空函数 `noop`，至于其中的参数 `a`，`b`，`c` 的作用，我们看注释可知是为了避免 `Flow` 使用 `rest` 参数转译代码。
 
-#### no
+## no
 
 * 源码如下：
 
@@ -250,7 +250,7 @@ export const no = (a?: any, b?: any, c?: any) => false
 
 * 描述：始终返回 `false` 的函数
 
-#### toRawType
+## toRawType
 
 * 源码如下：
 
@@ -271,7 +271,7 @@ export function toRawType (value: any): string {
 
 首先使用 `Object.prototype.toString` 获取诸如这样的字符串：`[object Object]`，然后使用 `slice` 方法截取，最终结果类似于 `Object`。
 
-#### isPlainObject
+## isPlainObject
 
 * 源码如下：
 
@@ -291,7 +291,7 @@ export function isPlainObject (obj: any): boolean {
 
 原理很简单，使用 `Object.prototype.toString` 与 `'[object Object]'` 做全等对比。
 
-#### isRegExp
+## isRegExp
 
 * 源码如下：
 
@@ -307,7 +307,7 @@ export function isRegExp (v: any): boolean {
 
 原理很简单，使用 `Object.prototype.toString` 与 `'[object RegExp]'` 做全等对比。
 
-#### genStaticKeys
+## genStaticKeys
 
 * 源码如下：
 

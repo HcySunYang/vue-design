@@ -1,4 +1,4 @@
-## Vue 的思路之选项的合并
+# Vue 选项的合并
 
 上一章节我们了解了 `Vue` 对选项的规范化，而接下来才是真正的合并阶段，我们继续看 `mergeOptions` 函数的代码，接下来的一段代码如下：
 
@@ -94,7 +94,7 @@ const strats = config.optionMergeStrategies
 
 这句代码就定义了 `strats` 变量，且它是一个常量，这个常量的值为 `config.optionMergeStrategies`，这个 `config` 对象是全局配置对象，来自于 `core/config.js` 文件，此时 `config.optionMergeStrategies` 还只是一个空的对象。注意一下这里的一段注释：*选项覆盖策略是处理如何将父选项值和子选项值合并到最终值的函数*。也就是说 `config.optionMergeStrategies` 是一个合并选项的策略对象，这个对象下包含很多函数，这些函数就可以认为是合并特定选项的策略。这样不同的选项使用不同的合并策略，如果你使用自定义选项，那么你也可以自定义该选项的合并策略，只需要在 `Vue.config.optionMergeStrategies` 对象上添加与自定义选项同名的函数就行。而这就是 `Vue` 文档中提过的全局配置：[optionMergeStrategies](https://vuejs.org/v2/api/#optionMergeStrategies)。
 
-##### 选项 el、propsData 的合并策略
+## 选项 el、propsData 的合并策略
 
 那么接下来我们就看看这个选项合并策略对象都有哪些策略，首先是下面这段代码：
 
@@ -216,7 +216,7 @@ const strat = strats[key] || defaultStrat
 
 所以在生产环境将直接使用默认的策略函数 `defaultStrat` 来处理 `el` 和 `propsData` 这两个选项。
 
-##### 选项 data 的合并策略
+## 选项 data 的合并策略
 
 下面我们接着按照顺序看 `options.js` 文件的代码，接下来定义了两个函数：`mergeData` 以及 `mergeDataOrFn`，我们暂且不关注这两个函数的作用。暂且跳过继续看下面的代码，接下来的代码如下：
 
@@ -656,11 +656,11 @@ return to
 
 最后我们对大家经常会产生疑问的地方做一些补充：
 
-###### 一、为什么最终 `strats.data` 会被处理成一个函数？
+### 一、为什么最终 `strats.data` 会被处理成一个函数？
 
 这是因为，通过函数返回数据对象，保证了每个组件实例都有一个唯一的数据副本，避免了组件间数据互相影响。后面讲到 `Vue` 的初始化的时候大家会看到，在初始化数据状态的时候，就是通过执行 `strats.data` 函数来获取数据并对其进行处理的。
 
-###### 二、为什么不在合并阶段就把数据合并好，而是要等到初始化的时候再合并数据？
+### 二、为什么不在合并阶段就把数据合并好，而是要等到初始化的时候再合并数据？
 
 这个问题是什么意思呢？我们知道合并阶段 `strats.data` 将被处理成一个函数，但是这个函数并没有被执行，而是到了后面初始化的阶段才执行的，这个时候才会调用 `mergeData` 对数据进行合并处理，那这么做的目的是什么呢？
 
@@ -697,7 +697,7 @@ var vm = new Vue({
 * 1、由于 `props` 的初始化先于 `data` 选项的初始化
 * 2、`data` 选项是在初始化的时候才求值的，你也可以理解为在初始化的时候才使用 `mergeData` 进行数据合并。
 
-###### 三、你可以这么做。
+### 三、你可以这么做。
 
 在上面的例子中，子组件的 `data` 选项我们是这么写的：
 
@@ -751,7 +751,7 @@ if (!parentVal) {
 
 在这段代码中，直接将 `parentVal` 或 `childVal` 返回了，我们知道这里的 `parentVal` 和 `childVal` 就是 `data` 函数，由于被直接返回，所以并没有指定其运行的作用域，且也没有传递当前实例作为参数，所以我们必然还是在其他地方做这些事情，而这个地方就是我们说的第二个地方，它在哪里呢？当然是初始化的时候，后面我们会讲到的，如果这里大家没有理解也不用担心。
 
-##### 生命周期钩子选项的合并策略
+## 生命周期钩子选项的合并策略
 
 现在我们看了完 `strats.data` 策略函数，我们继续按照 `options.js` 文件的顺序看代码，接下来的一段代码如下：
 
@@ -951,7 +951,7 @@ new Vue({
 
 钩子函数将按顺序执行。
 
-##### 资源(assets)选项的合并策略
+## 资源(assets)选项的合并策略
 
 在 `Vue` 中 `directives`、`filters` 以及 `components` 被认为是资源，其实很好理解，指令、过滤器和组件都是可以作为第三方应用来提供的，比如你需要一个模拟滚动的组件，你当然可以选用超级强大的第三方组件 [scroll-flip-page](https://github.com/HcySunYang/scroll-flip-page)，所以这样看来 [scroll-flip-page](https://github.com/HcySunYang/scroll-flip-page) 就可以认为是资源，除了组件之外指令和过滤器也都是同样的道理。
 
@@ -1126,7 +1126,7 @@ function assertObjectType (name: string, value: any, vm: ?Component) {
 
 就是使用 `isPlainObject` 进行判断。上面我们都在以 `components` 进行讲解，对于指令(`directives`)和过滤器(`filters`)也是一样的，因为他们都是用 `mergeAssets` 进行合并处理。
 
-##### 选项 watch 的合并策略
+## 选项 watch 的合并策略
 
 接下来我们要看的代码就是这一段了：
 
@@ -1347,7 +1347,7 @@ if (!parentVal) return childVal
 
 所以大家应该知道：*被合并处理后的 `watch` 选项下的每个键值，有可能是一个数组，也有可能是一个函数*。
 
-##### 选项 props、methods、inject、computed 的合并策略
+## 选项 props、methods、inject、computed 的合并策略
 
 接下来我们要看的一段代码如下：
 
@@ -1402,7 +1402,7 @@ return ret
 
 以上就是 `props`、`methods`、`inject` 以及 `computed` 这四个属性的通用合并策略。
 
-##### 选项 provide 的合并策略
+## 选项 provide 的合并策略
 
 最后一个选项的合并策略，就是 `provide` 选项的合并策略，只有一句代码，如下：
 
@@ -1412,7 +1412,7 @@ strats.provide = mergeDataOrFn
 
 也就是说 `provide` 选项的合并策略与 `data` 选项的合并策略相同，都是使用 `mergeDataOrFn` 函数。
 
-##### 选项处理小结
+## 选项处理小结
 
 现在我们了解了 `Vue` 中是如何合并处理选项的，接下来我们稍微做一个总结：
 
@@ -1428,7 +1428,7 @@ strats.provide = mergeDataOrFn
 
 至此，我们大概介绍完了 `Vue` 对选项的处理，但留心的同学一定注意到了，`options.js` 文件的代码我们都基本逐行分析，唯独剩下一个函数我们始终没有提到，它就是 `resolveAsset` 函数。这个函数我们暂且不在这里讲，后面随着我们的深入，自然会再次碰到它，到那个时候应该是讲它的最好时机。
 
-##### 再看 mixins 和 extends
+## 再看 mixins 和 extends
 
 在 [4Vue选项的规范化](/note/4Vue选项的规范化) 一节中，我们讲到了 `mergeOptions` 函数中的如下这段代码：
 

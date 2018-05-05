@@ -1,6 +1,6 @@
-## 创建编译器
+# Vue 的编译器初探
 
-#### 寻找 compileToFunctions
+## 寻找 compileToFunctions
 
 接下来我们的主要工作，就是搞清楚 `compileToFunctions` 函数，根据 `platforms/web/entry-runtime-with-compiler.js` 文件头部的 `import` 引用关系可知，`compileToFunctions` 函数来自于当前目录下的 `./compiler/index.js` 文件，打开 `./compiler/index.js` 文件，可以发现这样一句代码：
 
@@ -177,7 +177,7 @@ export function createCompileToFunctionFn (compile: Function): Function {
 
 至此我们经历了一波三折，终于找到了 `compileToFunctions` 函数，`/entry-runtime-with-compiler.js` 文件中执行的 `compileToFunctions` 函数，其实就是在执行 `src/compiler/to-function.js` 文件中 `createCompileToFunctionFn` 函数返回的 `compileToFunctions` 函数。
 
-#### compileToFunctions 的作用
+## compileToFunctions 的作用
 
 经过前面的讲解，我们已经知道了 `entry-runtime-with-compiler.js` 文件中调用的 `compileToFunctions` 的真正来源，可以说为了创建 `compileToFunctions` 函数经历了一波三折，现在大家也许会有疑问，比如为什么要弄的这么复杂？我们暂时把这个疑问放在心里，随着我们的深入，大家将会慢慢理解其内涵。
 
@@ -413,7 +413,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 最后，真正的 `模板字符串` 到 `渲染函数字符串` 的编译工作实际上是通过调用 `compile` 函数来完成的，所以接下来我们的任务就是弄清楚 `compile` 函数。
 
-#### compile 的作用
+## compile 的作用
 
 回顾一下 `compileToFunctions` 函数中调用 `compile` 的方式：
 

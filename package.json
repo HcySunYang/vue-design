@@ -5,8 +5,8 @@
   "repository": "https://github.com/HcySunYang/analyze-vue.git",
   "author": "HcySunYang <HcySunYang@outlook.com>",
   "scripts": {
-    "dev": "vuepress dev .",
-    "build": "vuepress build ."
+    "dev": "vuepress dev ./docs",
+    "build": "vuepress build ./docs"
   },
   "license": "MIT",
   "devDependencies": {

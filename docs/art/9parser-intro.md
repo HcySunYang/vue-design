@@ -1,6 +1,6 @@
-## 编译器之 parser
+# 编译器之 parser
 
-在 [7Vue的编译器初探](/note/7Vue的编译器初探) 这一章节中，我们对 `Vue` 如何创建编译器，以及在这个过程中经历过的几个重要的函数做了分析，比如 `compileToFunctions` 函数以及 `compile` 函数，并且我们知道真正对模板进行编译工作的实际是 `baseCompile` 函数，而接下来我们任务就是搞清楚 `baseCompile` 函数的内容。
+在 [Vue的编译器初探](/note/7Vue的编译器初探) 这一章节中，我们对 `Vue` 如何创建编译器，以及在这个过程中经历过的几个重要的函数做了分析，比如 `compileToFunctions` 函数以及 `compile` 函数，并且我们知道真正对模板进行编译工作的实际是 `baseCompile` 函数，而接下来我们任务就是搞清楚 `baseCompile` 函数的内容。
 
 `baseCompile` 函数是在 `src/compiler/index.js` 中作为 `createCompilerCreator` 函数参数使用的，代码如下：
 
@@ -56,7 +56,7 @@ const ast = parse(template.trim(), options)
 
 也就是 `Vue` 的 `parser`，它是如何将字符串模板解析为抽象语法树的(`AST`)。
 
-#### 对 parser 简单介绍
+## 对 parser 简单介绍
 
 在说 `parser` 之前，我们先了解一下编译器的概念，科班出身的你，应该对编译器的概念有所了解，简单的讲编译器就是将 `源代码` 转换成 `目标代码` 的工具。详细一点如下(引用自维基百科)：
 

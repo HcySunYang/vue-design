@@ -1,8 +1,8 @@
-## platforms/web/util 目录下的工具方法全解
+# platforms/web/util 目录下的工具方法全解
 
-#### index.js 文件
+## index.js 文件
 
-##### query
+### query
 
 * 源码如下：
 
@@ -37,9 +37,9 @@ export function query (el: string | Element): Element {
 
 `query` 函数内部使用 `document.querySelector()` 实现，so easy。
 
-#### attrs.js 文件
+## attrs.js 文件
 
-##### isReservedAttr
+### isReservedAttr
 
 * 源码如下：
 
@@ -51,7 +51,7 @@ export const isReservedAttr = makeMap('style,class')
 
 * 描述：`isReservedAttr` 函数是通过 `makeMap` 生成的，用来检测一个属性是否是保留属性(web平台的保留属性)，由源码可知，保留属性有两个：`style` 和 `class`。
 
-##### mustUseProp
+### mustUseProp
 
 * 源码如下：
 
@@ -104,9 +104,9 @@ return (
 * `video` 标签的 `muted` 属性应该使用 `props` 绑定
 
 
-#### class.js 文件
+## class.js 文件
 
-#### compat.js 文件
+## compat.js 文件
 
 `compat.js` 文件的全部代码如下：
 
@@ -181,9 +181,9 @@ export const shouldDecodeNewlinesForHref = inBrowser ? getShouldDecode(true) : f
 
 最后再啰嗦一句，为什么只在浏览器中才需要判断是否需要做此兼容处理呢？那是因为，只有完整版(包括编译器)的 `Vue`才会遇到这个问题，因为只有完整版的 `Vue` 才会在浏览器中对模板就行编译，才有可能在获取模板的时候使用 `innerHTML` 获取模板内容。
 
-#### element.js 文件
+## element.js 文件
 
-##### isHTMLTag
+### isHTMLTag
 
 * 源码如下：
 
@@ -209,7 +209,7 @@ export const isHTMLTag = makeMap(
 
 `isHTMLTag` 是一个使用 `makeMap` 生成的函数，可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看 `makeMap` 方法。
 
-##### isSVG
+### isSVG
 
 * 源码如下：
 
@@ -230,7 +230,7 @@ export const isSVG = makeMap(
 
 `isSVG` 是一个使用 `makeMap` 生成的函数，可以在 [shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看 `makeMap` 方法。
 
-##### isPreTag
+### isPreTag
 
 * 源码如下：
 
@@ -244,7 +244,7 @@ export const isPreTag = (tag: ?string): boolean => tag === 'pre'
 
 通过 `tag === 'pre'` 进行判断。
 
-##### isReservedTag
+### isReservedTag
 
 * 源码如下：
 
@@ -266,7 +266,7 @@ isHTMLTag(tag) || isSVG(tag)
 
 判断一个标签是否是保留标签，我们可以知道，如果一个标签是 `html` 标签，或者是 `svg` 标签，那么这个标签即使保留标签。
 
-##### getTagNamespace
+### getTagNamespace
 
 * 源码如下：
 
@@ -291,4 +291,4 @@ export function getTagNamespace (tag: string): ?string {
 * 返回值：`{String | undefined}` 如果一个标签满足 `isSVG(tag)`，则返回 `'svg'`，如果标签为 `math` 则返回 `'math'`，其他情况返回 `undefined`。
 
 
-#### style.js 文件
+## style.js 文件

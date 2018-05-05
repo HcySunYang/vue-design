@@ -1,6 +1,6 @@
-## Vue 的初始化之开篇
+# Vue 的初始化之开篇
 
-#### 用于初始化的最终选项 $options
+## 用于初始化的最终选项 $options
 
 在 [Vue的思路之以一个例子为线索](/note/Vue的思路之以一个例子为线索) 一节中，我们写了一个很简单的例子，这个例子如下：
 
@@ -95,7 +95,7 @@ var vm = new Vue({
 
 我们发现 `el` 确实还是原来的值，而 `data` 也确实变成了一个函数，并且这个函数就是我们之前遇到过的 `mergedInstanceDataFn`，除此之外我们还能看到其他合并后的选项，其中 `components`、`directives`、`filters` 以及 `_base` 是存在于 `Vue.options` 中的，这些是我们所知道的，至于 `render` 和 `staticRenderFns` 这两个选项是在将模板编译成渲染函数时添加上去的，我们后面会遇到。另外 `_parentElm` 和 `_refElm` 这两个选项是在为虚拟DOM创建组件实例时添加的，我们后面也会讲到，这里大家不需要关心，免得失去重点。
 
-#### 渲染函数的作用域代理
+## 渲染函数的作用域代理
 
 ok，现在我们已经足够了解 `vm.$options` 这个属性了，它才是用来做一系列初始化工作的最终选项，那么接下来我们就继续看 `_init` 方法中的代码，继续了解 `Vue` 的初始化工作。
 
@@ -436,7 +436,7 @@ Vue.config.keyCodes.shift = 16
 
 由于 `shift` 是内置的修饰符，所以上面这句代码将会得到警告。
 
-#### 初始化之 initLifecycle
+## 初始化之 initLifecycle
 
 `_init` 函数在执行完 `initProxy` 之后，执行的就是 `initLifecycle` 函数：
 
@@ -740,7 +740,7 @@ vm._isBeingDestroyed = false
 其中 `$children` 和 `$refs` 都是我们熟悉的实例属性，他们都在 `initLifecycle` 函数中被初始化，其中 `$children` 被初始化为一个数组，`$refs` 被初始化为一个空 `json` 对象，除此之外，还定义了一些内部使用的属性，大家先混个脸熟，在后面的分析中自然会知道他们的用途，但是不要忘了，既然这些属性是在 `initLifecycle` 函数中定义的，那么自然会与生命周期有关。这样 `initLifecycle` 函数我们就分析完毕了，我们回到 `_init` 函数，看看接下来要做的初始化工作是什么。
 
 
-#### 初始化之 initEvents
+## 初始化之 initEvents
 
 在 `initLifecycle` 函数之后，执行的就是 `initEvents`，它来自于 `core/instance/events.js` 文件，打开该文件找到 `initEvents` 方法，其内容很简短，如下：
 
@@ -799,7 +799,7 @@ export function createComponentInstanceForVnode (
 
 我们发现 `_parentListeners` 也出现这里，也就是说在创建子组件实例的时候才会有这个参数选项，所以现在我们不做深入讨论，后面自然有机会。
 
-#### 初始化之 initRender
+## 初始化之 initRender
 
 在 `initEvents` 的下面，执行的是 `initRender` 函数，该函数来自于 `core/instance/render.js` 文件，我们打开这个文件找到 `initRender` 函数，如下：
 
@@ -976,7 +976,7 @@ export function updateChildComponent (
 
 最后，对于大家来讲，现在了解这些知识就足够了，至于 `$attrs` 和 `$linsteners` 这两个属性的值到底是什么，等我们讲解虚拟DOM的时候再回来说明，这样大家更容易理解。
 
-#### 生命周期钩子的实现方式
+## 生命周期钩子的实现方式
 
 在 `initRender` 函数执行完毕后，是这样一段代码：
 
@@ -1094,7 +1094,7 @@ if (vm._hasHookEvent) {
 
 另外大家可能会疑惑，`vm._hasHookEvent` 是在什么时候被设置为 `true` 的呢？或者换句话说，`Vue` 是如何检测是否存在生命周期事件侦听器的呢？对于这个问题等我们在讲解 `Vue` 事件系统时自然会知道。
 
-#### Vue 的初始化之 initState
+## Vue 的初始化之 initState
 
 实际上根据如下代码所示：
 

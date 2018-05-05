@@ -1,8 +1,8 @@
-## Vue 的思路之选项的规范化
+# Vue 的思路之选项的规范化
 
 <p class="tip">注意：本节中当我们提到“以我们的例子为例”的时候，这里的“我们的例子”指的是《Vue的思路之以一个例子为线索》中的例子</p>
 
-#### 弄清楚传递给 mergeOptions 函数的三个参数
+## 弄清楚传递给 mergeOptions 函数的三个参数
 
 这一小节我们继续前面的讨论，看一看 `mergeOptions` 都做了些什么。根据 `core/instance/init.js` 顶部的引用关系可知，`mergeOptions` 函数来自于 `core/util/options.js` 文件，事实上不仅仅是 `mergeOptions` 函数，整个文件所做的一切都为了一件事：选项的合并。
 
@@ -174,7 +174,7 @@ vm.$options = mergeOptions(
 
 现在我们已经搞清楚传递给 `mergeOptions` 函数的三个参数分别是什么了，那么接下来我们就打开 `core/util/options.js` 文件并找到  `mergeOptions` 方法，看一看都发生了什么。
 
-#### 检查组件名称是否符合要求
+## 检查组件名称是否符合要求
 
 打开 `core/util/options.js` 文件，找到 `mergeOptions` 方法，这个方法上面有一段注释：
 
@@ -270,7 +270,7 @@ Vue.config.isReservedTag = isReservedTag
 
 另外要说一点，我们的例子中并没有使用 `components` 选项，但是这里还是给大家顺便介绍了一下。如果按照我们的例子的话，`mergeOptions` 函数中的很多代码都不会执行，但是为了保证让大家理解整个选项合并所做的事情，这里都会有所介绍。
 
-#### 允许合并另一个实例构造者的选项
+## 允许合并另一个实例构造者的选项
 
 我们继续看代码，接下来的一段代码同样是一个 `if` 语句块：
 
@@ -282,7 +282,7 @@ if (typeof child === 'function') {
 
 这说明 `child` 参数除了是普通的选项对象外，还可以是一个函数，如果是函数的话就取该函数的 `options` 静态属性作为新的 `child`，我们想一想什么样的函数具有 `options` 静态属性呢？现在我们知道 `Vue` 构造函数本身就拥有这个属性，其实通过 `Vue.extend` 创造出来的子类也是拥有这个属性的。所以这就允许我们在进行选项合并的时候，去合并一个 `Vue` 实例构造者的选项了。
 
-#### 规范化 props（normalizeProps）
+## 规范化 props（normalizeProps）
 
 接着看代码，接下来是三个用来规范化选项的函数调用：
 
@@ -523,7 +523,7 @@ if (Array.isArray(props)) {
 
 在警告中使用了来自 `shared/util.js` 文件的 `toRawType` 方法获取你所传递的 `props` 的真实数据类型。
 
-#### 规范化 inject（normalizeInject）
+## 规范化 inject（normalizeInject）
 
 现在我们已经了解了，原来 `Vue` 底层是这样处理 `props` 选项的，下面我们再来看看第二个规范化函数：`normalizeInject`，源码如下：
 
@@ -717,7 +717,7 @@ if (Array.isArray(inject)) {
 }
 ```
 
-#### 规范化 directives（normalizeDirectives）
+## 规范化 directives（normalizeDirectives）
 
 最后一个规范化函数是 `normalizeDirectives`，源码如下：
 

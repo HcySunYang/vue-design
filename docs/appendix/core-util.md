@@ -1,6 +1,6 @@
-## core/util 目录下的工具方法全解
+# core/util 目录下的工具方法全解
 
-#### debug.js 文件代码说明
+## debug.js 文件代码说明
 
 该文件主要导出四个函数，如下：
 
@@ -61,15 +61,15 @@ const classify = str => str
 console.log(classify('aaa-bbb-ccc')) // AaaBbbCcc
 ```
 
-##### warn
+### warn
 
-##### tip
+### tip
 
-##### formatComponentName
+### formatComponentName
 
-#### env.js 文件代码说明
+## env.js 文件代码说明
 
-##### hasProto
+### hasProto
 
 源码如下：
 
@@ -84,7 +84,7 @@ export const hasProto = '__proto__' in {}
 
 判断当前环境是否可以使用 `__proto__` 属性很简单，正如源码所示那样，使用 `in` 运算符从一个空的对象字面量开始沿着原型链逐级检查，看其是否存在即可。
 
-##### nativeWatch
+### nativeWatch
 
 源码如下：
 
@@ -95,7 +95,7 @@ export const nativeWatch = ({}).watch
 
 * 描述：在 `Firefox` 中原生提供了 `Object.prototype.watch` 函数，所以当运行在 `Firefox` 中时 `nativeWatch` 为原生提供的函数，在其他浏览器中 `nativeWatch` 为 `undefined`。这个变量主要用于 `Vue` 处理 `watch` 选项时与其冲突。
 
-##### isServerRendering
+### isServerRendering
 
 源码如下：
 
@@ -138,7 +138,7 @@ global['process'].env.VUE_ENV === 'server'
 
 注意，在 `isServerRendering` 中使用全局变量 `_isServer` 保存了最终的值，如果发现 `_isServer` 有定义，那么就不会重新计算，从而提升性能。毕竟环境是不会改变的，只需要求值一次即可。
 
-#### error.js 文件代码说明
+## error.js 文件代码说明
 
 该文件只导出一个函数：`handleError`，在看这个函数的实现之前，我们需要回顾一下 `Vue` 的文档，我们知道 `Vue` 提供了一个全局配置 `errorHandler`，用来捕获组件生命周期函数等的内部错误，使用方法如下：
 
@@ -150,7 +150,7 @@ Vue.config.errorHandler = function (err, vm, info) {
 
 我们通过设置 `Vue.config.errorHandler` 为一个函数，实现对特定错误的捕获。具体使用可以查看官方文档。而接下来要讲的 `handleError` 函数就是用来实现 `Vue.config.errorHandler` 这一配置功能的，我们看看是怎么做的。
 
-##### handleError
+### handleError
 
 源码如下：
 
@@ -368,11 +368,11 @@ if (capture) return
 
 其中 `capture` 是钩子调用的返回值与 `false` 的全等比较的结果，也就是说，如果 `errorCaptured` 钩子函数返回假，那么 `capture` 为真直接 `return`，程序不会走 `if` 语句块后面的 `globalHandleError`，否则除了 `errorCaptured` 被调用外，`if` 语句块后面的 `globalHandleError` 也会被调用。最总要的是：如果 `errorCaptured` 钩子函数返回假将阻止错误继续向“上级”传递。
 
-#### lang.js 文件代码说明
+## lang.js 文件代码说明
 
 
 
-##### isReserved
+### isReserved
 
 * 源码如下：
 
@@ -401,7 +401,7 @@ new Vue({
 
 判断一个字符串是否以 `$` 或 `_` 开头还是比较容易的，只不过 `isReserved` 函数的实现方式是通过字符串的 `charCodeAt` 方法获得该字符串第一个字符串的 `unicode`，然后与 `0x24` 和 `0x5F` 作比较。其中 `$` 对应的 `unicode` 码为 `36`，对应的十六进制值为 `0x24`；`_` 对应的 `unicode` 码为 `95`，对应的十六进制值为 `0x5F`。有的同学可能会有疑问为什么不直接用字符 `$` 和 `_` 作比较，而是用这两个字符对应的 `unicode` 码作比较，其实无论哪种比较方法差别不大，看作者更倾向于哪一种。
 
-##### def
+### def
 
 * 源码如下：
 
@@ -425,11 +425,11 @@ export function def (obj: Object, key: string, val: any, enumerable?: boolean) {
 
 `def` 函数接收四个参数，分别是 源对象，要在对象上定义的键名，对应的值，以及是否可枚举，如果不传递 `enumerable` 参数则代表定义的属性是不可枚举的。
 
-#### options.js 文件代码说明
+## options.js 文件代码说明
 
 *该文件的讲解集中在 [4Vue选项的规范化](/note/4Vue选项的规范化) 以及 [5Vue选项的合并](/note/5Vue选项的合并) 这两个小节中*。
 
-#### perf.js 文件代码说明
+## perf.js 文件代码说明
 
 这个文件导出两个变量，分别是 `mark` 和 `measure`：
 
@@ -504,8 +504,8 @@ mark('for-end')
 measure('for-measure', 'for-start', 'for-end')
 ```
 
-#### props.js 文件代码说明
+## props.js 文件代码说明
 
 
 
-#### next-tick.js 文件代码说明
+## next-tick.js 文件代码说明

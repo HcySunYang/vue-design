@@ -1,4 +1,4 @@
-## Vue 中的 html-parser
+# Vue 中的 html-parser
 
 <p class="tip">本节中大量出现 `parse` 以及 `parser` 这两个单词，不要混淆这两个单词，`parse` 是动词，代表“解析”的过程，`parser` 是名词，代表“解析器”。</p>
 
@@ -19,7 +19,7 @@
 
 通过这段注释我们可以了解到，`Vue` 的 `html parser` 的灵感来自于 [John Resig 所写的一个开源项目：http://erik.eae.net/simplehtmlparser/simplehtmlparser.js](http://erik.eae.net/simplehtmlparser/simplehtmlparser.js)，实际上，我们上一小节所讲的小例子就是在这个项目的基础上所做的修改。`Vue` 在此基础上做了很多完善的工作，下面我们就探究一下 `Vue` 中的 `html parser` 都做了哪些事情。
 
-#### 正则分析
+## 正则分析
 
 代码正文的一开始，是两句 `import` 语句，以及定义的一些正则常量：
 
@@ -44,7 +44,7 @@ const conditionalComment = /^<!\[/
 
 下面我们依次来看一下这些正则：
 
-##### attribute
+### attribute
 
 这与上之前我们讲解的小例子中所定义的正则的作用基本是一致的，只不过 `Vue` 所定义的正则更加严谨和完善，我们一起看一下这些正则的作用。首先是 `attribute` 常量：
 
@@ -110,7 +110,7 @@ console.log('class=some-class'.match(attribute))  // 测试无引号
 ]
 ```
 
-##### ncname
+### ncname
 
 接下来一句代码如下：
 
@@ -146,7 +146,7 @@ const ncname = '[a-zA-Z_][\\w\\-\\.]*'
 
 了解了这些，我们再来看 `ncname` 的正则表达式，它定了 `ncname` 的合法组成，这个正则所匹配的内容很简单：*字母、数字或下划线开头，后面可以跟任意数量的字符、中横线和 `.`*。
 
-##### qnameCapture
+### qnameCapture
 
 下一个正则是 `qnameCapture`，`qnameCapture` 同样是普通字符串，只不过将来会用在 `new RegExp()` 中：
 
@@ -156,7 +156,7 @@ const qnameCapture = `((?:${ncname}\\:)?${ncname})`
 
 我们知道 `qname` 实际上就是合法的标签名称，它是有可选项的 `前缀`、`冒号` 以及 `名称` 组成，观察 `qnameCapture` 可知它有一个捕获分组，捕获的内容就是整个 `qname` 名称，即整个标签的名称。
 
-##### startTagOpen
+### startTagOpen
 
 `startTagOpen` 是一个真正使用 `new RegExp()` 创建出来的正则表达式：
 
@@ -166,7 +166,7 @@ const startTagOpen = new RegExp(`^<${qnameCapture}`)
 
 用来匹配开始标签的一部分，这部分包括：`<` 以及后面的 `标签名称`，这个表达式的创建用到了上面定义的 `qnameCapture` 字符串，所以 `qnameCapture` 这个字符串中所设置的捕获分组，在这里同样适用，也就是说 `startTagOpen` 这个正则表达式也会有一个捕获的分组，用来捕获匹配的标签名称。
 
-##### startTagClose
+### startTagClose
 
 ```js
 const startTagClose = /^\s*(\/?)>/
@@ -176,7 +176,7 @@ const startTagClose = /^\s*(\/?)>/
 
 观察 `startTagClose` 可知，这个正则拥有一个捕获分组，用来捕获开始标签结束部分的斜杠：`/`。
 
-##### endTag
+### endTag
 
 ```js
 const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`)
@@ -184,7 +184,7 @@ const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`)
 
 `endTag` 这个正则用来匹配结束标签，由于该正则同样使用了字符串 `qnameCapture`，所以这个正则也拥有了一个捕获组，用来捕获标签名称。
 
-##### doctype
+### doctype
 
 ```js
 const doctype = /^<!DOCTYPE [^>]+>/i
@@ -192,7 +192,7 @@ const doctype = /^<!DOCTYPE [^>]+>/i
 
 这个正则用来匹配文档的 `DOCTYPE` 标签，没有捕获组。
 
-##### comment
+### comment
 
 ```js
 // #7298: escape - to avoid being pased as HTML comment when inlined in page
@@ -201,7 +201,7 @@ const comment = /^<!\--/
 
 这个正则用来匹配注释节点，没有捕获组。大家注意这句代码上方的注释，所以是：`#7298`。有兴趣的同学可以去 `Vue` 的 `issue` 中搜索一下相关问题。在这之前实际上 `comment` 常量的值是 `<!--` 而并不是 `<!\--`，之所以改成 `<!\--` 是为了允许把 `Vue` 代码内联到 `html` 中，否则 `<!--` 会被认为是注释节点。
 
-##### conditionalComment
+### conditionalComment
 
 ```js
 const conditionalComment = /^<!\[/
@@ -222,7 +222,7 @@ let IS_REGEX_CAPTURING_BROKEN = false
 
 首先定义了变量 `IS_REGEX_CAPTURING_BROKEN` 且初始值为 `false`，接着使用一个字符串 `'x'` 的 `replace` 函数用一个带有捕获组的正则进行匹配，并将捕获组捕获到的值赋值给变量 `g`。我们观察字符串 `'x'` 和正则 `/x(.)?/` 可以发现，该正则中的捕获组应该捕获不到任何内容，所以此时 `g` 的值应该是 `undefined`，但是在老版本的火狐浏览器中存在一个问题，此时的 `g` 是一个空字符串 `''`，并不是 `undefined`。所以变量 `IS_REGEX_CAPTURING_BROKEN` 的作用就是用来标识当前宿主环境是否存在该问题。这个变量我们后面会用到，其作用到时候再说。
 
-#### 常量分析
+## 常量分析
 
 在这些正则的下面，定义了一些常量，如下：
 
@@ -287,7 +287,7 @@ function decodeAttr (value, shouldDecodeNewlines) {
 
 `decodeAttr` 函数是用来解码 `html` 实体的。它的原理是利用前面我们讲过的正则 `encodedAttrWithNewLines` 和 `encodedAttr` 以及 `html` 实体与字符一一对应的 `decodingMap` 对象来实现将 `html` 实体转为对应的字符。该函数将会在后面 `parse` 的过程中使用到。
 
-#### parseHTML
+## parseHTML
 
 接下来，将进入真正的 `parse` 阶段，这个阶段我们将看到如何将 `html` 字符串作为字符输入流，并且按照一定的规则将其逐步消化分解。这也是我们本节的重点，同时接下来我们要分析的函数也是 `compiler/parser/html-parser.js` 文件所导出的函数，即 `parseHTML` 函数，这个函数的内容非常多，但其实它还是很有条理的，下面就是对 `parseHTML` 函数的简化和注释，这能够让你更好的把握 `parseHTML` 函数的意图：
 
@@ -526,7 +526,7 @@ if (textEnd === 0) {
 * 5、可能是开始标签：`<xxx>`
 * 6、可能只是一个单纯的字符串：`<abcdefg`
 
-##### parse 注释节点
+### parse 注释节点
 
 针对以上六中情况我们逐个来看，首先判断是否是注释节点：
 
@@ -608,7 +608,7 @@ advance(commentEnd + 3)
 
 最后还有一个很重要的步骤，即调用完 `advance` 函数之后，要执行 `continue` 跳过此次循环，由于此时 `html` 字符串已经是去掉了 `parse` 过的部分的新字符串了，所以开启下一次循环，重新开始 `parse` 过程。
 
-##### parse 条件注释节点
+### parse 条件注释节点
 
 如果没有命中注释节点，则什么都不会做，继续判断是否命中条件注释节点：
 
@@ -634,7 +634,7 @@ const conditionalEnd = html.indexOf(']>')
 
 其中传递给 `advance` 函数的参数是 `conditionalEnd` 常量，它保存着条件注释结束部分在字符串中的位置，道理与 `parse` 注释节点时相同。
 
-##### parse Doctype节点
+### parse Doctype节点
 
 如果既没有命中注释节点，也没有命中条件注释节点，那么将判断是否命中 `Doctype` 节点：
 
@@ -651,7 +651,7 @@ if (doctypeMatch) {
 
 如果匹配成功 `if` 语句块将被执行，同样的，对于 `Doctype` 也没有提供相应的 `parser` 钩子，即 `Vue` 不会保留 `Doctype` 节点的内容。不过大家不用担心，因为在原则上 `Vue` 在编译的时候根本不会遇到 `Doctype` 标签。
 
-##### parse 开始标签
+### parse 开始标签
 
 实际上接下来的代码是解析结束标签的(`End tag`)，解析开始标签(`Start tag`)的代码被放到了最后面，但是这里把解析开始标签的代码提前来讲，是因为在顺序读取 `html` 字符流的过程中，总会先遇到开始标签，再遇到结束标签，除非你的 `html` 代码中没有开始标签，直接写结束标签。
 
@@ -669,7 +669,7 @@ if (startTagMatch) {
 }
 ```
 
-###### parseStartTag 函数解析开始标签
+### parseStartTag 函数解析开始标签
 
 首先调用 `parseStartTag` 函数，并获取其返回值，如果存在返回值则说明开始标签解析成功，这的的确确是一个开始标签，然后才会执行 `if` 语句块内的代码。也就是说判断是否解析到一个开始标签的工作，是由 `parseStartTag` 函数完成的，这个函数定义在 `advance` 函数的下面，我们看看它的代码：
 
@@ -871,7 +871,7 @@ match = {
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-12-28-080651.jpg)
 
-###### handleStartTag 函数处理解析结果
+### handleStartTag 函数处理解析结果
 
 我们讲解完了 `parseStartTag` 函数及其返回值，现在我们回到对开始标签的 `parse` 部分：
 
@@ -1048,7 +1048,7 @@ if (options.start) {
 
 如果 `parser` 选项中包含 `options.start` 函数，则调用之，并将开始标签的名字(`tagName`)，格式化后的属性数组(`attrs`)，是否为一元标签(`unary`)，以及开始标签在元 `html` 中的开始和结束位置(`match.start` 和 `match.end`) 作为参数传递。
 
-##### parse 结束标签
+### parse 结束标签
 
 接下来我们将会讲解 `textEnd === 0` 时的最后一种情况，即可能是结束标签，`parse` 结束标签的代码如下：
 
