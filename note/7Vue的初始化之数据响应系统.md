@@ -1664,6 +1664,70 @@ function copyAugment (target: Object, src: Object, keys: Array<string>) {
 
 我们知道 `copyAugment` 函数的第三个参数 `keys` 就是定义在 `arrayMethods` 对象上的所有函数的键，即所有要拦截的数组变异方法的名称。这样通过 `for` 循环对其进行遍历，并使用 `def` 函数在数组实例上定义与数组变异方法同名的且不可枚举的函数，这样就实现了拦截操作。
 
+总之无论是 `protoAugment` 函数还是 `copyAugment` 函数，他们的目的只有一个：**把数组实例与代理原型或与代理原型中定义的函数联系起来，从而拦截数组变异方法**。下面我们在回到 `Observer` 类的 `constructor` 函数中，看如下代码：
+
+```js
+if (Array.isArray(value)) {
+  const augment = hasProto
+    ? protoAugment
+    : copyAugment
+  augment(value, arrayMethods, arrayKeys)
+  this.observeArray(value)
+} else {
+  // 省略...
+}
+```
+
+可以发现在 `augment` 函数调用语句之后，还以该数组实例作为参数调用了 `Observer` 实例对象的 `observeArray` 方法：
+
+```js
+this.observeArray(value)
+```
+
+这句话的作用是什么呢？或者说 `observeArray` 方法的作用是什么呢？我们知道，当被观测的数据(`value`)是数组时，会执行 `if` 语句块的代码，并调用 `augment` 函数从而拦截数组的变异方法，这样当我们尝试通过这些变异方法修改数组时是会触发相应的依赖(`观察者`)的，比如下面的代码：
+
+```js
+const ins = new Vue({
+  data: {
+    arr: [1, 2]
+  }
+})
+
+ins.arr.push(3) // 能够触发响应
+```
+
+但是如果数组中嵌套了其他的数组或对象，那么嵌套的数组或对象却不是响应的：
+
+```js
+const ins = new Vue({
+  data: {
+    arr: [
+      [1, 2]
+    ]
+  }
+})
+
+ins.arr.push(1) // 能够触发响应
+ins.arr[0].push(3) // 不能触发响应
+```
+
+上面的代码中，直接调用 `arr` 数组的 `push` 方法是能够触发响应的，但调用 `arr` 数组内嵌套数组的 `push` 方法是不能触发响应的。为了使嵌套的数组或对象同样是响应式数据，我们需要递归的观测那些类型为数组或对象的数组元素，而这就是 `observeArray` 方法的作用，如下是 `observeArray` 方法的全部代码：
+
+```js
+/**
+  * Observe a list of Array items.
+  */
+observeArray (items: Array<any>) {
+  for (let i = 0, l = items.length; i < l; i++) {
+    observe(items[i])
+  }
+}
+```
+
+可以发现 `observeArray` 方法的实现很简单，只需要对数组进行遍历，并对数组元素逐个应用 `observe` 工厂函数即可，这样就会递归观测数组元素了。
+
+##### 数组的特殊性
+
 
 
 
