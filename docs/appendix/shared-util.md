@@ -1,5 +1,68 @@
 # shared/util.js 文件工具方法全解
 
+## emptyObject
+
+源码如下：
+
+```js
+export const emptyObject = Object.freeze({})
+```
+
+* 描述：`emptyObject` 是一个冻结的空对象，这意味着 `emptyObject` 是不可扩展、不可配置、不可写的
+
+## isUndef
+
+源码如下：
+
+```js
+export function isUndef (v: any): boolean %checks {
+  return v === undefined || v === null
+}
+```
+
+* 描述：`isUndef` 函数用来判断给定的变量是否是未定义，要注意的是，这个函数认为即使变量值为 `null`，也会认为其是未定义的。
+
+* 参数：
+  * `{Any} v` 任意变量
+
+## isPrimitive
+
+* 源码如下：
+
+```js
+export function isPrimitive (value: any): boolean %checks {
+  return (
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    // $flow-disable-line
+    typeof value === 'symbol' ||
+    typeof value === 'boolean'
+  )
+}
+```
+
+* 描述：`isPrimitive` 用来判断给定的变量是否是原始类型值，即：字符串、数字、布尔值以及 `symbol`。
+
+* 参数：
+  * `{Any} v` 任意变量
+
+## isValidArrayIndex
+
+* 源码如下：
+
+```js
+export function isValidArrayIndex (val: any): boolean {
+  const n = parseFloat(String(val))
+  return n >= 0 && Math.floor(n) === n && isFinite(val)
+}
+```
+
+* 描述：`isValidArrayIndex` 函数用来判断给定的值是否是有效的数组索引。如果是有效的则返回 `true`，否则返回 `false`。
+
+* 源码分析：
+
+一个有效的数组索引要满足两个条件：1、大于等于 `0` 的整数，2、在条件一的基础上，这个整数不能是无限的。在源码中条件 `n >= 0 && Math.floor(n) === n` 保证了索引是一个大于等于 `0` 的整数，而条件 `isFinite(val)` 保证了该值是有限的。
+
 ## extend
 
 源码如下：
