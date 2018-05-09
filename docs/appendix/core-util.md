@@ -69,6 +69,18 @@ console.log(classify('aaa-bbb-ccc')) // AaaBbbCcc
 
 ## env.js 文件代码说明
 
+### inBrowser
+
+源码如下：
+
+```js
+export const inBrowser = typeof window !== 'undefined'
+```
+
+* 描述：检测当前宿主环境是否是浏览器
+
+* 源码解析：通过判断 `window` 对象是否存在即可
+
 ### hasProto
 
 源码如下：

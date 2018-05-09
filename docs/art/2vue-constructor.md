@@ -633,7 +633,7 @@ extend(Vue.options.directives, platformDirectives)
 extend(Vue.options.components, platformComponents)
 ```
 
-安装运行时的平台化的指令和组件，大家还记 `Vue.options` 长什么样吗？在执行这两句代码之前，它长成这样：
+安装特定平台运行时的指令和组件，大家还记 `Vue.options` 长什么样吗？在执行这两句代码之前，它长成这样：
 
 ```js
 Vue.options = {
@@ -833,7 +833,7 @@ Vue.compile = compileToFunctions
 export default Vue
 ```
 
-上面代码是简化过的，但是保留了所有重要的部分，开始是一段 `import` 语句，其中重要的两句 `import` 语句就是上面代码中出现的那两句，一句是导入运行时的 `Vue`，一句是从 `./compiler/index.js` 文件导入 `compileToFunctions`，并且在倒数第二句代码将其添加到 `Vue.compile` 上。
+上面代码是简化过的，但是保留了所有重要的部分，该文件的开始是一堆 `import` 语句，其中重要的两句 `import` 语句就是上面代码中出现的那两句，一句是导入运行时的 `Vue`，一句是从 `./compiler/index.js` 文件导入 `compileToFunctions`，并且在倒数第二句代码将其添加到 `Vue.compile` 上。
 
 然后定义了一个函数 `idToTemplate`，这个函数的作用是：获取拥有指定 `id` 属性的元素的 `innerHTML`。
 

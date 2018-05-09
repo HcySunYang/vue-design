@@ -45,4 +45,7 @@ vm.$listeners
 // initState(vm)   src/core/instance/state.js **************************************************
 vm._watchers = []
 vm._data
+
+// mountComponent()   src/core/instance/lifecycle.js
+vm.$el
 ```

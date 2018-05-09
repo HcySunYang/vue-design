@@ -31,11 +31,13 @@ export function query (el: string | Element): Element {
 * 参数：
     * `{String | Element} el` css选择符或者DOM元素
 
-* 返回值：`{Element}` 如果参数是字符串，那么将该字符串作为css选择符查询元素，如果查找到该元素则返回该元素，否则返回一个新创建的 `div`，如果参数不是一个字符串，则直接返回参数。
+* 返回值：`{Element} el` DOM 元素 
 
 * 源码分析：
 
-`query` 函数内部使用 `document.querySelector()` 实现，so easy。
+如果参数是字符串，那么将该字符串作为 `css` 选择符并使用 `document.querySelector()` 函数查询元素，如果查找到该元素则返回该元素，否则在非生产环境下回打印警告信息并返回一个新创建的 `div`。
+
+如果参数不是一个字符串，则原封不动的返回参数。
 
 ## attrs.js 文件
 
