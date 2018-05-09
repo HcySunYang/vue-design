@@ -36,9 +36,10 @@ module.exports = {
             '5vue-merge',
             '6vue-init-start',
             '7vue-reactive',
-            '8vue-compiler-start',
-            '9parser-intro',
-            '10vue-html-parser'
+            '8vue-reactive-dep-watch',
+            '80vue-compiler-start',
+            '90parser-intro',
+            '100vue-html-parser'
           ]
         }
       ],

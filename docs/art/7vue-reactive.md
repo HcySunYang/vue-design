@@ -1,4 +1,8 @@
-# Vue的初始化之数据响应系统
+# 揭开数据响应系统的面纱
+
+::: tip 注意
+本节中将频繁的使用 `依赖` 和 `观察者` 这两个词汇，它们的意义是相同的。
+:::
 
 ## 完整目录
 
@@ -2090,28 +2094,66 @@ Vue.set(data, 'someProperty', 'someVal')
 
 ### Vue.delete/$delete
 
+接下来我们继续看一下 `Vue.delete/$delete` 函数的实现，仍然是 `src/core/observer/index.js` 文件，找到 `del` 函数：
 
+```js
+export function del (target: Array<any> | Object, key: any) {
+  // 省略...
+}
+```
 
+`del` 函数接收两个参数，分别是将要被删除属性的目标对象 `target` 以及要删除属性的键名 `key`，与 `set` 函数相同，在函数体的开头是如下 `if` 语句块：
 
+```js
+if (process.env.NODE_ENV !== 'production' &&
+  (isUndef(target) || isPrimitive(target))
+) {
+  warn(`Cannot delete reactive property on undefined, null, or primitive value: ${(target: any)}`)
+}
+```
 
+检测 `target` 是否是 `undefined` 或 `null` 或者是原始类型值，如果是的话那么在非生产环境下会打印警告信息。
 
+接着是如下这段 `if` 语句块：
 
+```js
+if (Array.isArray(target) && isValidArrayIndex(key)) {
+  target.splice(key, 1)
+  return
+}
+```
 
+很显然，如果我们使用 `Vue.delete/$delete` 去删除一个数组的索引时，如上这段代码将被执行，当然了前提是参数 `key` 需要是一个有效的数组索引。与为数组添加元素类似，移除数组元素同样使用了数组的 `splice` 方法，大家知道这样是能够触发响应的。
 
+再往下是如下这段 `if` 语句块：
 
+```js
+const ob = (target: any).__ob__
+if (target._isVue || (ob && ob.vmCount)) {
+  process.env.NODE_ENV !== 'production' && warn(
+    'Avoid deleting properties on a Vue instance or its root $data ' +
+    '- just set it to null.'
+  )
+  return
+}
+```
 
+与不能使用 `Vue.set/$set` 函数一样为根数据或 `Vue` 实例对象添加属性一样，同样不能使用 `Vue.delete/$delete` 删除 `Vue` 实例对象或根数据的属性。不允许删除 `Vue` 实例对象的属性的，是出于安全因素的考虑。而不允许删除根数据对象的属性，是因为这样做也是触发不了响应的，关于触发不了响应的原因，我们在讲解 `Vue.set/$set` 时已经分析过了。
 
+接下来是 `Vue.delete/$delete` 函数的最后一段代码，如下：
 
+```js
+if (!hasOwn(target, key)) {
+  return
+}
+delete target[key]
+if (!ob) {
+  return
+}
+ob.dep.notify()
+```
 
+首先使用 `hasOwn` 函数检测 `key` 是否是 `target` 对象自身拥有的属性，如果不是那么直接返回(`return`)。很好理解，如果你将要删除的属性原本就不在该对象上，那么自然什么都不需要做。
 
-
-
-
-
-
-
-
-
-
-
+如果 `key` 存在于 `target` 对象上，那么代码将继续运行，此时将使用 `delete` 语句从 `target` 上删除属性 `key`。最后判断 `ob` 对象是否存在，如果不存在说明 `target` 对象原本就不是响应的，所以直接返回(`return`)即可。如果 `ob` 对象存在，说明 `target` 对象是响应的，需要触发响应才行，即执行 `ob.dep.notify()`。
 
