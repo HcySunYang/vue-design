@@ -238,7 +238,7 @@ const hasHandler = {
 }
 ```
 
-这里我假设大家都对 `Proxy` 的使用已经没有任何问题了，我们知道 `has` 可以拦截一下操作：
+这里我假设大家都对 `Proxy` 的使用已经没有任何问题了，我们知道 `has` 可以拦截以下操作：
 
 * 属性查询: foo in proxy
 * 继承属性查询: foo in Object.create(proxy)
@@ -297,7 +297,7 @@ const vm = new Vue({
 vnode = render.call(vm._renderProxy, vm.$createElement)
 ```
 
-可以发现，调用 `render` 函数的时候，使用 `call` 方法指定了函数的执行环境为 `vm._renderProxy`，渲染函数长成什么样呢？还是以上面的例子为例，我们可以通过打印 `vm.$options.render` 查看，所以它张成这样：
+可以发现，调用 `render` 函数的时候，使用 `call` 方法指定了函数的执行环境为 `vm._renderProxy`，渲染函数长成什么样呢？还是以上面的例子为例，我们可以通过打印 `vm.$options.render` 查看，所以它长成这样：
 
 ```js
 vm.$options.render = function () {
@@ -395,7 +395,7 @@ if (!has && !isAllowed) {
 }
 ```
 
-上面这段代码中的 `if` 语句的判断条件是 `(!has && !isAllowed)`，其中 `!has` 我们可以理解为**你访问了一个没有定义在实例对象上(或原型链上)的属性**，所以这个时候提示错误信息是合理。但是即便 `!has` 成立也不一定要提示错误信息，因为必须要满足 `!isAllowed`，也就是说当你访问了一个**虽然不在实例对象上(或原型链上)的属性，但如果你访问的是全局对象**那么也是被允许的。这样我们就可以在模板中使用全局对象了，如：
+上面这段代码中的 `if` 语句的判断条件是 `(!has && !isAllowed)`，其中 `!has` 我们可以理解为**你访问了一个没有定义在实例对象上(或原型链上)的属性**，所以这个时候提示错误信息是合理，但是即便 `!has` 成立也不一定要提示错误信息，因为必须要满足 `!isAllowed`，也就是说当你访问了一个**虽然不在实例对象上(或原型链上)的属性，但如果你访问的是全局对象**那么也是被允许的。这样我们就可以在模板中使用全局对象了，如：
 
 ```html
 <template>
@@ -405,7 +405,7 @@ if (!has && !isAllowed) {
 
 其中 `Number` 为全局对象，如果去掉 `!isAllowed` 这个判断条件，那么上面模板的写法将会得到警告信息。除了允许使用全局对象之外，还允许方法以 `_` 开头的属性，这么做是由于渲染函数中会包含很多以 `_` 开头的内部方法，如之前我们查看渲染函数时遇到的 `_c`、`_v` 等等。
 
-最后对于 `proxy.js` 文件内的代码，还有一段使我们没有讲过的，就是下面这段：
+最后对于 `proxy.js` 文件内的代码，还有一段是我们没有讲过的，就是下面这段：
 
 ```js
 if (hasProxy) {
@@ -671,7 +671,7 @@ if (parent && !options.abstract) {
   while (parent.$options.abstract && parent.$parent) {
     parent = parent.$parent
   }
-  // 经过上线的 while 循环后，parent 应该是一个非抽象的组件，将它作为当前实例的父级，所以将当前实例 vm 添加到父级的 $children 属性里
+  // 经过上面的 while 循环后，parent 应该是一个非抽象的组件，将它作为当前实例的父级，所以将当前实例 vm 添加到父级的 $children 属性里
   parent.$children.push(vm)
 }
 ```
@@ -721,7 +721,7 @@ vm.$parent = parent
 vm.$root = parent ? parent.$root : vm
 ```
 
-如果 `options.abstract` 为真，那说明当前实例是抽象的，所以并不会走 `if` 分支的代码，所以会跳过 `if` 语句块直接设置 `vm.$parent` 和 `vm.$root` 的值。跳过 `if` 语句块的结果将导致改抽象实例不会被添加到父实例的 `$children` 中。如果 `options.abstract` 为假，那说明当前实例不是抽象的，是一个普通的组件实例，这个时候就会走 `while` 循环，那么这个 `while` 循环是干嘛的呢？我们前面说过，抽象的组件是不能够也不应该作为父级的，所以 `while` 循环的目的就是沿着父实例链逐层向上寻找到第一个不抽象的实例作为 `parent`（父级）。并且在找到父级之后将当前实例添加到父实例的 `$children` 属性中，这样最终的目的就达成了。
+如果 `options.abstract` 为真，那说明当前实例是抽象的，所以并不会走 `if` 分支的代码，所以会跳过 `if` 语句块直接设置 `vm.$parent` 和 `vm.$root` 的值。跳过 `if` 语句块的结果将导致该抽象实例不会被添加到父实例的 `$children` 中。如果 `options.abstract` 为假，那说明当前实例不是抽象的，是一个普通的组件实例，这个时候就会走 `while` 循环，那么这个 `while` 循环是干嘛的呢？我们前面说过，抽象的组件是不能够也不应该作为父级的，所以 `while` 循环的目的就是沿着父实例链逐层向上寻找到第一个不抽象的实例作为 `parent`（父级）。并且在找到父级之后将当前实例添加到父实例的 `$children` 属性中，这样最终的目的就达成了。
 
 在上面这段代码执行完毕之后，`initLifecycle` 函数还负责在当前实例上添加一些属性，即后面要执行的代码：
 
@@ -925,7 +925,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 上面的代码主要作用就是在 `Vue` 实例对象上定义两个属性：`vm.$attrs` 以及 `vm.$listeners`。这两个属性在 `Vue` 的文档中是有说明的，由于这两个属性的存在使得在 `Vue` 中创建高阶组件变得更容易，感兴趣的同学可以阅读 [Vue 中创建高阶组件](/note/扩展阅读/Vue中创建高阶组件)。
 
-我们注意到，在为实例对象定义 `$attrs` 属性和 `$listeners` 属性时，使用了 `defineReactive` 函数，该函数的作用就是为一个对象定义响应式的属性，所以 `$attrs` 和 `$listeners` 这两个属性是相应式的，至于 `defineReactive` 函数的讲解，我们会放到 `Vue` 的响应系统中讲解。
+我们注意到，在为实例对象定义 `$attrs` 属性和 `$listeners` 属性时，使用了 `defineReactive` 函数，该函数的作用就是为一个对象定义响应式的属性，所以 `$attrs` 和 `$listeners` 这两个属性是响应式的，至于 `defineReactive` 函数的讲解，我们会放到 `Vue` 的响应系统中讲解。
 
 另外，上面的代码中有一个对环境的判断，在非生产环境中调用 `defineReactive` 函数时传递的第四个参数是一个函数，实际上这个函数是一个自定义的 `setter`，这个 `setter` 会在你设置 `$attrs` 或 `$listeners` 属性时触发并执行。以 `$attrs` 属性为例，当你试图设置该属性时，会执行该函数：
 
@@ -935,9 +935,9 @@ if (process.env.NODE_ENV !== 'production') {
 }
 ```
 
-可以看到，当 `!isUpdatingChildComponent` 成立是，会提示你 `$attrs` 是只读属性，你不应该手动设置它的值。同样的，对于 `$listeners` 属性也做了这样的处理。
+可以看到，当 `!isUpdatingChildComponent` 成立时，会提示你 `$attrs` 是只读属性，你不应该手动设置它的值。同样的，对于 `$listeners` 属性也做了这样的处理。
 
-这里使用到了 `isUpdatingChildComponent` 变量，根据引用关系，该变量来自于 `lifecycle.js` 文件，代开 `lifecycle.js` 文件，可以发现有三个地方使用了这个变量：
+这里使用到了 `isUpdatingChildComponent` 变量，根据引用关系，该变量来自于 `lifecycle.js` 文件，打开 `lifecycle.js` 文件，可以发现有三个地方使用了这个变量：
 
 ```js
 // 定义 isUpdatingChildComponent，并初始化为 false
@@ -1059,7 +1059,7 @@ initProvide(vm) // resolve provide after data/props
 callHook(vm, 'created')
 ```
 
-现在大家应该知道，`beforeCreate` 以及 `created` 这两个生命周期钩子的调用时机了。其中 `initState` 包括了：`initProps`、`initMethods`、`initData`、`initComputed` 以及 `initWatch`。所以当 `beforeCreate` 钩子被调用时，所以与 `props`、`methods`、`data`、`computed` 以及 `watch` 相关的内容都不能使用，当然了 `inject/provide` 也是不可用的。
+现在大家应该知道，`beforeCreate` 以及 `created` 这两个生命周期钩子的调用时机了。其中 `initState` 包括了：`initProps`、`initMethods`、`initData`、`initComputed` 以及 `initWatch`。所以当 `beforeCreate` 钩子被调用时，所有与 `props`、`methods`、`data`、`computed` 以及 `watch` 相关的内容都不能使用，当然了 `inject/provide` 也是不可用的。
 
 作为对立面，`created` 生命周期钩子则恰恰是等待 `initInjections`、`initState` 以及 `initProvide` 执行完毕之后才被调用，所以在 `created` 钩子中，是完全能够使用以上提到的内容的。但由于此时还没有任何挂载的操作，所以在 `created` 中是不能访问DOM的，即不能访问 `$el`。
 
@@ -1108,7 +1108,7 @@ callHook(vm, 'created')
 
 可以看到在 `initState` 函数执行之前，先执行了 `initInjections` 函数，也就是说 `inject` 选项要更早被初始化，不过由于初始化 `inject` 选项的时候涉及到 `defineReactive` 函数，并且调用了 `toggleObserving` 函数操作了用于控制是否应该转换为响应式属性的状态标识 `observerState.shouldConvert`，所以我们决定先讲解 `initState`，之后再来讲解 `initInjections` 和 `initProvide`，这才是一个合理的顺序，并且从 `Vue` 的时间线上来看 `inject/provide` 选项确实是后来才添加的。
 
-所以我么打开 `core/instance/state.js` 文件，找到 `initState` 函数，如下：
+所以我们打开 `core/instance/state.js` 文件，找到 `initState` 函数，如下：
 
 ```js
 export function initState (vm: Component) {
@@ -1137,7 +1137,7 @@ if (opts.methods) initMethods(vm, opts.methods)
 
 如果 `opts.props` 存在，即选项中有 `props`，那么就调用 `initProps` 初始化 `props` 选项。同样的，如果 `opts.methods` 存在，则调用 `initMethods` 初始化 `methods` 选项。
 
-在往下执行的是这段代码：
+再往下执行的是这段代码：
 
 ```js
 if (opts.data) {
@@ -1158,9 +1158,9 @@ if (opts.watch && opts.watch !== nativeWatch) {
 }
 ```
 
-采用同样的方式初始化 `computed` 选项，但是对于 `watch` 选项仅仅判断 `opts.watch` 是否存在是不足够的，还要判断 `opts.watch` 是不是原生的 `watch` 对象。前面的章节中我们提到过，这是因在 `Firefox` 中原生提供了 `Object.prototype.watch` 函数，所以即使没有 `opts.watch` 选项，如果在火狐浏览器中依然能够通过原型链访问到原生的 `Object.prototype.watch`。但这其实不是我们想要的结果，所以这里加了一层判断避免把原生 `watch` 函数误认为是我们预期的 `opts.watch` 选项。之后才会调用 `initWatch` 函数初始化 `opts.watch` 选项。
+采用同样的方式初始化 `computed` 选项，但是对于 `watch` 选项仅仅判断 `opts.watch` 是否存在是不够的，还要判断 `opts.watch` 是不是原生的 `watch` 对象。前面的章节中我们提到过，这是因在 `Firefox` 中原生提供了 `Object.prototype.watch` 函数，所以即使没有 `opts.watch` 选项，如果在火狐浏览器中依然能够通过原型链访问到原生的 `Object.prototype.watch`。但这其实不是我们想要的结果，所以这里加了一层判断避免把原生 `watch` 函数误认为是我们预期的 `opts.watch` 选项。之后才会调用 `initWatch` 函数初始化 `opts.watch` 选项。
 
-通过阅读 `initState` 函数，我们可以发现 `initState` 其实是很多选项初始化的汇总，包括：`props`、`methods`、`data`、`computed` 和 `watch` 等。并且我们注意到 `props` 选项的初始化要早与 `data` 选项的初始化，那么这是不是可以使用 `props` 初始化 `data` 数据的原因呢？答案是：“是的”。接下来我们就深入讲解这些初始化工作都做了什么事情。下一章节将我们将重点讲解 `Vue` 初始化中的关键一步：**数据响应系统**。
+通过阅读 `initState` 函数，我们可以发现 `initState` 其实是很多选项初始化的汇总，包括：`props`、`methods`、`data`、`computed` 和 `watch` 等。并且我们注意到 `props` 选项的初始化要早于 `data` 选项的初始化，那么这是不是可以使用 `props` 初始化 `data` 数据的原因呢？答案是：“是的”。接下来我们就深入讲解这些初始化工作都做了什么事情。下一章节将我们将重点讲解 `Vue` 初始化中的关键一步：**数据响应系统**。
 
 
 
