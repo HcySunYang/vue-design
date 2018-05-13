@@ -382,8 +382,6 @@ if (capture) return
 
 ## lang.js 文件代码说明
 
-
-
 ### isReserved
 
 * 源码如下：
@@ -436,6 +434,10 @@ export function def (obj: Object, key: string, val: any, enumerable?: boolean) {
 * 源码分析：
 
 `def` 函数接收四个参数，分别是 源对象，要在对象上定义的键名，对应的值，以及是否可枚举，如果不传递 `enumerable` 参数则代表定义的属性是不可枚举的。
+
+### parsePath
+
+* `parsePath` 函数的源码在 [初始 Watcher](/art/8vue-reactive-dep-watch.html#初识-watcher) 一节中讲解
 
 ## options.js 文件代码说明
 
