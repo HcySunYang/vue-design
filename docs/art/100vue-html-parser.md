@@ -1,6 +1,6 @@
 # Vue 中的 html-parser
 
-<p class="tip">本节中大量出现 `parse` 以及 `parser` 这两个单词，不要混淆这两个单词，`parse` 是动词，代表“解析”的过程，`parser` 是名词，代表“解析器”。</p>
+本节中大量出现 `parse` 以及 `parser` 这两个单词，不要混淆这两个单词，`parse` 是动词，代表“解析”的过程，`parser` 是名词，代表“解析器”。
 
 打开 `src/compiler/parser/html-parser.js` 文件，该文件的开头是一段注释：
 
@@ -46,7 +46,7 @@ const conditionalComment = /^<!\[/
 
 ### attribute
 
-这与上之前我们讲解的小例子中所定义的正则的作用基本是一致的，只不过 `Vue` 所定义的正则更加严谨和完善，我们一起看一下这些正则的作用。首先是 `attribute` 常量：
+这与之前我们讲解的小例子中所定义的正则的作用基本是一致的，只不过 `Vue` 所定义的正则更加严谨和完善，我们一起看一下这些正则的作用。首先是 `attribute` 常量：
 
 ```js
 // Regular Expressions for parsing tags and attributes
@@ -61,7 +61,7 @@ const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s
 
 * 1、使用双引号把值引起来：`class="some-class"`
 * 2、使用单引号把值引起来：`class='some-class'`
-* 3、不适用引号：`class=some-class`
+* 3、不使用引号：`class=some-class`
 
 正因如此，需要三个正则分组分别匹配三种情况，我们可以对这个正则做一个测试，如下：
 
@@ -172,7 +172,7 @@ const startTagOpen = new RegExp(`^<${qnameCapture}`)
 const startTagClose = /^\s*(\/?)>/
 ```
 
-`startTagOpen` 用来匹配开始标签的 `<` 以及标签的名字，但是并不包过开始标签的闭合部分，即：`>` 或者 `/>`，由于标签可能是一元标签，所以开始标签的闭合部分有可能是 `/>`，比如：`<br />`，如果不是一元标签，此时就应该是：`>`
+`startTagOpen` 用来匹配开始标签的 `<` 以及标签的名字，但是并不包括开始标签的闭合部分，即：`>` 或者 `/>`，由于标签可能是一元标签，所以开始标签的闭合部分有可能是 `/>`，比如：`<br />`，如果不是一元标签，此时就应该是：`>`
 
 观察 `startTagClose` 可知，这个正则拥有一个捕获分组，用来捕获开始标签结束部分的斜杠：`/`。
 
@@ -199,7 +199,7 @@ const doctype = /^<!DOCTYPE [^>]+>/i
 const comment = /^<!\--/
 ```
 
-这个正则用来匹配注释节点，没有捕获组。大家注意这句代码上方的注释，所以是：`#7298`。有兴趣的同学可以去 `Vue` 的 `issue` 中搜索一下相关问题。在这之前实际上 `comment` 常量的值是 `<!--` 而并不是 `<!\--`，之所以改成 `<!\--` 是为了允许把 `Vue` 代码内联到 `html` 中，否则 `<!--` 会被认为是注释节点。
+这个正则用来匹配注释节点，没有捕获组。大家注意这句代码上方的注释，索引是：`#7298`。有兴趣的同学可以去 `Vue` 的 `issue` 中搜索一下相关问题。在这之前实际上 `comment` 常量的值是 `<!--` 而并不是 `<!\--`，之所以改成 `<!\--` 是为了允许把 `Vue` 代码内联到 `html` 中，否则 `<!--` 会被认为是注释节点。
 
 ### conditionalComment
 
@@ -209,7 +209,7 @@ const conditionalComment = /^<!\[/
 
 这个正则用来匹配条件注释节点，没有捕获组。
 
-最后很重要的地点是，大家主要，这些正则表达式有一个共同的特点，即：*他们都是从一个字符串的开头位置开始匹配的，因为有 `^` 的存在*。
+最后很重要的一点是，大家注意，这些正则表达式有一个共同的特点，即：*他们都是从一个字符串的开头位置开始匹配的，因为有 `^` 的存在*。
 
 在这些正则常量的下面，有着这样一段代码：
 
@@ -249,7 +249,7 @@ const encodedAttrWithNewLines = /&(?:lt|gt|quot|amp|#10|#9);/g
 
 然后定义了 `reCache` 常量，它被初始化为一个空的 `JSON` 对象字面量。
 
-再往下定义了 `decodingMap` 常量，它也是一个 `JOSN` 对象字面量，其中 `key` 是一些特殊的 `html` 实体，值则是这些实体对应的字符。在 `decodingMap` 常量下面的是两个正则常量：`encodedAttr` 和 `encodedAttrWithNewLines`。可以发现正则 `encodedAttrWithNewLines` 会比 `encodedAttr` 多匹配两个 `html` 实体字符，分别是 `&#10;` 和 `&#9;`。对于 `decodingMap` 以及下面两个正则的作用不知道大家能不能猜得到，其实我们 [创建编译器](http://localhost:8080/#/note/7Vue%E7%9A%84%E7%BC%96%E8%AF%91%E5%99%A8%E5%88%9D%E6%8E%A2) 一节中有讲到 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个编译器选项，当时我们就有针对这两个选项作用的讲解，可以再附录 [platforms/web/util 目录下的工具方法全解](http://localhost:8080/#/note/%E9%99%84%E5%BD%95/web-util?id=compat-js-%E6%96%87%E4%BB%B6) 中查看。
+再往下定义了 `decodingMap` 常量，它也是一个 `JOSN` 对象字面量，其中 `key` 是一些特殊的 `html` 实体，值则是这些实体对应的字符。在 `decodingMap` 常量下面的是两个正则常量：`encodedAttr` 和 `encodedAttrWithNewLines`。可以发现正则 `encodedAttrWithNewLines` 会比 `encodedAttr` 多匹配两个 `html` 实体字符，分别是 `&#10;` 和 `&#9;`。对于 `decodingMap` 以及下面两个正则的作用不知道大家能不能猜得到，其实我们 [创建编译器](http://localhost:8080/#/note/7Vue%E7%9A%84%E7%BC%96%E8%AF%91%E5%99%A8%E5%88%9D%E6%8E%A2) 一节中有讲到 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个编译器选项，当时我们就有针对这两个选项的作用做讲解，可以在附录 [platforms/web/util 目录下的工具方法全解](http://localhost:8080/#/note/%E9%99%84%E5%BD%95/web-util?id=compat-js-%E6%96%87%E4%BB%B6) 中查看。
 
 所以这里的常量 `decodingMap` 以及两个正则 `encodedAttr` 和 `encodedAttrWithNewLines` 的作用就是用来完成对 `html` 实体进行解码的。
 
@@ -484,7 +484,7 @@ if (textEnd < 0) {
 }
 ```
 
-当 `textEnd === 0` 时，说明 `html` 字符串的第一个字符就是左尖括号，比如 `html` 字符串为：`<div>asdf</div>`，那么这个字符串的第一个字符就是左尖括号(`<`)。现在我们采用深度优先的方式去分析，所以我们暂时不关系 `textEnd >= 0` 以及 `textEnd < 0` 的情况，我们查看一下当 `textEnd === 0` 时的 `if` 语句块内的代码，如下：
+当 `textEnd === 0` 时，说明 `html` 字符串的第一个字符就是左尖括号，比如 `html` 字符串为：`<div>asdf</div>`，那么这个字符串的第一个字符就是左尖括号(`<`)。现在我们采用深度优先的方式去分析，所以我们暂时不关心 `textEnd >= 0` 以及 `textEnd < 0` 的情况，我们查看一下当 `textEnd === 0` 时的 `if` 语句块内的代码，如下：
 
 ```js
 if (textEnd === 0) {
@@ -528,7 +528,7 @@ if (textEnd === 0) {
 
 ### parse 注释节点
 
-针对以上六中情况我们逐个来看，首先判断是否是注释节点：
+针对以上六种情况我们逐个来看，首先判断是否是注释节点：
 
 ```js
 // Comment:
@@ -571,7 +571,7 @@ continue
 html.substring(4, commentEnd)
 ```
 
-通过调用字符串的 `substring` 方法截取注释内容，其中其实位置是 `4`，结束位置是 `commentEnd` 的值，用一张图表示将会更加清晰：
+通过调用字符串的 `substring` 方法截取注释内容，其中起始位置是 `4`，结束位置是 `commentEnd` 的值，用一张图表示将会更加清晰：
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-12-26-115232.jpg)
 
@@ -698,7 +698,7 @@ function parseStartTag () {
 }
 ```
 
-`parseStartTag` 函数首先会调用 `html` 字符串的 `match` 函数匹配 `startTagOpen` 正则，前面我们讲到过 `startTagOpen` 正则用来匹配开始标签的一部分，这部分包括：`<` 以及后面的 `标签名称`，并且拥有一个不获取，即捕获标签的名称。然后将匹配的结果赋值给 `start` 常量，如果 `start` 常量为 `null` 则说明匹配失败，则 `parseStartTag` 函数执行完毕，其返回值为 `undefined`。
+`parseStartTag` 函数首先会调用 `html` 字符串的 `match` 函数匹配 `startTagOpen` 正则，前面我们讲到过 `startTagOpen` 正则用来匹配开始标签的一部分，这部分包括：`<` 以及后面的 `标签名称`，并且拥有一个捕获组，即捕获标签的名称。然后将匹配的结果赋值给 `start` 常量，如果 `start` 常量为 `null` 则说明匹配失败，则 `parseStartTag` 函数执行完毕，其返回值为 `undefined`。
 
 如果匹配成功，那么 `start` 常量将是一个包含两个元素的数组：第一个元素是标签的开始部分(包含 `<` 和 `标签名称`)；第二个元素是捕获组捕获到的标签名称。比如有如下 `html`：
 
@@ -822,7 +822,7 @@ end = ['/>', '/']
 end = ['>', undefined]
 ```
 
-所以，如果 `end[1]` 不为 `undefined`，那么说明该标签是一个一元标签。那么现在再看 `if` 语句块内的代码，将很容以理解，首先在 `match` 对象上添加 `unarySlash` 属性，其值为 `end[1]`：
+所以，如果 `end[1]` 不为 `undefined`，那么说明该标签是一个一元标签。那么现在再看 `if` 语句块内的代码，将很容易理解，首先在 `match` 对象上添加 `unarySlash` 属性，其值为 `end[1]`：
 
 ```js
 match.unarySlash = end[1]

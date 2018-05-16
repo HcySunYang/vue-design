@@ -130,7 +130,7 @@ return {
 而这里的 `compileToFunctions` 属性就是 `platforms/web/compiler/index.js` 文件中解构出来的 `compileToFunctions`：
 
 ```js
-// 这里通过 createCompiler 函数的返回值结构出 compileToFunctions
+// 这里通过 createCompiler 函数的返回值解构出 compileToFunctions
 const { compile, compileToFunctions } = createCompiler(baseOptions)
 ```
 
@@ -205,7 +205,7 @@ const { render, staticRenderFns } = compileToFunctions(template, {
 
 其中 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个变量来自于 `platforms/web/util.js` 文件，大家可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看这两个变量的作用，其目的是对浏览器的怪癖做兼容，具体在附录中都有讲到，并且这两个变量的类型都是布尔值。
 
-对于 `options.delimiters` 和 `options.comments`，其中 `options` 就是当前 `Vue` 实例的 `$options` 属性，并且 `delimiters` 和 `comments` 都是 `Vue` 提供的选项。所以这两只是简单的将这两个选项透传了过去。
+对于 `options.delimiters` 和 `options.comments`，其中 `options` 就是当前 `Vue` 实例的 `$options` 属性，并且 `delimiters` 和 `comments` 都是 `Vue` 提供的选项。所以这里只是简单的将这两个选项透传了过去。
 
 另外 `delimiters` 和 `comments` 这两个选项大家在 `Vue` 的官方文档都能够找到讲解。而这里我要强调的是在 `Vue` 官方文档中有特殊说明，即这两个选项只在完整版的 `Vue` 中可用。这是为什么呢？可能有的同学已经知道了，其原因是这两个选项只有在创建完整版 `Vue` 的时候才会用到，大家不要忘了 `entry-runtime-with-compiler.js` 这个文件是完整版 `Vue` 的入口，也就是说运行时版的 `Vue` 压根不存在这些内容所以自然不会起作用。
 
@@ -629,7 +629,7 @@ export default function text (el: ASTElement, dir: ASTDirective) {
 
 `baseOptions` 的第四个属性是 `isPreTag`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](/note/附录/web-util) 中查看其实现讲解，其作用是通过给定的标签名字检查标签是否是 `'pre'` 标签。
 
-`baseOptions` 的第五个属性是 `isUnaryTag`，它来自于与 `options.js` 文件同级目录下的 `util.js` 文件，即 `src/platforms/web/compiler/util.js` 文件，带看这个文件，找到 `isUnaryTag` 如下：
+`baseOptions` 的第五个属性是 `isUnaryTag`，它来自于与 `options.js` 文件同级目录下的 `util.js` 文件，即 `src/platforms/web/compiler/util.js` 文件，再看这个文件，找到 `isUnaryTag` 如下：
 
 ```js
 export const isUnaryTag = makeMap(
@@ -732,7 +732,7 @@ if (options.directives) {
 
 由于 `directives` 是对象而不是数组，所以不能采用与 `modules` 相同的处理方式，对于 `directives` 采用原型链的原理实现对扩展属性与基本属性。首先通过 `Object.create(baseOptions.directives || null)` 创建一个以 `baseOptions.directives` 对象为原型的新对象，然后使用 `extend` 方法将 `options.directives` 的属性混合到新创建出来的对象中，并将该对象作为 `finalOptions.directives` 的值。
 
-最后对于 `options` 中既不是 `modules` 又不是 `directives` 其他属性，采用直接复制过去的方式进行处理：
+最后对于 `options` 中既不是 `modules` 又不是 `directives` 的其他属性，采用直接复制过去的方式进行处理：
 
 ```js
 // copy other options
@@ -749,7 +749,7 @@ for (const key in options) {
 const compiled = baseCompile(template, finalOptions)
 ```
 
-上面的代码调用了 `baseCompile` 函数，并分别将字符串模板(`template`)，以及最终的编译器选项(`finalOptions`)传递了过去。这说明什么？这说明 `compile` 函数对模板的编译是通过委托 `baseCompile` 完成的。`baseCompile` 函数是 `createCompilerCreator` 函数的形参，是在 `src/compiler/index.js` 文件中调用 `createCompilerCreator` 创建 `'编译器创建者' 的创建者时` 传递过来的：
+上面的代码调用了 `baseCompile` 函数，并分别将字符串模板(`template`)，以及最终的编译器选项(`finalOptions`)传递了过去。这说明什么？这说明 `compile` 函数对模板的编译是通过委托给 `baseCompile` 完成的。`baseCompile` 函数是 `createCompilerCreator` 函数的形参，是在 `src/compiler/index.js` 文件中调用 `createCompilerCreator` 创建 `'编译器创建者' 的创建者时` 传递过来的：
 
 ```js
 export const createCompiler = createCompilerCreator(function baseCompile (
