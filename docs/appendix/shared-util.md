@@ -186,6 +186,33 @@ makeMap('slot,component', true)
 
 可知：`slot` 和 `component` 为 `Vue` 内置的标签
 
+## remove
+
+* 源码如下：
+
+```js
+export function remove (arr: Array<any>, item: any): Array<any> | void {
+  if (arr.length) {
+    const index = arr.indexOf(item)
+    if (index > -1) {
+      return arr.splice(index, 1)
+    }
+  }
+}
+```
+
+* 描述：从数组中移除指定元素
+
+* 参数：
+  * `{Array} arr` 源数组
+  * `{Any} item` 要从数组中移除的元素
+
+* 返回值：如果成功移除，则返回移除后的元素，否则返回 `undefined`。
+
+* 源码分析：
+
+首先判断数组 `arr` 的长度是否为 `0`，如果为 `0` 则说明没有任何需要移除的元素，如果不为 `0` 则使用 `indexOf` 函数查看要移除的元素是否在数组中以及在数组中的位置，然后使用 `splice` 方法将其移除。
+
 ## cached
 
 * 源码如下：
