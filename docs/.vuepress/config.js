@@ -38,8 +38,7 @@ module.exports = {
             '7vue-reactive',
             '8vue-reactive-dep-watch',
             '80vue-compiler-start',
-            '90parser-intro',
-            '100vue-html-parser'
+            '81vue-parse-ast'
           ]
         }
       ],

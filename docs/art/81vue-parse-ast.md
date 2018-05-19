@@ -1,4 +1,74 @@
-# Vue 中的 html-parser
+# 词法分析 - 为生成AST做准备
+
+在 [Vue的编译器初探](/note/7Vue的编译器初探) 这一章节中，我们对 `Vue` 如何创建编译器，以及在这个过程中经历过的几个重要的函数做了分析，比如 `compileToFunctions` 函数以及 `compile` 函数，并且我们知道真正对模板进行编译工作的实际是 `baseCompile` 函数，而接下来我们任务就是搞清楚 `baseCompile` 函数的内容。
+
+`baseCompile` 函数是在 `src/compiler/index.js` 中作为 `createCompilerCreator` 函数的参数使用的，代码如下：
+
+```js
+// `createCompilerCreator` allows creating compilers that use alternative
+// parser/optimizer/codegen, e.g the SSR optimizing compiler.
+// Here we just export a default compiler using the default parts.
+export const createCompiler = createCompilerCreator(function baseCompile (
+  template: string,
+  options: CompilerOptions
+): CompiledResult {
+  const ast = parse(template.trim(), options)
+  optimize(ast, options)
+  const code = generate(ast, options)
+  return {
+    ast,
+    render: code.render,
+    staticRenderFns: code.staticRenderFns
+  }
+})
+```
+
+可以看到 `baseCompile` 函数接收两个参数，分别是字符串模板(`template`)和选项参数(`options`)，其中选项参数 `options` 我们已经分析过了，并且我们有对应的附录专门整理编译器的选项参数，可以在 [编译器选项整理](/note/附录/compiler-options) 中查看。
+
+`baseCompile` 函数很简短，由三句代码和一个 `return` 语句组成，这三句代码的作用如以下：
+
+```js
+// 调用 parse 函数将字符串模板解析成抽象语法树(AST)
+const ast = parse(template.trim(), options)
+// 调用 optimize 函数优化 ast
+optimize(ast, options)
+// 调用 generate 函数将 ast 编译成渲染函数
+const code = generate(ast, options)
+```
+
+最终 `baseCompile` 的返回值如下：
+
+```js
+return {
+  ast,
+  render: code.render,
+  staticRenderFns: code.staticRenderFns
+}
+```
+
+可以看到，其最终返回了抽象语法树(`ast`)，渲染函数(`render`)，静态渲染函数(`staticRenderFns`)，且 `render` 的值为 `code.render`，`staticRenderFns` 的值为 `code.staticRenderFns`，也就是说通过 `generate` 处理 `ast` 之后得到的返回值 `code` 是一个对象，该对象的属性中包含了渲染函数（**注意以上提到的渲染函数，都以字符串的形式存在，因为真正变成函数的过程是在 `compileToFunctions` 中使用 `new Function()` 来完成的**）。
+
+而接下来我们将会花费很大的篇幅来聚焦在一句代码上，即下面这句代码：
+
+```js
+const ast = parse(template.trim(), options)
+```
+
+也就是 `Vue` 的 `parser`，它是如何将字符串模板解析为抽象语法树的(`AST`)。
+
+## 对 parser 的简单介绍
+
+在说 `parser` 之前，我们先了解一下编译器的概念，简单的讲编译器就是将 `源代码` 转换成 `目标代码` 的工具。详细一点如下(引用自维基百科)：
+
+> 它主要的目的是将便于人编写、阅读、维护的高级计算机语言所写作的 `源代码` 程序，翻译为计算机能解读、运行的低阶机器语言的程序。`源代码` 一般为高阶语言（High-level language），如Pascal、C、C++、C# 、Java等，而目标语言则是汇编语言或目标机器的目标代码（Object code）。
+
+编译器所包含的概念很多，比如 词法分析(`lexical analysis`)，句法分析(`parsing`)，类型检查/推导，代码优化，代码生成...等等，且大学中已有专门的课程，而我们这里要讲的 `parser` 就是编译器中的一部分，准确的说，`parser` 是编译器对源代码处理的第一步。
+
+`parser` 是把某种特定格式的文本转换成某种数据结构的程序，其中“特定格式的文本”可以理解为普通的字符串，而 `parser` 的作用就是将这个字符串转换成一种数据结构(通常是一个对象)，并且这个数据结构是编译器能够理解的，因为编译器的后续步骤，比如上面提到的 句法分析，类型检查/推导，代码优化，代码生成 等等都依赖于该数据结构，正因如此我们才说 `parser` 是编译器处理源代码的第一步，并且这种数据结构是抽象的，我们常称其为抽象语法树，即 `AST`。
+
+`Vue` 的编译器也不例外，大致也分为三个阶段，即：词法分析 -> 句法分析 -> 代码生成。在词法分析阶段 `Vue` 会把字符串模板解析成一个个的令牌(`token`)，该令牌将用于句法分析阶段，在句法分析阶段会根据令牌生成一颗 `AST`，最后再根据该 `AST` 生成最终的渲染函数，这样就完成了代码的生成。按照顺序我们需要先了解的是词法分析阶段，看一看 `Vue` 是如何对字符串模板进行拆解的。
+
+## Vue 中的 html-parser
 
 本节中大量出现 `parse` 以及 `parser` 这两个单词，不要混淆这两个单词，`parse` 是动词，代表“解析”的过程，`parser` 是名词，代表“解析器”。
 
@@ -782,7 +852,7 @@ advance(attr[0].length)
 match.attrs.push(attr)
 ```
 
-这样一次循环就结束了，将会开始下一次循环，直到**匹配到结束标签**或者**匹配不到属性**的时候循环才会停止。`parseStartTag` 函数 `if` 语句块内的最后一段代码如下：
+这样一次循环就结束了，将会开始下一次循环，直到**匹配到开始标签的结束部分**或者**匹配不到属性**的时候循环才会停止。`parseStartTag` 函数 `if` 语句块内的最后一段代码如下：
 
 ```js
 if (start) {
@@ -943,7 +1013,7 @@ const tagName = match.tagName
 const unarySlash = match.unarySlash
 ```
 
-这两个常量的值都来自于开始标签的匹配结果，以下我们统一将开始标签的匹配结果成为 `match` 对象。其中常量 `tagName` 为开始标签的标签名，常量 `unarySlash` 的值为 `'/'` 或 `undefined` 其中之一。
+这两个常量的值都来自于开始标签的匹配结果，以下我们统一将开始标签的匹配结果称为 `match` 对象。其中常量 `tagName` 为开始标签的标签名，常量 `unarySlash` 的值为 `'/'` 或 `undefined` 其中之一。
 
 接着是一个 `if` 语句块，`if` 语句的判断条件是 `if (expectHTML)`，前面说过 `expectHTML` 是 `parser` 选项，是一个布尔值，如果为真则该 `if` 语句块的代码将被执行。但是现在我们暂时不看这段代码，因为这段代码包含 `parseEndTag` 函数的调用，所以待我们讲解完 `parseEndTag` 函数之后，再回头来说这段代码。
 
@@ -1246,7 +1316,7 @@ canBeLeftOpenTag(tagName) && lastTag === tagName
 
 `p` 标签是可以省略结束标签的标签，所以当解析到一个 `p` 标签的开始标签并且下一次遇到的标签也是 `p` 标签的开始标签时，会立即关闭第二个 `p` 标签。即调用：`parseEndTag(tagName)` 函数，然后由于第一个 `p` 标签缺少闭合标签所以会 `Vue` 会给你一个警告。但其实这是不对的，我已经提了PR：[https://github.com/vuejs/vue/pull/7510](https://github.com/vuejs/vue/pull/7510)。
 
-现在我们补充讲解了 `handleStartTag` 函数中遗留未讲解的内容，现在我们回过头来继续看 `parseEndTag` 函数的代码，接下来是这段代码：
+现在我们补充讲解了 `handleStartTag` 函数中遗留未讲解的内容，我们回过头来继续看 `parseEndTag` 函数的代码，接下来是这段代码：
 
 ```js
 if (tagName) {
@@ -1383,3 +1453,10 @@ if (tagName) {
 ```
 
 由于 `tagName` 不存在，所以此时 `pos` 为 `0`，我们知道在这段代码之后会遍历 `stack` 栈，并将 `stack` 栈中元素的索引与 `pos` 作对比。由于 `pos` 为 `0`，所以 `i >= pos` 始终成立，这个时候 `stack` 栈中如果有剩余未处理的标签，则会逐个警告缺少闭合标签，并调用 `options.end` 将其闭合。
+
+
+
+
+
+
+

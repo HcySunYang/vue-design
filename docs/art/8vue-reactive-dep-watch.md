@@ -991,6 +991,16 @@ removeSub (sub: Watcher) {
 
 它的内容很简单，接收一个要被移除的观察者作为参数，然后使用 `remove` 工具函数，将该观察者从 `this.subs` 数组中移除。其中 `remove` 工具函数来自 `src/shared/util.js` 文件，可以在 [shared/util.js 文件工具方法全解](shared-util.html#remove) 中查看。
 
+## 触发依赖的过程
 
+## 异步更新队列
 
+## 深度观测的实现
 
+## 避免收集无用依赖
+
+这不同于收集重复的依赖
+
+## 计算属性的实现
+
+## $watch和watch选项的实现
