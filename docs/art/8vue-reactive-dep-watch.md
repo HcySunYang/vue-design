@@ -678,7 +678,7 @@ if (this.computed) {
 
 ## 依赖收集的过程
 
-`this.get()` 是我们遇到的第一个观察者对象的实例方法，它的作用可以用两个字描述即：**求值**。求值的目的有两个，第一能够触访问器属性的 `get` 拦截器函数，第二能够能够获得被观察目标的值。而且能够触发访问器属性的 `get` 拦截器函数是依赖被收集的关键，下面我们具体查看一下 `this.get()` 方法的内容：
+`this.get()` 是我们遇到的第一个观察者对象的实例方法，它的作用可以用两个字描述即：**求值**。求值的目的有两个，第一能够触访问器属性的 `get` 拦截器函数，第二能能够获得被观察目标的值。而且能够触发访问器属性的 `get` 拦截器函数是依赖被收集的关键，下面我们具体查看一下 `this.get()` 方法的内容：
 
 ```js
 get () {
@@ -708,7 +708,7 @@ get () {
 
 如上是 `this.get()` 方法的全部代码，一上来调用了 `pushTarget(this)` 函数，并将当前观察者实例对象作为参数传递，这里的 `pushTarget` 函数来自于 `src/core/observer/dep.js` 文件，如下代码所示：
 
-```js
+```js {8}
 export default class Dep {
   // 省略...
 }
@@ -766,9 +766,9 @@ constructor (
 }
 ```
 
-这句高亮的代码将 `this.get()` 方法的返回值赋值给了观察者实例对象的 `this.value` 属性。也就是说 `this.value` 属性保存着被观察目标的值。以渲染函数的观察者为例，则渲染函数的观察者实例对象的 `this.value` 属性的值实际上是虚拟DOM对象。
+这句高亮的代码将 `this.get()` 方法的返回值赋值给了观察者实例对象的 `this.value` 属性。也就是说 `this.value` 属性保存着被观察目标的值。
 
-`this.get()` 方法除了对被观察目标求值之外，大家别忘了正式因为对被观察目标的求值才得以触发数据属性的 `get` 拦截器函数，还是以渲染函数的观察者为例，假设我们有如下模板：
+`this.get()` 方法除了对被观察目标求值之外，大家别忘了正是因为对被观察目标的求值才得以触发数据属性的 `get` 拦截器函数，还是以渲染函数的观察者为例，假设我们有如下模板：
 
 ```html
 <div id="demo">
@@ -880,7 +880,7 @@ function anonymous () {
 }
 ```
 
-可以看到，渲染函数的执行将读取两次数据对象 `name` 属性的值，这必然会触发两次 `name` 属性的 `get` 拦截器函数，同样的道理，`dep.depend` 也将被触发两次，最后导致 `dep.addSub` 方法被执行了两次，且参数一模一样，这样就产生了依赖被重复收集多次的问题。所以我们不能像如上那样修改 `addDep` 函数的代码，那么此时我相信大家也应该知道如下高亮代码的含义了：
+可以看到，渲染函数的执行将读取两次数据对象 `name` 属性的值，这必然会触发两次 `name` 属性的 `get` 拦截器函数，同样的道理，`dep.depend` 也将被触发两次，最后导致 `dep.addSub` 方法被执行了两次，且参数一模一样，这样就产生了同一个观察者被收集多次的问题。所以我们不能像如上那样修改 `addDep` 函数的代码，那么此时我相信大家也应该知道如下高亮代码的含义了：
 
 ```js {3-5}
 addDep (dep: Dep) {
@@ -895,7 +895,7 @@ addDep (dep: Dep) {
 }
 ```
 
-在 `addDep` 内部并不是直接调用 `dep.addSub` 收集观察者，而是先根据 `dep.id` 属性检测该 `Dep` 实例对象是否已经存在于 `newDepIds` 中，如果存在那么说明已经收集过依赖了，什么都不会做。如果不存在才会继续执行 `if` 语句块的代码，同时将 `dep.id` 属性和 `Dep` 实例对象本身分别添加到 `newDepIds` 和 `newDeps` 属性中，这样无论一个数据属性被读取了多少次，它只收集一次观察者。
+在 `addDep` 内部并不是直接调用 `dep.addSub` 收集观察者，而是先根据 `dep.id` 属性检测该 `Dep` 实例对象是否已经存在于 `newDepIds` 中，如果存在那么说明已经收集过依赖了，什么都不会做。如果不存在才会继续执行 `if` 语句块的代码，同时将 `dep.id` 属性和 `Dep` 实例对象本身分别添加到 `newDepIds` 和 `newDeps` 属性中，这样无论一个数据属性被读取了多少次，对于同一个观察者它只会收集一次。
 
 不过有的同学可能注意到了，如下高亮代码所示：
 
@@ -954,7 +954,7 @@ cleanupDeps () {
 }
 ```
 
-在 `cleanupDeps` 方法内部，首先是一个 `while` 循环，我们暂且不关心这个循环的作用，我们看循环下面的代码，即高亮的部分，这段代码是典型的引用类型变量的交换过程，最终的结果就是 `newDepIds` 属性和 `newDeps` 属性被清空，并且在被清空之前把值分别赋给了 `depIds` 属性和 `deps` 属性，这两个属性将会用在下一次求值时避免依赖的重复收集。
+在 `cleanupDeps` 方法内部，首先是一个 `while` 循环，我们暂且不关心这个循环的作用，我们看循环下面的代码，即高亮的部分，这段代码是典型的引用类型变量交换值的过程，最终的结果就是 `newDepIds` 属性和 `newDeps` 属性被清空，并且在被清空之前把值分别赋给了 `depIds` 属性和 `deps` 属性，这两个属性将会用在下一次求值时避免依赖的重复收集。
 
 现在我们可以做几点总结：
 
@@ -979,7 +979,7 @@ cleanupDeps () {
 }
 ```
 
-这段 `while` 循环就是对 `deps` 数组进行遍历，也就是对上一次求值所收集到的 `Dep` 对象进行遍历，然后在循环内部检查上一次求值所收集到的 `Dep` 实例对象是否存在于当前这次求值过程所收集到的 `Dep` 实例对象中，如果不存在则说明该 `Dep` 实例对象已经和该观察者不存在依赖关系了，这时就会调用 `dep.removeSub(this)` 方法并以该观察者实例对象作为参数传递，从而将该观察者对象从 `Dep` 实例对象中移除。
+这段 `while` 循环就是对 `deps` 数组进行遍历，也就是对上一次求值所收集到的 `Dep` 对象进行遍历，然后在循环内部检查上一次求值所收集到的 `Dep` 实例对象是否存在于当前这次求值所收集到的 `Dep` 实例对象中，如果不存在则说明该 `Dep` 实例对象已经和该观察者不存在依赖关系了，这时就会调用 `dep.removeSub(this)` 方法并以该观察者实例对象作为参数传递，从而将该观察者对象从 `Dep` 实例对象中移除。
 
 我们可以找到 `Dep` 类的 `removeSub` 实例方法，如下：
 
@@ -993,7 +993,357 @@ removeSub (sub: Watcher) {
 
 ## 触发依赖的过程
 
+在上一小节中我们提到了，每次求值并收集完观察者之后，会将当次求值所收集到的观察者保存到另外一组属性中，即 `depIds` 和 `deps`，并将存有当次求值所收集到的观察者的属性清空，即清空 `newDepIds` 和 `newDeps`。我们当时也说过了，这么做的目的是为了对比当次求值与上一次求值所收集到的观察者的变化情况，并作出合理的矫正工作，比如移除那么已经没有关联关系的观察者等。本节我们将以数据属性的变化为切入点，讲解重新求值的过程。
+
+假设我们有如下模板：
+
+```html
+<div id="demo">
+  {{name}}
+</div>
+```
+
+我们知道这段模板将会被编译成渲染函数，接着创建一个渲染函数的观察者，从而对渲染函数求值，在求值的过程中会触发数据对象 `name` 属性的 `get` 拦截器函数，进而将该观察者收集到 `name` 属性通过闭包引用的“筐”中，即收集到 `Dep` 实例对象中。这个 `Dep` 实例对象是属于 `name` 属性自身所拥有的，这样当我们尝试修改数据对象 `name` 属性的值时就会触发 `name` 属性的 `set` 拦截器函数，这样就有机会调用 `Dep` 实例对象的 `notify` 方法，从而触发了响应，如下代码截取了 `defineReactive` 函数中的 `set` 拦截器函数：
+
+```js {3}
+set: function reactiveSetter (newVal) {
+  // 省略...
+  dep.notify()
+}
+```
+
+如上高亮代码所示，可以看到当属性值变化时确实通过 `set` 拦截器函数调用了 `Dep` 实例对象的 `notify` 方法，这个方法就是用来通知变化的，我们找到 `Dep` 类的 `notify` 方法，如下：
+
+```js {6,15}
+export default class Dep {
+  // 省略...
+
+  constructor () {
+    this.id = uid++
+    this.subs = []
+  }
+
+  // 省略...
+
+  notify () {
+    // stabilize the subscriber list first
+    const subs = this.subs.slice()
+    for (let i = 0, l = subs.length; i < l; i++) {
+      subs[i].update()
+    }
+  }
+}
+```
+
+`notify` 方法只做了一件事，就是遍历当前 `Dep` 实例对象的 `subs` 属性中所保存的所有观察者对象，并逐个调用观察者对象的 `update` 方法，这就是触发响应的实现机制，那么大家应该也猜到了，重新求值的操作应该是在 `update` 方法中进行的，那我们就找到观察者对象的 `update` 方法，看看它做了什么事情，如下：
+
+```js
+update () {
+  /* istanbul ignore else */
+  if (this.computed) {
+    // 省略...
+  } else if (this.sync) {
+    this.run()
+  } else {
+    queueWatcher(this)
+  }
+```
+
+在 `update` 方法中代码被拆分了三分部，即 `if...else if...else` 语句块。首先 `if` 语句块的代码会在判断条件是 `this.computed` 为真的情况下执行，我们说过 `this.computed` 属性用来判断该观察者是不是计算属性的观察者，这部分代码我们将会在计算属性部分详细讲解。也就是说渲染函数的观察者肯定是不会执行 `if` 语句块中的代码的，此时会继续判断 `else...if` 语句的条件 `this.sync` 是否为真，我们知道 `this.sync` 属性的值就是创建观察者实例对象时传递的第三个选项参数中的 `sync` 属性的值，这个值的真假代表了当变化发生时是否同步更新变化。对于渲染函数的观察者来讲，它并不是同步更新变化的，而是将变化放到一个异步更新队列中，也就是 `else` 语句块中代码所做的事情，即 `queueWatcher` 会将当前观察者对象放到一个异步更新队列，这个队列会在调用栈被清空之后按照一定的顺序执行。关于更多异步更新队列的内容我们会在后面单独讲解，这里大家只需要知道一件事情，那就是无论是同步更新变化还是将更新变化的操作放到异步更新队列，真正的更新变化操作都是通过调用观察者实例对象的 `run` 方法完成的。所以此时我们应该把目光转向 `run` 方法，如下：
+
+```js
+run () {
+  if (this.active) {
+    this.getAndInvoke(this.cb)
+  }
+}
+```
+
+`run` 方法的代码很简短，它判断了当前观察者实例的 `this.active` 属性是否为真，其中 `this.active` 属性用来标识一个观察者是否处于激活状态，或者可用状态。如果观察者处于激活状态那么 `thisd.active` 的值为真，此时会调用观察者实例对象的 `getAndInvoke` 方法，并以 `this.cb` 作为参数，我们知道 `this.cb` 属性是一个函数，我们称之为回调函数，当变化发生时会触发，但是对于渲染函数的观察者来讲，`this.cb` 属性的值为 `noop`，即什么都不做。
+
+现在我们终于找到了更新变化的根源，那就是 `getAndInvoke` 方法，如下：
+
+```js {2}
+getAndInvoke (cb: Function) {
+  const value = this.get()
+  if (
+    value !== this.value ||
+    // Deep watchers and watchers on Object/Arrays should fire even
+    // when the value is the same, because the value may
+    // have mutated.
+    isObject(value) ||
+    this.deep
+  ) {
+    // set new value
+    const oldValue = this.value
+    this.value = value
+    this.dirty = false
+    if (this.user) {
+      try {
+        cb.call(this.vm, value, oldValue)
+      } catch (e) {
+        handleError(e, this.vm, `callback for watcher "${this.expression}"`)
+      }
+    } else {
+      cb.call(this.vm, value, oldValue)
+    }
+  }
+}
+```
+
+在 `getAndInvoke` 方法中，第一句代码就调用了 `this.get` 方法，这意味着重新求值，这也证明了我们在上一小节中的假设。对于渲染函数的观察者来讲，重新求值其实等价于重新执行渲染函数，最终结果就是重新生成了虚拟DOM并更新真实DOM，这样就完成了重新渲染的过程。在重新调用 `this.get` 方法之后是一个 `if` 语句块，实际上对于渲染函数的观察者来讲并不会执行这个 `if` 语句块，因为 `this.get` 方法的返回值其实就等价于 `updateComponent` 函数的返回值，这个值将永远都是 `undefined`。实际上 `if` 语句块内的代码是为非渲染函数类型的观察者准备的，它用来对比新旧两次求值的结果，当值不相等的时候会调用通过参数传递进来的回调。我们先看一下判断条件，如下：
+
+```js {3，7-8}
+const value = this.get()
+if (
+  value !== this.value ||
+  // Deep watchers and watchers on Object/Arrays should fire even
+  // when the value is the same, because the value may
+  // have mutated.
+  isObject(value) ||
+  this.deep
+) {
+  // 省略...
+}
+```
+
+首先对比新值 `value` 和旧值 `this.value` 是否相等，只有在不相等的情况下才需要执行回调，但是两个值相等就一定不执行回调吗？未必，这个时候就需要检测第二个条件是否成立，即 `isObject(value)`，判断新值的类型是否是对象，如果是对象的话即使值不变也需要执行回调，注意这里的“不变”指的是引用不变，如下代码所示：
+
+```js
+const data = {
+  obj: {
+    a: 1
+  }
+}
+const obj1 = data.obj
+data.obj.a = 2
+const obj2 = data.obj
+
+console.log(obj1 === obj2) // true
+```
+
+上面的代码中由于 `obj1` 与 `obj2` 具有相同的引用，所以他们总是相等的，但其实在数据已经变化了，这就是判断 `isObject(value)` 为真则执行回调的原因。
+
+接下来我们就看一下 `if` 语句块内的代码：
+
+```js
+const oldValue = this.value
+this.value = value
+this.dirty = false
+if (this.user) {
+  try {
+    cb.call(this.vm, value, oldValue)
+  } catch (e) {
+    handleError(e, this.vm, `callback for watcher "${this.expression}"`)
+  }
+} else {
+  cb.call(this.vm, value, oldValue)
+}
+```
+
+代码如果执行到了 `if` 语句块内，则说明应该执行观察者的回调函数了。首先定义了 `oldValue` 常量，它的值是旧值，紧接着使用新值更新了 `this.value` 的值。我们可以看到如上代码中是如何执行回调的：
+
+```js
+cb.call(this.vm, value, oldValue)
+```
+
+将回调函数的作用域修改为当前 `Vue` 组件对象，然后传递了两个参数，分别是新值和旧值。
+
+另外大家可能注意到了这句代码：`this.dirty = false`，将观察者实例对象的 `this.dirty` 属性设置为 `false`，实际上 `this.dirty` 属性也是为计算属性准备的，由于计算属性是惰性求值，所以在实例化计算属性的时候 `this.dirty` 的值会被设置为 `true`，代表着还没有求值，后面当真正对计算属性求值时，也就是执行如上代码时才会将 `this.dirty` 设置为 `true`，代表着已经求过值了。
+
+除此之外，我们注意如下代码：
+
+```js
+if (this.user) {
+  try {
+    cb.call(this.vm, value, oldValue)
+  } catch (e) {
+    handleError(e, this.vm, `callback for watcher "${this.expression}"`)
+  }
+} else {
+  cb.call(this.vm, value, oldValue)
+}
+```
+
+在调用回调函数的时候，如果观察者对象的 `this.user` 为真意味着这个观察者是开发者定义的，所谓开发者定义的是指那些通过 `watch` 选项或 `$watch` 函数定义的观察者，这些观察者的特点是回调函数是由开发者编写的，所以这些回调函数在执行的过程中其行为是不可预知的，很可能出现错误，这时候将其放到一个 `try...catch` 语句块中，这样当错误发生时我们就能够给开发者一个友好的提示。并且我们注意到在提示信息中包含了 `this.expression` 属性，我们前面说过该属性是被观察目标(`expOrFn`)的字符串表示，这样开发者就能清楚的知道是哪里发生了错误。
+
 ## 异步更新队列
+
+接下来我们就聊一聊 `Vue` 中的异步更新队列。在上一节中我们讲解了触发依赖的过程，举个例子如下：
+
+```html {2,12}
+<div id="app">
+  <p>{{name}}</p>
+</div>
+
+<script>
+  new Vue({
+    el: '#app',
+    data: {
+      name: ''
+    },
+    mounted () {
+      this.name = 'hcy'
+    }
+  })
+</script>
+```
+
+如上代码所示，我们在模板中使用了数据对象的 `name` 属性，这意味着 `name` 属性将会收集渲染函数的观察者作为依赖，接着我们在 `mounted` 钩子中修改了 `name` 属性的值，这样就会触发响应：**渲染函数的观察者会重新求值，完成重渲染**，这个过程可以用一张图来描述，如下图所示：
+
+![](http://7xlolm.com1.z0.glb.clouddn.com/2018-05-25-082631.jpg)
+
+上图描述了一个同步的视图更新过程，从属性值的变化到完成重新渲染，这是一个同步更新的过程，大家思考一下“同步更新”会导致什么问题？很显然这会导致每次属性值的变化都会引发一次重新渲染，假设我们要修改两个属性的值，那么同步更新将导致两次的重渲染，如下图所示：
+
+![](http://7xlolm.com1.z0.glb.clouddn.com/2018-05-23-131015.jpg)
+
+有时候这是致命的缺陷，想象一下复杂业务场景，你可能会同时修改很多属性的值，如果每次属性值的变化都要重新渲染，就会导致严重的性能问题，而异步更新队列就是用来解决这个问题的，为了让大家更好的理解，我们同样用一张图来描述异步更新的过程，如下：
+
+![](http://7xlolm.com1.z0.glb.clouddn.com/2018-05-25-103029.jpg)
+
+上图描述了异步更新的过程，与同步更新的不同之处在于，每次修改属性的值之后并没有立即重新求值，而是将需要执行更新操作的观察者放入一个队列中。当我们修改 `name` 属性值时，由于 `name` 属性收集了渲染函数的观察者(后面我们称其为 `renderWatcher`)作为依赖，所以此时 `renderWatcher` 会被添加到队列中，接着我们修改了 `age` 属性的值，由于 `age` 属性也收集了 `renderWatcher` 作为依赖，所以此时也会尝试将 `renderWatcher` 添加到队列中，但是由于 `renderWatcher` 已经存在于队列中了，所以并不会重复添加，这样队列中将只会存在一个 `renderWatcher`。当所有的突变完成之后，在一次性的执行队列中所有观察者的更新方法，同时清空队列，这样就达到了优化的目的。
+
+接下来我们就从具体代码入手，看一看其具体实现，我们知道当修改一个属性的值时，会通过执行该属性所收集的所有观察者对象的 `update` 方法进行更新的，那么我就找到观察者对象的 `update` 方法，如下：
+
+```js {8}
+update () {
+  /* istanbul ignore else */
+  if (this.computed) {
+    // 省略...
+  } else if (this.sync) {
+    this.run()
+  } else {
+    queueWatcher(this)
+  }
+}
+```
+
+如上高亮代码所示，如果没有指定这个观察者是同步更新(`this.sync` 为真)，那么这个观察者的更新机制就是异步的，这时当调用观察者对象的 `update` 方法时，在 `update` 方法内部会调用 `queueWatcher` 函数，并将当前观察者对象作为参数传递，`queueWatcher` 函数的作用就是我们前面讲到过的，它将观察者放到一个队列中等待所有突变完成之后统一执行更新。
+
+`queueWatcher` 函数来自 `src/core/observer/scheduler.js` 文件，如下是 `queueWatcher` 函数的全部代码：
+
+```js
+export function queueWatcher (watcher: Watcher) {
+  const id = watcher.id
+  if (has[id] == null) {
+    has[id] = true
+    if (!flushing) {
+      queue.push(watcher)
+    } else {
+      // if already flushing, splice the watcher based on its id
+      // if already past its id, it will be run next immediately.
+      let i = queue.length - 1
+      while (i > index && queue[i].id > watcher.id) {
+        i--
+      }
+      queue.splice(i + 1, 0, watcher)
+    }
+    // queue the flush
+    if (!waiting) {
+      waiting = true
+      nextTick(flushSchedulerQueue)
+    }
+  }
+}
+```
+
+`queueWatcher` 函数接收观察者对象作为参数，首先定义了 `id` 常量，它的值是观察者对象的唯一 `id`，然后 `if` 判断语句，如下是简化的代码：
+
+```js {3-4}
+export function queueWatcher (watcher: Watcher) {
+  const id = watcher.id
+  if (has[id] == null) {
+    has[id] = true
+    // 省略...
+  }
+}
+```
+
+其中变量 `has` 定义在 `scheduler.js` 文件头部，它是一个空对象：
+
+```js
+let has: { [key: number]: ?true } = {}
+```
+
+当 `queueWatcher` 函数被调用之后，会尝试将该观察者放入队列中，并将该观察者的 `id` 值登记到 `has` 对象上作为 `has` 对象的属性同时将该属性值设置为 `true`。该 `if` 语句以及变量 `has` 的作用就是用来避免将相同的观察者重复入队的。在改 `if` 语句块内执行了真正的入队操作，如下代码高亮的部分所示：
+
+```js {6}
+export function queueWatcher (watcher: Watcher) {
+  const id = watcher.id
+  if (has[id] == null) {
+    has[id] = true
+    if (!flushing) {
+      queue.push(watcher)
+    } else {
+      // 省略...
+    }
+    // 省略...
+  }
+}
+```
+
+其中 `queue` 常量也定义在 `scheduler.js` 文件的头部：
+
+```js
+const queue: Array<Watcher> = []
+```
+
+`queue` 常量是一个数组，入队就是调用该数组的 `push` 方法将观察者添加到数组的尾部。在入队之前有一个对变量 `flushing` 的判断，`flushing` 变量也定义在 `scheduler.js` 文件的头部，它的初始值是 `false`：
+
+```js
+let flushing = false
+```
+
+`flushing` 变量是一个标志，我们知道放入队列 `queue` 中的所有观察者将会在突变完成之后统一执行更新，当更新开始时会将 `flushing` 变量的设置为 `true`，代表着此时正在执行更新，所以根据判断条件 `if (!flushing)` 可知只有当队列没有执行更新时才会简单的将观察者追加到队列的尾部，有的同学可能会问：“难道在队列执行更新的过程中还会有观察者入队的操作吗？”，实际上是会的，典型的例子就是计算属性，比如队列执行更新时经常会执行渲染函数观察者的更新，渲染函数中很可能有计算属性的存在，由于计算属性在实现方式与普通响应式属性有所不同，所以当触发计算属性的 `get` 拦截器函数时会有观察者入队的行为，这个时候我们需要特殊处理，也就是 `else` 分支的代码，如下：
+
+```js {10-14}
+export function queueWatcher (watcher: Watcher) {
+  const id = watcher.id
+  if (has[id] == null) {
+    has[id] = true
+    if (!flushing) {
+      queue.push(watcher)
+    } else {
+      // if already flushing, splice the watcher based on its id
+      // if already past its id, it will be run next immediately.
+      let i = queue.length - 1
+      while (i > index && queue[i].id > watcher.id) {
+        i--
+      }
+      queue.splice(i + 1, 0, watcher)
+    }
+    // 省略...
+  }
+}
+```
+
+如上高亮的代码所示，当变量 `flushing` 为真时，说明队列正在执行更新，这时如果有观察者入队则会执行 `else` 分支中的代码，这段代码的作用是为了保证观察者的执行顺序，现在大家只需要知道观察者会被放入 `queue` 队列中即可，我们后面会详细讨论。
+
+接着我们再来看如下代码：
+
+```js {7-10}
+export function queueWatcher (watcher: Watcher) {
+  const id = watcher.id
+  if (has[id] == null) {
+    has[id] = true
+    // 省略...
+    // queue the flush
+    if (!waiting) {
+      waiting = true
+      nextTick(flushSchedulerQueue)
+    }
+  }
+}
+```
+
+这段代码是一个 `if` 语句块，其中变量 `waiting` 同样是一个标志，它也定义在 `scheduler.js` 文件头部，初始值为 `false`：
+
+```js
+let waiting = false
+```
+
+为什么需要这个标志呢？我们看 `if` 语句块内的代码就知道了，在 `if` 语句块内先将 `waiting` 的值设置为 `true`，这意味着无论调用多少次 `queueWatcher` 函数，该 `if` 语句块的代码只会执行一次。接着调用 `nextTick` 并以 `flushSchedulerQueue` 函数作为参数，其中 `flushSchedulerQueue` 函数的作用之一就是用来将队列中的观察者统一执行更新的。
+
 
 ## 深度观测的实现
 
