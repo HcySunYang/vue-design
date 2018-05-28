@@ -1365,6 +1365,149 @@ export function queueWatcher (watcher: Watcher) {
 
 ### nextTick 的实现
 
+`nextTick` 函数来自于 `src/core/util/next-tick.js` 文件，对于 `nextTick` 函数相信大家都不陌生，我们常用的 `$nextTick` 方法实际上就是对 `nextTick` 函数的封装，如下：
+
+```js
+export function renderMixin (Vue: Class<Component>) {
+  // 省略...
+  Vue.prototype.$nextTick = function (fn: Function) {
+    return nextTick(fn, this)
+  }
+  // 省略...
+}
+```
+
+`$nextTick` 方法是在 `renderMixin` 函数中挂载到 `Vue` 原型上的，可以看到 `$nextTick` 函数体只有一句话即调用 `nextTick` 函数，这说明 `$nextTick` 确实是对 `nextTick` 函数的简单包装。
+
+前面说过 `nextTick` 函数的作用相当于 `setTiomeout(fn, 0)`，这里有几个概念需要大家去了解一下，即调用栈、任务队列、事件循环，`javascript` 是一种单线程的语言，它的一切都是建立在以这三个概念为基础之上的。详细内容在这里就不讨论了，读者自行补充，后面的讲解将假设大家对这些概念已经非常清楚了。
+
+我们知道任务队列并非只有一个队列，在 `node` 中更为复杂，但总的来说我们可以将其分为 `microtask` 和 `(macro)task`，并且这两个队列的行为还要依据不同浏览器的具体实现去讨论，这里我们只讨论被广泛认同和接受的队列执行行为。当调用栈空闲后每次事件循环只会从 `(macro)task` 中读取一个任务并执行，而在同一次事件循环内会将 `microtask` 队列中所有的任务全部执行完毕，且要先于 `microtask`。另外 `(macro)task` 中两个不同的任务之间可能穿插着UI的重渲染，那么我们只需要在 `microtask` 中把所有在UI重渲染之前需要更新的数据全部更新，这样只需要一次重渲染就能得到最新的DOM了。恰好 `Vue` 是一个数据驱动的框架，如果能在UI重渲染之前更新所有数据状态，这对性能的提升是一个很大的帮助，所有要优先选用 `microtask` 去更新数据状态而不是 `(macro)task`，这就是为什么不使用 `setTimeout` 的原因，因为 `setTimeout` 会将回调放到 `(macro)task` 队列中而不是 `microtask` 队列，所以理论上最优的选择是使用 `Promise`，当浏览器不支持 `Promise` 时再降级为 `setTimeout`。如下是 `next-tick.js` 文件中的一段代码：
+
+```js
+if (typeof Promise !== 'undefined' && isNative(Promise)) {
+  const p = Promise.resolve()
+  microTimerFunc = () => {
+    p.then(flushCallbacks)
+    // in problematic UIWebViews, Promise.then doesn't completely break, but
+    // it can get stuck in a weird state where callbacks are pushed into the
+    // microtask queue but the queue isn't being flushed, until the browser
+    // needs to do some other work, e.g. handle a timer. Therefore we can
+    // "force" the microtask queue to be flushed by adding an empty timer.
+    if (isIOS) setTimeout(noop)
+  }
+} else {
+  // fallback to macro
+  microTimerFunc = macroTimerFunc
+}
+```
+
+其中 `microTimerFunc` 定义在文件头部，它的初始值是 `undefined`，上面的代码中首先检测当前宿主环境是否支持原生的 `Promise`，如果支持则优先使用 `Promise` 注册 `microtask`。其实现很简单首先定义常量 `p` 它的值是一个立即 `resolve` 的 `Promise` 实例对象，接着将变量 `microTimerFunc` 定义为一个函数，这个函数的执行将会把 `flushCallbacks` 函数注册为 `microtask`。另外大家注意这句代码：
+
+```js
+if (isIOS) setTimeout(noop)
+```
+
+注释已经写得很清楚了，这是一个解决怪异问题的变通方法，在一些 `UIWebViews` 中存在很奇怪的问题，即 `microtask` 没有被刷新，对于这个问题的解决方案就是让浏览做一些其他的事情比如注册一个 `(macro)task` 即使这个 `(macro)task` 什么都不做，这样就能够间接触发 `microtask` 的刷新。
+
+使用 `Promise` 是最理想的方案，但是如果宿主环境不支持 `Promise`，我们就需要降级处理，即注册 `(macro)task`，这就是 `else` 语句块内代码所做的事情：
+
+```js {5}
+if (typeof Promise !== 'undefined' && isNative(Promise)) {
+  // 省略... 
+} else {
+  // fallback to macro
+  microTimerFunc = macroTimerFunc
+}
+```
+
+将 `macroTimerFunc` 的值赋值给 `microTimerFunc`。我们知道 `microTimerFunc` 用来将 `flushCallbacks` 函数注册为 `microtask`，而 `macroTimerFunc` 则是用来将 `flushCallbacks` 函数注册为 `(macro)task` 的，来看下面这段代码：
+
+```js
+if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
+  macroTimerFunc = () => {
+    setImmediate(flushCallbacks)
+  }
+} else if (typeof MessageChannel !== 'undefined' && (
+  isNative(MessageChannel) ||
+  // PhantomJS
+  MessageChannel.toString() === '[object MessageChannelConstructor]'
+)) {
+  const channel = new MessageChannel()
+  const port = channel.port2
+  channel.port1.onmessage = flushCallbacks
+  macroTimerFunc = () => {
+    port.postMessage(1)
+  }
+} else {
+  /* istanbul ignore next */
+  macroTimerFunc = () => {
+    setTimeout(flushCallbacks, 0)
+  }
+}
+```
+
+将一个回调函数注册为 `(macro)task` 的方式有很多，如 `setTimeout`、`setInterval` 以及 `setImmediate` 等等，但不同的方案之间是有区别的，通过上面的代码我们可以看到 `setTimeout` 被作为最后的备选方案：
+
+```js {11-13}
+if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
+  // 省略...
+} else if (typeof MessageChannel !== 'undefined' && (
+  isNative(MessageChannel) ||
+  // PhantomJS
+  MessageChannel.toString() === '[object MessageChannelConstructor]'
+)) {
+  // 省略...
+} else {
+  /* istanbul ignore next */
+  macroTimerFunc = () => {
+    setTimeout(flushCallbacks, 0)
+  }
+}
+```
+
+而首选方案是 `setImmediate`：
+
+```js {2-4}
+if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
+  macroTimerFunc = () => {
+    setImmediate(flushCallbacks)
+  }
+} else if (typeof MessageChannel !== 'undefined' && (
+  isNative(MessageChannel) ||
+  // PhantomJS
+  MessageChannel.toString() === '[object MessageChannelConstructor]'
+)) {
+  // 省略...
+} else {
+  // 省略...
+}
+```
+
+如果宿主环境支持原生 `setImmediate` 函数，则使用 `setImmediate` 注册 `(macro)task`，为什么首选 `setImmediate` 呢？这是有原因的，因为 `setImmediate` 拥有比 `setTimeout` 更好的性能，这个问题很好理解，`setTimeout` 在将回调注册为 `(macro)task` 之前要不停的做超时检测，而 `setImmediate` 则不需要，这就是优先选用 `setImmediate` 的原因。但是 `setImmediate` 的缺陷也很明显，就是它的兼容性问题，到目前为止只有IE浏览器实现了它，所以为了兼容非IE浏览器我们还需要做兼容处理，只不过此时还轮不到 `setTimeout` 上场，而是使用 `MessageChannel`：
+
+```js {8-13}
+if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
+  // 省略...
+} else if (typeof MessageChannel !== 'undefined' && (
+  isNative(MessageChannel) ||
+  // PhantomJS
+  MessageChannel.toString() === '[object MessageChannelConstructor]'
+)) {
+  const channel = new MessageChannel()
+  const port = channel.port2
+  channel.port1.onmessage = flushCallbacks
+  macroTimerFunc = () => {
+    port.postMessage(1)
+  }
+} else {
+  // 省略...
+}
+```
+
+相信大家应该了解过 `Web Workers`，实际上 `Web Workers` 的内部实现就是用到了 `MessageChannel`，一个 `MessageChannel` 实例对象拥有两个属性 `port1` 和 `prot2`，我们只需要让其中一个 `prot` 监听 `onmessage` 事件，然后使用另外一个 `prot` 的 `postMessage` 向前一个 `prot` 发送消息即可，这样前一个 `prot` 的 `onmessage` 回调就会被注册为 `(macro)task`，由于它也不需要做任何检测工作，所以性能也要优于 `setTimeout`。总之 `macroTimerFunc` 函数的作用就是将 `flushCallbacks` 注册为 `(macro)task`。
+
+
+
 
 
 
