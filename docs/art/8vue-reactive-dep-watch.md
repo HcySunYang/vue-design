@@ -1506,6 +1506,104 @@ if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
 
 相信大家应该了解过 `Web Workers`，实际上 `Web Workers` 的内部实现就是用到了 `MessageChannel`，一个 `MessageChannel` 实例对象拥有两个属性 `port1` 和 `prot2`，我们只需要让其中一个 `prot` 监听 `onmessage` 事件，然后使用另外一个 `prot` 的 `postMessage` 向前一个 `prot` 发送消息即可，这样前一个 `prot` 的 `onmessage` 回调就会被注册为 `(macro)task`，由于它也不需要做任何检测工作，所以性能也要优于 `setTimeout`。总之 `macroTimerFunc` 函数的作用就是将 `flushCallbacks` 注册为 `(macro)task`。
 
+现在是时候仔细看一下 `nextTick` 函数都做了什么事情了，不过为了更融入理解 `nextTick` 函数的代码，我们需要从 `$nextTick` 方法入手，如下：
+
+```js {3-5}
+export function renderMixin (Vue: Class<Component>) {
+  // 省略...
+  Vue.prototype.$nextTick = function (fn: Function) {
+    return nextTick(fn, this)
+  }
+  // 省略...
+}
+```
+
+`$nextTick` 方法只接收一个回调函数作为参数，但在内部调用 `nextTick` 函数时，除了把回调函数 `fn` 透传之外，第二个参数是硬编码为当前组件实例对象 `this`。我们知道在使用 `$nextTick` 方法时是可以省略回调函数这个参数的，这时 `$nextTick` 方法会返回一个 `promise` 实例对象。这些功能实际上都是有 `nextTick` 函数提供的，如下是 `nextTick` 函数的签名：
+
+```js
+export function nextTick (cb?: Function, ctx?: Object) {
+  // 省略...
+}
+```
+
+`nextTick` 函数接收两个参数，第一个参数是一个回调函数，第二个参数指定一个作用域主要用在不传递回调函数时的使用场景。下面我们逐个分析传递回调函数与不传递回调函数这两种使用场景功能的实现，首先我们来看传递回调函数的情况，那么此时参数 `cb` 就是回调函数，来看如下代码：
+
+```js
+export function nextTick (cb?: Function, ctx?: Object) {
+  let _resolve
+  callbacks.push(() => {
+    if (cb) {
+      try {
+        cb.call(ctx)
+      } catch (e) {
+        handleError(e, ctx, 'nextTick')
+      }
+    } else if (_resolve) {
+      _resolve(ctx)
+    }
+  })
+  // 省略
+}
+```
+
+`nextTick` 函数会在 `callbacks` 数组中添加一个新的函数，`callbacks` 数组定义在文件头部：`const callbacks = []`。注意并不是将 `cb` 回调函数直接添加到 `callbacks` 数组中，但这个被添加到 `callbacks` 数组中的函数的执行会间接调用 `cb` 回调函数，并且可以看到在调用 `cb` 函数时使用 `.call` 方法将函数 `cb` 的作用域设置为 `ctx`，也就是 `nextTick` 函数的第二个参数。所以对于 `$nextTick` 方法来讲，传递给 `$nextTick` 方法的回调函数的作用域就是当前组件实例对象，当然了前提是回调函数不能是箭头函数，其实在平时的使用中，回调函数使用箭头函数也没关系，只要你能够达到你的目的即可。另外我们再次强调一遍，此时回调函数并没有被执行，当你调用 `$nextTick` 方法并传递回调函数时，会使用一个新的函数包裹回调函数并将新函数添加到 `callbacks` 数组中。
+
+我们继续看 `nextTick` 函数的代码，如下：
+
+```js
+export function nextTick (cb?: Function, ctx?: Object) {
+  // 省略...
+  if (!pending) {
+    pending = true
+    if (useMacroTask) {
+      macroTimerFunc()
+    } else {
+      microTimerFunc()
+    }
+  }
+  // 省略...
+}
+```
+
+在将回调函数添加到 `callbacks` 数组之后，会进行一个 `if` 条件判断，判断变量 `pending` 的真假，`pending` 变量也定义在文件头部：`let pending = false`，它是一个标识，它的真假代表回调队列是否处于等待刷新的状态，初始值是 `false` 代表回调队列为空不需要等待刷新。假如此时在某个地方调用了 `$nextTick` 方法，那么 `if` 语句块内的代码将会被执行，在 `if` 语句块内优先将将变量 `pending` 的值设置为 `true`，代表着此时回调队列不为空，正在等待刷新。既然等待刷新，那么当然要刷新回调队列啊，怎么刷新呢？这时就用到了我们前面讲过的 `microTimerFunc` 或者 `macroTimerFunc` 函数，我们知道这两个函数的作用是将 `flushCallbacks` 函数分别注册为 `microtask` 和 `(macro)task`。但是无论哪种任务类型，它们都将会等待调用栈清空之后才执行。如下：
+
+```js
+created () {
+  this.$nextTick(() => { console.log(1) })
+  this.$nextTick(() => { console.log(2) })
+  this.$nextTick(() => { console.log(3) })
+}
+```
+
+上面的代码中我们在 `created` 钩子中连续调用三次 `$nextTick` 方法，但只有第一次调用 `$nextTick` 方法时才会执行 `microTimerFunc` 函数将 `flushCallbacks` 注册为 `microtask`，但此时 `flushCallbacks` 函数并不会执行，因为它要等待接下来的两次 `$nextTick` 方法的调用语句执行完后才会执行，或者准确的说等待调用栈被清空之后才会执行。也就是说当 `flushCallbacks` 函数执行的时候，`callbacks` 回调队列中将包含本次事件循环所收集的所有通过 `$nextTick` 方法注册的回调，而接下来的任务就是在 `flushCallbacks` 函数内将这些回调全部执行并清空。如下是 `flushCallbacks` 函数的源码：
+
+```js
+function flushCallbacks () {
+  pending = false
+  const copies = callbacks.slice(0)
+  callbacks.length = 0
+  for (let i = 0; i < copies.length; i++) {
+    copies[i]()
+  }
+}
+```
+
+很好理解，首先将变量 `pending` 重置为 `false`，接着开始执行回调，但需要注意的是在执行 `callbacks` 队列中的回调函数时并没有直接遍历 `callbacks` 数组，而是使用 `copies` 常量保存一份 `callbacks` 的复制，然后遍历 `copies` 数组，并且在遍历 `copies` 数组之前将 `callbacks` 数组清空：`callbacks.length = 0`。为什么要这么做呢？这么做肯定是有原因的，大家思考如下代码：
+
+```js {3}
+created () {
+  this.$nextTick(() => {
+    this.$nextTick(() => { console.log('hello') })
+  })
+}
+```
+
+在上面的代码中我们在 `$nextTick` 方法的回调再次调用了 `$nextTick`。
+
+
+
+
+
 
 
 
