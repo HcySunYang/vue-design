@@ -1381,7 +1381,7 @@ export function renderMixin (Vue: Class<Component>) {
 
 前面说过 `nextTick` 函数的作用相当于 `setTiomeout(fn, 0)`，这里有几个概念需要大家去了解一下，即调用栈、任务队列、事件循环，`javascript` 是一种单线程的语言，它的一切都是建立在以这三个概念为基础之上的。详细内容在这里就不讨论了，读者自行补充，后面的讲解将假设大家对这些概念已经非常清楚了。
 
-我们知道任务队列并非只有一个队列，在 `node` 中更为复杂，但总的来说我们可以将其分为 `microtask` 和 `(macro)task`，并且这两个队列的行为还要依据不同浏览器的具体实现去讨论，这里我们只讨论被广泛认同和接受的队列执行行为。当调用栈空闲后每次事件循环只会从 `(macro)task` 中读取一个任务并执行，而在同一次事件循环内会将 `microtask` 队列中所有的任务全部执行完毕，且要先于 `microtask`。另外 `(macro)task` 中两个不同的任务之间可能穿插着UI的重渲染，那么我们只需要在 `microtask` 中把所有在UI重渲染之前需要更新的数据全部更新，这样只需要一次重渲染就能得到最新的DOM了。恰好 `Vue` 是一个数据驱动的框架，如果能在UI重渲染之前更新所有数据状态，这对性能的提升是一个很大的帮助，所有要优先选用 `microtask` 去更新数据状态而不是 `(macro)task`，这就是为什么不使用 `setTimeout` 的原因，因为 `setTimeout` 会将回调放到 `(macro)task` 队列中而不是 `microtask` 队列，所以理论上最优的选择是使用 `Promise`，当浏览器不支持 `Promise` 时再降级为 `setTimeout`。如下是 `next-tick.js` 文件中的一段代码：
+我们知道任务队列并非只有一个队列，在 `node` 中更为复杂，但总的来说我们可以将其分为 `microtask` 和 `(macro)task`，并且这两个队列的行为还要依据不同浏览器的具体实现去讨论，这里我们只讨论被广泛认同和接受的队列执行行为。当调用栈空闲后每次事件循环只会从 `(macro)task` 中读取一个任务并执行，而在同一次事件循环内会将 `microtask` 队列中所有的任务全部执行完毕，且要先于 `(macro)task`。另外 `(macro)task` 中两个不同的任务之间可能穿插着UI的重渲染，那么我们只需要在 `microtask` 中把所有在UI重渲染之前需要更新的数据全部更新，这样只需要一次重渲染就能得到最新的DOM了。恰好 `Vue` 是一个数据驱动的框架，如果能在UI重渲染之前更新所有数据状态，这对性能的提升是一个很大的帮助，所有要优先选用 `microtask` 去更新数据状态而不是 `(macro)task`，这就是为什么不使用 `setTimeout` 的原因，因为 `setTimeout` 会将回调放到 `(macro)task` 队列中而不是 `microtask` 队列，所以理论上最优的选择是使用 `Promise`，当浏览器不支持 `Promise` 时再降级为 `setTimeout`。如下是 `next-tick.js` 文件中的一段代码：
 
 ```js
 if (typeof Promise !== 'undefined' && isNative(Promise)) {
@@ -1401,7 +1401,7 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
 }
 ```
 
-其中 `microTimerFunc` 定义在文件头部，它的初始值是 `undefined`，上面的代码中首先检测当前宿主环境是否支持原生的 `Promise`，如果支持则优先使用 `Promise` 注册 `microtask`。其实现很简单首先定义常量 `p` 它的值是一个立即 `resolve` 的 `Promise` 实例对象，接着将变量 `microTimerFunc` 定义为一个函数，这个函数的执行将会把 `flushCallbacks` 函数注册为 `microtask`。另外大家注意这句代码：
+其中变量 `microTimerFunc` 定义在文件头部，它的初始值是 `undefined`，上面的代码中首先检测当前宿主环境是否支持原生的 `Promise`，如果支持则优先使用 `Promise` 注册 `microtask`，做法很简单，首先定义常量 `p` 它的值是一个立即 `resolve` 的 `Promise` 实例对象，接着将变量 `microTimerFunc` 定义为一个函数，这个函数的执行将会把 `flushCallbacks` 函数注册为 `microtask`。另外大家注意这句代码：
 
 ```js
 if (isIOS) setTimeout(noop)
@@ -1526,7 +1526,7 @@ export function nextTick (cb?: Function, ctx?: Object) {
 }
 ```
 
-`nextTick` 函数接收两个参数，第一个参数是一个回调函数，第二个参数指定一个作用域主要用在不传递回调函数时的使用场景。下面我们逐个分析传递回调函数与不传递回调函数这两种使用场景功能的实现，首先我们来看传递回调函数的情况，那么此时参数 `cb` 就是回调函数，来看如下代码：
+`nextTick` 函数接收两个参数，第一个参数是一个回调函数，第二个参数指定一个作用域。下面我们逐个分析传递回调函数与不传递回调函数这两种使用场景功能的实现，首先我们来看传递回调函数的情况，那么此时参数 `cb` 就是回调函数，来看如下代码：
 
 ```js
 export function nextTick (cb?: Function, ctx?: Object) {
@@ -1588,26 +1588,71 @@ function flushCallbacks () {
 }
 ```
 
-很好理解，首先将变量 `pending` 重置为 `false`，接着开始执行回调，但需要注意的是在执行 `callbacks` 队列中的回调函数时并没有直接遍历 `callbacks` 数组，而是使用 `copies` 常量保存一份 `callbacks` 的复制，然后遍历 `copies` 数组，并且在遍历 `copies` 数组之前将 `callbacks` 数组清空：`callbacks.length = 0`。为什么要这么做呢？这么做肯定是有原因的，大家思考如下代码：
+很好理解，首先将变量 `pending` 重置为 `false`，接着开始执行回调，但需要注意的是在执行 `callbacks` 队列中的回调函数时并没有直接遍历 `callbacks` 数组，而是使用 `copies` 常量保存一份 `callbacks` 的复制，然后遍历 `copies` 数组，并且在遍历 `copies` 数组之前将 `callbacks` 数组清空：`callbacks.length = 0`。为什么要这么做呢？这么做肯定是有原因的，我们模拟一下整个异步更新的流程就明白了，如下代码：
 
-```js {3}
+```js {3，5}
 created () {
+  this.name = 'HcySunYang'
   this.$nextTick(() => {
-    this.$nextTick(() => { console.log('hello') })
+    this.name = 'hcy'
+    this.$nextTick(() => { console.log('第二个 $nextTick') })
   })
 }
 ```
 
-在上面的代码中我们在 `$nextTick` 方法的回调再次调用了 `$nextTick`。
+上面代码中我们在外层 `$nextTick` 方法的回调函数中再次调用了 `$nextTick` 方法，理论上外层 `$nextTick` 方法的回调函数不应该与内层 `$nextTick` 方法的回调函数不应该在同一个 `microtask` 任务中被执行，而是两个不同的 `microtask` 任务，虽然在结果上看或许没什么却别，当从设计角度就应该这么做。
 
+我们注意上面代码中我们修改了两次 `name` 属性的值(假设它是响应式数据)，首先我们将 `name` 属性的值修改为字符串 `HcySunYang`，我们前面讲过这会导致依赖于 `name` 属性的渲染函数观察者被添加到 `queue` 队列中，这个过程是通过调用 `src/core/observer/scheduler.js` 文件中的 `queueWatcher` 函数完成的。同时在 `queueWatcher` 函数内会使用 `nextTick` 将 `flushSchedulerQueue` 添加到 `callbacks` 数组中，所以此时 `callbacks` 数组如下：
 
+```js
+callbacks = [
+  flushSchedulerQueue // queue = [renderWatcher]
+]
+```
 
+同时会注册将 `flushCallbacks` 函数注册为 `microtask`，所以此时 `microtask` 队列如下：
 
+```js
+// microtask 队列
+[
+  flushCallbacks
+]
+```
 
+接着调用了第一个 `$nextTick` 方法，`$nextTick` 方法会将其回调数添加到 `callbacks` 数组中，那么此时的 `callbacks` 数组如下：
 
+```js
+callbacks = [
+  flushSchedulerQueue, // queue = [renderWatcher]
+  () => {
+    this.name = 'hcy'
+    this.$nextTick(() => { console.log('第二个 $nextTick') })
+  }
+]
+```
 
+接下来主线程处于空闲状态(调用栈清空)，开始执行 `microtask` 队列中的任务，即执行 `flushCallbacks` 函数，`flushCallbacks` 函数会按照顺序执行 `callbacks` 数组中的函数，首先会执行 `flushSchedulerQueue` 函数，这个函数会遍历 `queue` 中的所有观察者并重新求值，完成重新渲染，在完成渲染之后，本次更新队列已经清空，`queue` 会被重置为空数组，一切状态还原。接着会执行如下函数：
 
+```js
+() => {
+  this.name = 'hcy'
+  this.$nextTick(() => { console.log('第二个 $nextTick') })
+}
+```
 
+这个函数是第一个 `$nextTick` 方法的回调函数，由于在执行该回调函数之前已经完成了重新渲染，所以该回调函数内的代码是能够访问更新后的DOM的，到目前为止一切都很正常，我们继续往下看，在该回调函数内再次修改了 `name` 属性的值为字符串 `hcy`，这会再次触发响应，同样的会调用 `nextTick` 函数将 `flushSchedulerQueue` 添加到 `callbacks` 数组中，但是由于在执行 `flushCallbacks` 函数时优先将 `pending` 的重置为 `false`，所以 `nextTick` 函数会将 `flushCallbacks` 函数注册为一个新的 `microtask`，此时 `microtask` 队列将包含两个 `flushCallbacks` 函数：
+
+```js
+// microtask 队列
+[
+  flushCallbacks, // 第一个 flushCallbacks
+  flushCallbacks  // 第二个 flushCallbacks
+]
+```
+
+怎么样？我们的目的达到了，现在有两个 `microtask` 任务。
+
+而另外除了将变量 `pending` 的值重置为 `false` 之外，我们要知道第一个 `flushCallbacks` 函数遍历的并不是 `callbacks` 本身，而是它的赋值品 `copies` 数组，并且在第一个 `flushCallbacks` 函数的一开头就清空了 `callbacks` 数组本身。所以第二个 `flushCallbacks` 函数的一切流程与第一个 `flushCallbacks` 是完全相同。
 
 ## 深度观测的实现
 
