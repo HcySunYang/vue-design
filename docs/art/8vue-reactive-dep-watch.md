@@ -2031,7 +2031,233 @@ watch: {
 
 ## 深度观测的实现
 
-本节讨论深度观测的实现，实际上
+接下来我们将会讨论深度观测的实现，在这之前我们需要回顾一下数据响应的原理，我们知道响应式数据的关键在于数据的属性是访问器属性，这使得我们能够拦截对该属性的读写操作，从而有机会收集依赖并触发响应。思考如下代码：
+
+```js
+watch: {
+  a () {
+    console.log('a 改变了')
+  }
+}
+```
+
+这段代码使用 `watch` 选项观测了数据对象的 `a` 属性，我们知道 `watch` 方法内部是通过创建 `Watcher` 实例对象来实现观测的，在创建 `Watcher` 实例对象时会读取 `a` 的值从而触发属性 `a` 的 `get` 拦截器函数，最终将依赖收集。但问题是如果属性 `a` 的值是一个对象，如下：
+
+```js {3-5}
+data () {
+  return {
+    a: {
+      b: 1
+    }
+  }
+},
+watch: {
+  a () {
+    console.log('a 改变了')
+  }
+}
+```
+
+如上高亮代码所示，数据对象 `data` 的属性 `a` 是一个对象，当实例化 `Watcher` 对象并观察属性 `a` 时，会读取属性 `a` 的值，这样的确能够触发属性 `a` 的 `get` 拦截器函数，但由于没有读取 `a.b` 属性的值所以对于 `b` 来讲是没有收集到任何观察者的。这就是我们常说的浅观察，直接修改属性 `a` 的值能够触发响应，而修改 `a.b` 的值是触发不了响应的。
+
+深度观测就是用来解决这个问题的，深度观测的原理很简单，既然属性 `a.b` 中没有收集到观察者，那么我们就主动读取一下 `a.b` 的值，这样不就能够触发属性 `a.b` 的 `get` 拦截器函数从而收集到观察者了吗，其实 `Vue` 就是这么做的，只不过你需要将 `deep` 选项参数设置为 `true`，主动告诉 `Watcher` 实例对象你现在需要的是深度观测。我们找到 `Watcher` 类的 `get` 方法，如下：
+
+```js {6, 16-18}
+get () {
+  pushTarget(this)
+  let value
+  const vm = this.vm
+  try {
+    value = this.getter.call(vm, vm)
+  } catch (e) {
+    if (this.user) {
+      handleError(e, vm, `getter for watcher "${this.expression}"`)
+    } else {
+      throw e
+    }
+  } finally {
+    // "touch" every property so they are all tracked as
+    // dependencies for deep watching
+    if (this.deep) {
+      traverse(value)
+    }
+    popTarget()
+    this.cleanupDeps()
+  }
+  return value
+}
+```
+
+如上高亮代码所示，我们知道 `Watcher` 类的 `get` 方法用来求值，在 `get` 方法内部通过调用 `this.getter` 函数对被观察的属性求值，并将求得的值赋值给变量 `value`，同时我们可以看到在 `finally` 语句块内，如果 `this.deep` 属性的值为真说明是深度观测，此时会将被观测属性的值 `value` 作为参数传递给 `traverse` 函数，其中 `traverse` 函数的作用就是递归的读取被观察属性的所有子属性的值，这样被观察属性的所有子属性都将会收集到观察者，从而达到深度观测的目的。
+
+`traverse` 函数来自 `src/core/observer/traverse.js` 文件，如下：
+
+```js
+const seenObjects = new Set()
+
+/**
+ * Recursively traverse an object to evoke all converted
+ * getters, so that every nested property inside the object
+ * is collected as a "deep" dependency.
+ */
+export function traverse (val: any) {
+  _traverse(val, seenObjects)
+  seenObjects.clear()
+}
+```
+
+上面的代码中定义了 `traverse` 函数，这个函数将接收被观察属性的值作为参数，拿到这个参数后在 `traverse` 函数内部会调用 `_traverse` 函数完成递归遍历。其中 `_traverse` 函数就定义在 `traverse` 函数的下方，如下是 `_traverse` 函数的签名：
+
+```js
+function _traverse (val: any, seen: SimpleSet) {
+  // 省略...
+}
+```
+
+`_traverse` 函数接收两个参数，第一个参数是被观察属性的值，第二个参数是一个 `Set` 数据结构的实例，可以看到在 `traverse` 函数中调用 `_traverse` 函数时传递的第二个参数 `seenObjects` 就是一个 `Set` 数据结构的实例，它定义在文件头部：`const seenObjects = new Set()`。
+
+接下来我们看一下 `_traverse` 函数是如何遍历访问数据对象的，如下是 `_traverse` 函数的全部代码：
+
+```js {7-13}
+function _traverse (val: any, seen: SimpleSet) {
+  let i, keys
+  const isA = Array.isArray(val)
+  if ((!isA && !isObject(val)) || Object.isFrozen(val) || val instanceof VNode) {
+    return
+  }
+  if (val.__ob__) {
+    const depId = val.__ob__.dep.id
+    if (seen.has(depId)) {
+      return
+    }
+    seen.add(depId)
+  }
+  if (isA) {
+    i = val.length
+    while (i--) _traverse(val[i], seen)
+  } else {
+    keys = Object.keys(val)
+    i = keys.length
+    while (i--) _traverse(val[keys[i]], seen)
+  }
+}
+```
+
+注意上面代码中高亮的部分，现在我们把高亮的代码删除，那么 `_traverse` 函数将变成如下这个样子：
+
+```js
+function _traverse (val: any, seen: SimpleSet) {
+  let i, keys
+  const isA = Array.isArray(val)
+  if ((!isA && !isObject(val)) || Object.isFrozen(val) || val instanceof VNode) {
+    return
+  }
+  if (isA) {
+    i = val.length
+    while (i--) _traverse(val[i], seen)
+  } else {
+    keys = Object.keys(val)
+    i = keys.length
+    while (i--) _traverse(val[keys[i]], seen)
+  }
+}
+```
+
+之所以要删除这段代码是为了降低复杂度，现在我们就当做删除的那段代码不存在，来看一下 `_traverse` 函数的实现，在 `_traverse` 函数的开头声明了两个变量，分别是 `i` 和 `keys`，这两个变量在后面会使用到，接着检查参数 `val` 是不是数组，并将检查结果存储在常量 `isA` 中。再往下是一段 `if` 语句块：
+
+```js
+if ((!isA && !isObject(val)) || Object.isFrozen(val) || val instanceof VNode) {
+  return
+}
+```
+
+这段代码是对参数 `val` 的检查，后面我们统一称 `val` 为**被观察属性的值**，我们知道既然是深度观测，所以被观察属性的值要么是一个对象要么是一个数组，并且该值不能是冻结的，同时也不应该是 `VNode` 实例(这是Vue单独做的限制)。只有当被观察属性的值满足这些条件时，才会对其进行深度观测，只要有一项不满足 `_traverse` 就会 `return` 结束执行。所以上面这段 `if` 语句可以理解为是在检测被观察属性的值能否进行深度观测，一旦能够深度观测将会继续执行之后的代码，如下：
+
+```js
+if (isA) {
+  i = val.length
+  while (i--) _traverse(val[i], seen)
+} else {
+  keys = Object.keys(val)
+  i = keys.length
+  while (i--) _traverse(val[keys[i]], seen)
+}
+```
+
+这段代码将检测被观察属性的值是数组还是对象，无论是数组还是对象都会通过 `while` 循环对其进行遍历，并递归调用 `_traverse` 函数，这段代码的关键在于递归调用 `_traverse` 函数时所传递的第一个参数：`val[i]` 和 `val[keys[i]]`。这两个参数实际上是在读取子属性的值，这将触发子属性 `get` 拦截器函数，保证子属性能够收集到观察者，仅此而已。
+
+现在 `_traverse` 函数的代码我们就解析完了，但大家有没有想过目前 `_traverse` 函数存在什么问题？别忘了前面我们删除了一段代码，如下：
+
+```js
+if (val.__ob__) {
+  const depId = val.__ob__.dep.id
+  if (seen.has(depId)) {
+    return
+  }
+  seen.add(depId)
+}
+```
+
+这段代码的作用不容忽视，它解决了循环引用导致死循环的问题，为了更好的说明问题我们举个例子，如下：
+
+```js
+const obj1 = {}
+const obj2 = {}
+
+obj1.data = obj2
+obj2.data = obj1
+```
+
+上面代码中我们定义了两个对象，分别是 `obj1` 和 `obj2`，并且 `obj1.data` 属性引用了 `obj2`，而 `obj2.data` 属性引用了 `obj1`，这是一个典型的循环应用，假如我们使用 `obj1` 或 `obj2` 这两个对象中的任意一个对象出现在 `Vue` 的响应式数据中，如果不做防循环引用的处理，将会导致死循环，如下代码：
+
+```js
+function _traverse (val: any, seen: SimpleSet) {
+  let i, keys
+  const isA = Array.isArray(val)
+  if ((!isA && !isObject(val)) || Object.isFrozen(val) || val instanceof VNode) {
+    return
+  }
+  if (isA) {
+    i = val.length
+    while (i--) _traverse(val[i], seen)
+  } else {
+    keys = Object.keys(val)
+    i = keys.length
+    while (i--) _traverse(val[keys[i]], seen)
+  }
+}
+```
+
+如果被观察属性的值 `val` 是一个循环应用的对象，那么上面的代码将导致死循环，为了避免这种情况的发生，我们可以使用一个变量来存储那些已经被遍历过的对象，当再次遍历该对象时程序会发现该对象已经被遍历过了，这时会跳过遍历，从而避免死循环，如下代码所示：
+
+```js {7-13}
+function _traverse (val: any, seen: SimpleSet) {
+  let i, keys
+  const isA = Array.isArray(val)
+  if ((!isA && !isObject(val)) || Object.isFrozen(val) || val instanceof VNode) {
+    return
+  }
+  if (val.__ob__) {
+    const depId = val.__ob__.dep.id
+    if (seen.has(depId)) {
+      return
+    }
+    seen.add(depId)
+  }
+  if (isA) {
+    i = val.length
+    while (i--) _traverse(val[i], seen)
+  } else {
+    keys = Object.keys(val)
+    i = keys.length
+    while (i--) _traverse(val[keys[i]], seen)
+  }
+}
+```
+
+如上高亮的代码所示，这是一个 `if` 语句块，用来判断 `val.__ob__` 是否有值，我们知道如果一个响应式数据是对象或数组，那么它会包含一个叫做 `__ob__` 的属性，这时我们读取 `val.__ob__.dep.id` 作为一个唯一的ID值，并将它放到 `seenObjects` 中：`seen.add(depId)`，这样即使 `val` 是一个拥有循环引用的对象，当下一次遇到该对象时，我们能够发现该对象已经遍历过了：`seen.has(depId)`，这样函数直接 `return` 即可。
+
+以上就是深度观测的实现以及避免循环引用造成的死循环的解决方案。
 
 ## 避免收集无用依赖
 
