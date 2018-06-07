@@ -37,8 +37,13 @@ module.exports = {
             '6vue-init-start',
             '7vue-reactive',
             '8vue-reactive-dep-watch',
+            '9vue-state-init',
             '80vue-compiler-start',
-            '81vue-parse-ast'
+            '81vue-parse-ast',
+            '82vue-parsing',
+            '83vue-codegen',
+            '84vue-vdom',
+            '85vue-vdom-patch'
           ]
         }
       ],
