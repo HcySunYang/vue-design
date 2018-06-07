@@ -1,5 +1,5 @@
 module.exports = {
-  base: '/',
+  base: '/vue-design/',
   title: '走进Vue源码',
   description: '逐行级别的 Vue 源码分析',
   markdown: {
