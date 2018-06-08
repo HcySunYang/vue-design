@@ -27,7 +27,7 @@
     </div>
     <div class="desc-box">
       <div class="desc-name">
-        <img src="/vue-design/logo.png">
+        <img :src="$withBase('/logo.png')">
         <p>团队</p>
       </div>
       <div class="desc-text">
