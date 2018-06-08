@@ -21,6 +21,3 @@
 ## AD
 
 我们是美团外卖商业增值部的前端组寻找合适的小伙伴，点击 [JD](https://m.zhipin.com/weijd/v2/job/3ec48e9afd5dc9281nNy39W-GVY~?aid=4504cda0d2b51aa93nVy3dm5&sid=wxs-152765366890566759&from=timeline&isappinstalled=0)
-
-
-
