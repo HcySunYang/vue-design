@@ -21,6 +21,14 @@ module.exports = {
       {
         text: '扩展阅读',
         link: '/more/'
+      },
+      {
+        text: '捐赠',
+        link: '/about/'
+      },
+      {
+        text: '关于',
+        link: '/about/'
       }
     ],
     sidebar: {
