@@ -8,6 +8,7 @@ module.exports = {
     }
   },
   themeConfig: {
+    repo: 'HcySunYang/vue-design',
     sidebarDepth: 3,
     nav: [
       {
