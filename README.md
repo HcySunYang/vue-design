@@ -44,7 +44,6 @@
 * node & npm & package.json
 * Rollup（这东西要比webpack容易上手的多）
 	* [英文文档](https://rollupjs.org/)
-	* [中文文档](https://rollupjs.org/zh)
 * flow（类型检查）
 	* [flow](https://flow.org/en/)
 
