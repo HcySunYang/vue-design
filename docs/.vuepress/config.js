@@ -1,6 +1,7 @@
 module.exports = {
   base: '/vue-design/',
   title: 'Vue技术内幕',
+  ga: 'UA-120533817-1',
   description: '逐行级别的 Vue 源码分析',
   markdown: {
     toc: {
@@ -38,7 +39,7 @@ module.exports = {
     sidebar: {
       '/art/': [
         {
-          title: '正文',
+          title: '正文(持续更新...)',
           children: [
             '',
             '1start-learn',
