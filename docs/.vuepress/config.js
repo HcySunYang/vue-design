@@ -1,6 +1,6 @@
 module.exports = {
   base: '/vue-design/',
-  title: '走进Vue源码',
+  title: 'Vue技术内幕',
   description: '逐行级别的 Vue 源码分析',
   markdown: {
     toc: {
@@ -21,10 +21,6 @@ module.exports = {
       {
         text: '扩展阅读',
         link: '/more/'
-      },
-      {
-        text: '捐赠',
-        link: '/about/'
       },
       {
         text: '关于',
