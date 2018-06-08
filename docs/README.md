@@ -1,13 +1,13 @@
 ---
 home: true
-actionText: 开始阅读 
+actionText: 开始阅读
 actionLink: /art/
 features:
-- title: 最全覆盖 
-  details: 
+- title: 最全覆盖
+  details:
 - title: 最深剖析
-  details: 
+  details:
 - title: 开源共享
-  details: 
-footer: MIT Licensed | Copyright © 2018-present huochunyang 
+  details:
+footer: Copyright © 2018-present HcySunYang
 ---

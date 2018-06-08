@@ -9,6 +9,9 @@ module.exports = {
   },
   themeConfig: {
     repo: 'HcySunYang/vue-design',
+    docsDir: 'docs',
+    editLinks: true,
+    editLinkText: '错别字纠正',
     sidebarDepth: 3,
     nav: [
       {
@@ -22,6 +25,14 @@ module.exports = {
       {
         text: '扩展阅读',
         link: '/more/'
+      },
+      {
+        text: '人之初',
+        link: '/donate/'
+      },
+      {
+        text: '关于',
+        link: '/about/'
       }
     ],
     sidebar: {
