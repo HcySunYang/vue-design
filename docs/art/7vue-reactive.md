@@ -620,7 +620,7 @@ export function toggleObserving (value: boolean) {
 
 * 第二个条件是 `!isServerRendering()` 必须为真
 
-`isServerRendering()` 函数的返回值是一个布尔值，用来判断是否是服务端渲染。也就是说只有当不是服务端渲染的时候才会观测数据。这里我们留下一个疑问：为什么服务端渲染时不对数据进行观测？对于这个问题后面我们会讲到。
+`isServerRendering()` 函数的返回值是一个布尔值，用来判断是否是服务端渲染。也就是说只有当不是服务端渲染的时候才会观测数据，关于这一点 `Vue` 的服务端渲染文档中有相关介绍，我们不做过多说明。
 
 * 第三个条件是 `(Array.isArray(value) || isPlainObject(value))` 必须为真
 
