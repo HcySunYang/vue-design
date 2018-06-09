@@ -252,7 +252,7 @@ Vue.prototype._g = bindObjectListeners
 Vue.prototype.$nextTick = function (fn: Function) {}
 Vue.prototype._render = function (): VNode {}
 ```
-至此，`instance/index.js` 文件中的代码就运行完毕了（注意：所谓的运行，是指执行 `npm run dev` 命令时构建的运行）。我们大概清楚每个 `*Mixin` 方法的作用其实就是包装 `Vue.prototype`，在其上挂载一些属性和方法，下面我们要做一件很重要的事情，就是将上面的内容集中合并起来，放到一个单独的地方，便于以后查看，我将它们整理到了这里：[附录/Vue 构造函数整理-原型](./附录/Vue构造函数整理-原型.md)，这样当我们在后面详细讲解的时候，提到某个方法你就可以迅速定位它的位置，便于我们思路的清晰。
+至此，`instance/index.js` 文件中的代码就运行完毕了（注意：所谓的运行，是指执行 `npm run dev` 命令时构建的运行）。我们大概清楚每个 `*Mixin` 方法的作用其实就是包装 `Vue.prototype`，在其上挂载一些属性和方法，下面我们要做一件很重要的事情，就是将上面的内容集中合并起来，放到一个单独的地方，便于以后查看，我将它们整理到了这里：[附录/Vue 构造函数整理-原型](../appendix/vue-prototype.md)，这样当我们在后面详细讲解的时候，提到某个方法你就可以迅速定位它的位置，便于我们思路的清晰。
 
 ## Vue 构造函数的静态属性和方法（全局API）
 
