@@ -127,19 +127,21 @@ const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-12-04-111.jpg)
 
-我们在观察一个复杂表达式的时候，主要就是要观察它有几个分组(准确的说应该是有几个捕获的分组)，通过上图我们能够清晰的看到，这个表达式有五个捕获组，第一个捕获组用来匹配属性名，第二个捕获组用来匹配等于号，第三、第四、第五个捕获组都是用来匹配属性值的，这是因为在 `html` 标签中有三种写属性值的方式：
+我们在观察一个复杂表达式的时候，主要就是要观察它有几个分组(准确的说应该是有几个捕获的分组)，通过上图我们能够清晰的看到，这个表达式有五个捕获组，第一个捕获组用来匹配属性名，第二个捕获组用来匹配等于号，第三、第四、第五个捕获组都是用来匹配属性值的，同时 `?` 表明第三、四、五个分组是可选的。 这是因为在 `html` 标签中有4种写属性值的方式：
 
 * 1、使用双引号把值引起来：`class="some-class"`
 * 2、使用单引号把值引起来：`class='some-class'`
 * 3、不使用引号：`class=some-class`
+* 4、单独的属性名：`disabled`
 
-正因如此，需要三个正则分组分别匹配三种情况，我们可以对这个正则做一个测试，如下：
+正因如此，需要三个正则分组配合可选属性分别匹配四种情况，我们可以对这个正则做一个测试，如下：
 
 ```js
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 console.log('class="some-class"'.match(attribute))  // 测试双引号
 console.log("class='some-class'".match(attribute))  // 测试单引号
 console.log('class=some-class'.match(attribute))  // 测试无引号
+console.log('disabled'.match(attribute))  // 测试无属性值
 ```
 
 对于双引号的情况，我们将得到以下结果：
@@ -177,6 +179,15 @@ console.log('class=some-class'.match(attribute))  // 测试无引号
     undefined,
     undefined,
     'some-class'
+]
+// 对于单独的属性名
+[
+    'disabled',
+    'disabled',
+    undefined,
+    undefined,
+    undefined,
+    undefined
 ]
 ```
 
