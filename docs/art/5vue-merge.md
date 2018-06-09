@@ -79,9 +79,9 @@ function mergeField (key) {
 }
 ```
 
-`mergeField` 函数只有两句代码，第一句代码定义了一个常量 `start`，它的值是通过指定的 `key` 访问 `strats` 对象得到的，而当访问的属性不存在时，则使用 `defaultStrat` 作为值。
+`mergeField` 函数只有两句代码，第一句代码定义了一个常量 `strat`，它的值是通过指定的 `key` 访问 `strats` 对象得到的，而当访问的属性不存在时，则使用 `defaultStrat` 作为值。
 
-这里我们就要明确了，`starts` 是什么？想弄明白这个问题，我们需要从整体角度去看一下 `options.js` 文件，首先看文件顶部的一堆 `import` 语句下的第一句代码：
+这里我们就要明确了，`strats` 是什么？想弄明白这个问题，我们需要从整体角度去看一下 `options.js` 文件，首先看文件顶部的一堆 `import` 语句下的第一句代码：
 
 ```js
 /**
