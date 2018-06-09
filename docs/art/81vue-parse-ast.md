@@ -141,7 +141,7 @@ const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s
 console.log('class="some-class"'.match(attribute))  // 测试双引号
 console.log("class='some-class'".match(attribute))  // 测试单引号
 console.log('class=some-class'.match(attribute))  // 测试无引号
-console.log('disabled'.match(attribute))  // 测试无引号
+console.log('disabled'.match(attribute))  // 测试无属性值
 ```
 
 对于双引号的情况，我们将得到以下结果：
