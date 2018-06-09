@@ -121,7 +121,7 @@ if (process.env.NODE_ENV !== 'production' && config.performance && mark)
 * 3、渲染(`render`)，其实就是渲染函数的性能，或者说渲染函数执行且生成虚拟DOM(`vnode`)的性能
 * 4、打补丁(`patch`)，将虚拟DOM渲染为真实DOM的性能
 
-其中第*组件初始化*的性能追踪就是我们在 `_init` 方法中看到的那样去实现的，其实现的方式就是在初始化的代码的开头和结尾分别使用 `mark` 函数打上两个标记，然后通过 `measure` 函数对这两个标记点进行性能计算。`mark` 和 `measure` 这两个函数可以在附录 [core/util 目录下的工具方法全解](../appendix/core-util.md) 中查看其作用和实现方式。
+其中*组件初始化*的性能追踪就是我们在 `_init` 方法中看到的那样去实现的，其实现的方式就是在初始化的代码的开头和结尾分别使用 `mark` 函数打上两个标记，然后通过 `measure` 函数对这两个标记点进行性能计算。`mark` 和 `measure` 这两个函数可以在附录 [core/util 目录下的工具方法全解](../appendix/core-util.md) 中查看其作用和实现方式。
 
 此时大家应该打开 `core/util/perf.js` 文件，然后对照着附录 [core/util 目录下的工具方法全解](../appendix/core-util.md) 搞清楚 `mark` 和 `measure` 这两个方法了，通过 `core/util/perf.js` 文件的代码我们可知，只有在非生产环境，且浏览器必须支持 `window.performance` API的情况下才会导出有用的 `mark` 和 `measure` 函数，也就是说，如果你的浏览器不支持 `window.performance` 那么在 `core/instance/init.js` 文件中导入的 `mark` 和 `measure` 就都是 `undefined`，也就不会执行 `if` 语句里面的内容。
 
