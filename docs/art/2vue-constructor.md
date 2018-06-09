@@ -428,7 +428,7 @@ Vue.options = {
 extend(Vue.options.components, builtInComponents)
 ```
 
-`extend` 来自于 `shared/util.js` 文件，可以在 [附录/shared/util.js 文件工具方法全解](/note/附录/shared-util) 中查看其作用，总之这句话的意思就是将 `builtInComponents` 的属性混合到 `Vue.options.components` 中，其中 `builtInComponents` 来自于 `core/components/index.js` 文件，该文件如下：
+`extend` 来自于 `shared/util.js` 文件，可以在 [附录/shared/util.js 文件工具方法全解](../appendix/shared-util.md) 中查看其作用，总之这句话的意思就是将 `builtInComponents` 的属性混合到 `Vue.options.components` 中，其中 `builtInComponents` 来自于 `core/components/index.js` 文件，该文件如下：
 
 ```js
 import KeepAlive from './keep-alive'
@@ -562,7 +562,7 @@ Vue.filter
 
 这三个静态方法大家都不陌生，分别用来全局注册组件，指令和过滤器。
 
-这样，`initGlobalAPI` 方法的全部功能我们就介绍完毕了，它的作用就像它的名字一样，是在 `Vue` 构造函数上添加全局的API，类似整理 `Vue.prototype` 上的属性和方法一样，我们同样对 `Vue` 静态属性和方法做一个整理，将他放到 [附录/Vue 构造函数整理-全局API](Vue构造函数整理-全局API.md) 中，便于以后查阅。
+这样，`initGlobalAPI` 方法的全部功能我们就介绍完毕了，它的作用就像它的名字一样，是在 `Vue` 构造函数上添加全局的API，类似整理 `Vue.prototype` 上的属性和方法一样，我们同样对 `Vue` 静态属性和方法做一个整理，将他放到 [附录/Vue 构造函数整理-全局API](../appendix/vue-global-api.md) 中，便于以后查阅。
 
 至此，对于 `core/index.js` 文件的作用我们也大概清楚了，在这个文件里，它首先将核心的 `Vue`，也就是在 `core/instance/index.js` 文件中的 `Vue`，也可以说是原型被包装(添加属性和方法)后的 `Vue` 导出，然后使用 `initGlobalAPI` 方法给 `Vue` 添加静态方法和属性，除此之外，在这里文件里，也对原型进行了修改，为其添加了两个属性：`$isServer` 和 `$ssrContext`，最后添加了 `Vue.version` 属性并导出了 `Vue`。
 
@@ -646,7 +646,7 @@ Vue.options = {
 }
 ```
 
-`extend` 方法我们见过，这里就不说明其作用了，可以查看 [附录/shared/util.js 文件工具方法全解](/note/附录/shared-util)，那么经过这两句代码之后的 `Vue.options` 长什么样呢？要想知道这个问题，我们就要知道 `platformDirectives` 和 `platformComponents` 长什么样。
+`extend` 方法我们见过，这里就不说明其作用了，可以查看 [附录/shared/util.js 文件工具方法全解](../appendix/shared-util.md)，那么经过这两句代码之后的 `Vue.options` 长什么样呢？要想知道这个问题，我们就要知道 `platformDirectives` 和 `platformComponents` 长什么样。
 
 根据文件开头的 `import` 语句：
 
