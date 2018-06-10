@@ -2579,3 +2579,214 @@ if (process.env.NODE_ENV !== 'production' &&
 
 ### 计算属性的实现
 
+以上关于计算属性相关初始化工作已经完成了，初始化计算属性的过程中主要创建了计算属性观察者以及将计算属性定义到组件实例对象上，接下来我们将通过一些例子来分析自己属性是如何实现的，假设我们有如下代码：
+
+```js
+data () {
+  return {
+    a: 1
+  }
+},
+computed: {
+  compA () {
+    return this.a + 1
+  }
+}
+```
+
+如上代码中，我们定义了本地数据 `data`，它拥有一个响应式的属性 `a`，我们还定义了计算属性 `compA`，它的值将依据 `a` 的值来计算求得。另外我们假设有如下模板：
+
+```html
+<div>{{compA}}</div>
+```
+
+模板中我们使用到了计算属性，我们知道模板会被编译成渲染函数，渲染函数的执行将触发计算属性 `compA` 的 `get` 拦截器函数，那么 `compA` 的拦截器函数是什么呢？就是我们前面分析的 `sharedPropertyDefinition.get` 函数，我们知道在非服务端渲染的情况下，这个函数为：
+
+```js
+sharedPropertyDefinition.get = function computedGetter () {
+  const watcher = this._computedWatchers && this._computedWatchers[key]
+  if (watcher) {
+    watcher.depend()
+    return watcher.evaluate()
+  }
+}
+```
+
+也就是说当 `compA` 属性被读取时，`computedGetter` 函数将会执行，在 `computedGetter` 函数内部，首先定义了 `watcher` 常量，它的值为计算属性 `compA` 的观察者对象，紧接着如果该观察者对象存在，则会分别执行观察者对象的 `depend` 方法和 `evaluate` 方法。
+
+我们首先找到 `Watcher` 类的 `depend` 方法，如下：
+
+```js
+depend () {
+  if (this.dep && Dep.target) {
+    this.dep.depend()
+  }
+}
+```
+
+`depend` 方法的内容很简单，检查 `this.dep` 和 `Dep.target` 是否全部有值，如果都有值的情况下便会执行 `this.dep.depend` 方法。这里我们首要知道 `this.dep` 属性是什么，实际上计算属性的观察者与其他观察者对象不同，不同之处首先会体现在创建观察者实例对象的时候，如下是 `Watcher` 类的 `constructor` 方法中的一段代码：
+
+```js {9-11}
+constructor (
+  vm: Component,
+  expOrFn: string | Function,
+  cb: Function,
+  options?: ?Object,
+  isRenderWatcher?: boolean
+) {
+  // 省略...
+  if (this.computed) {
+    this.value = undefined
+    this.dep = new Dep()
+  } else {
+    this.value = this.get()
+  }
+}
+```
+
+如上高亮代码所示，当创建计算属性观察者对象时，由于第四个选项参数中 `options.computed` 为真，所以计算属性观察者对象的 `this.computed` 属性的值也会为真，所以对于计算属性的观察者来讲，在创建时会执行 `if` 条件分支内的代码，而对于其他观察者对象则会执行 `else` 分支内的代码。同时我们能够看到在 `else` 分支内直接调用 `this.get()` 方法求值，而 `if` 分支内并没有调用 `this.get()` 方法求值，而是定义了 `this.dep` 属性，它的值是一个新创建的 `Dep` 实例对象。这说明计算属性的观察者是一个惰性求值的观察者。
+
+现在我们再回到 `Watcher` 类的 `depend` 方法中：
+
+```js {3}
+depend () {
+  if (this.dep && Dep.target) {
+    this.dep.depend()
+  }
+}
+```
+
+此时我们已经知道了 `this.dep` 属性是一个 `Dep` 实例对象，所以 `this.dep.depend()` 这句代码的作用就是用来收集依赖。那么它收集到的东西是什么呢？这就要看 `Dep.target` 属性的值是什么了，我们回想一下整个过程：首先渲染函数的执行会读取计算属性 `compA` 的值，从而触发计算属性 `compA` 的 `get` 拦截器函数，最终调用了 `this.dep.depend()` 方法收集依赖。这个过程中的关键一步就是渲染函数的执行，我们知道在渲染函数执行之前 `Dep.target` 的值必然是**渲染函数的观察者对象**。所以计算属性观察者对象的 `this.dep` 属性中所收集的就是渲染函数的观察者对象。
+
+记得此时计算属性观察者对象的 `this.dep` 中所收集的是渲染函数观察者对象，假设我们把渲染函数观察者对象成为 `renderWatcher`，那么：
+
+```js
+this.dep.subs = [renderWatcher]
+```
+
+这样 `computedGetter` 函数中的 `watcher.depend()` 语句我们就讲解完了，但 `computedGetter` 函数还没执行完，接下来要执行的是 `watcher.evaluate()` 语句：
+
+```js {5}
+sharedPropertyDefinition.get = function computedGetter () {
+  const watcher = this._computedWatchers && this._computedWatchers[key]
+  if (watcher) {
+    watcher.depend()
+    return watcher.evaluate()
+  }
+}
+```
+
+我们找到 `Watcher` 类的 `evaluate` 方法看看它做了哪些事情，如下：
+
+```js
+evaluate () {
+  if (this.dirty) {
+    this.value = this.get()
+    this.dirty = false
+  }
+  return this.value
+}
+```
+
+我们知道计算属性的观察者时惰性求值，所以在创建计算属性观察者时除了 `watcher.computed` 属性为 `true` 之外，`watcher.dirty` 属性的值也为 `true`，代表着当前观察者对象没有被求值，而 `evaluate` 方法的作用就是用来手动求值的。可以看到在 `evaluate` 方法内部对 `this.dirty` 属性做了真假判断，如果为真则调用观察者对象的 `this.get` 方法求值，同时将`this.dirty` 属性重置为 `false`。最后将求得的值返回：`return this.value`。
+
+这段代码的关键在于求值的这句代码，如下高亮部分所示：
+
+```js {3}
+evaluate () {
+  if (this.dirty) {
+    this.value = this.get()
+    this.dirty = false
+  }
+  return this.value
+}
+```
+
+我们在计算属性的初始化一节中讲过了，在创建计算属性观察者对象时传递给 `Watcher` 类的第二个参数为 `setter` 常量，它的值就是开发者在定义计算属性时的函数(或 `userDef.get`)，如下高亮代码所示：
+
+```js {5,12}
+function initComputed (vm: Component, computed: Object) {
+  // 省略...
+  for (const key in computed) {
+    const userDef = computed[key]
+    const getter = typeof userDef === 'function' ? userDef : userDef.get
+    // 省略...
+
+    if (!isSSR) {
+      // create internal watcher for the computed property.
+      watchers[key] = new Watcher(
+        vm,
+        getter || noop,
+        noop,
+        computedWatcherOptions
+      )
+    }
+
+    // 省略...
+  }
+}
+```
+
+所以在 `evaluate` 方法中求值的那句代码最终所执行的求值函数就是用户定义的计算属性的 `set` 函数。举个例子，假设我们这样定义计算属性：
+
+```js
+computed: {
+  compA () {
+    return this.a +1
+  }
+}
+```
+
+那么对于计算属性 `compA` 来讲，执行其计算属性观察者对象的 `wather.evaluate` 方法求值时，本质上就是执行如下函数进行求值：
+
+```js
+compA () {
+  return this.a +1
+}
+```
+
+大家想一想这个函数的执行会发生什么事情？我们知道数据对象的 `a` 属性是响应式的，所以如上函数的执行将会触发属性 `a` 的 `get` 拦截器函数。所以这回导致属性 `a` 将会收集到一个依赖，这个依赖实际上就是计算属性的观察者对象。
+
+现在思路大概明朗了，如果计算属性 `compA` 依赖了数据对象的 `a` 属性，那么属性 `a` 将收集计算属性 `compA` 的**计算属性观察者对象**，而**计算属性观察者对象**将收集**渲染函数观察者对象**，整个路线是这样的：
+
+![](http://7xlolm.com1.z0.glb.clouddn.com/2018-06-10-074626.png)
+
+假如此时我们修改响应式属性 `a` 的值，那么将触发属性 `a` 所收集的所有依赖，这其中包括计算属性的观察者。我们知道触发某个响应式属性的依赖实际上就是执行该属性所收集到的所有观察者的 `update` 方法，现在我们就找到 `Watcher` 类的 `update` 方法，如下：
+
+```js {3,18}
+update () {
+  /* istanbul ignore else */
+  if (this.computed) {
+    // A computed property watcher has two modes: lazy and activated.
+    // It initializes as lazy by default, and only becomes activated when
+    // it is depended on by at least one subscriber, which is typically
+    // another computed property or a component's render function.
+    if (this.dep.subs.length === 0) {
+      // In lazy mode, we don't want to perform computations until necessary,
+      // so we simply mark the watcher as dirty. The actual computation is
+      // performed just-in-time in this.evaluate() when the computed property
+      // is accessed.
+      this.dirty = true
+    } else {
+      // In activated mode, we want to proactively perform the computation
+      // but only notify our subscribers when the value has indeed changed.
+      this.getAndInvoke(() => {
+        this.dep.notify()
+      })
+    }
+  } else if (this.sync) {
+    this.run()
+  } else {
+    queueWatcher(this)
+  }
+}
+```
+
+如上高亮代码所示，由于响应式数据收集到了计算属性观察者对象，所以当计算属性观察者对象的 `update` 方法被执行时，如上 `if` 语句块的代码将被执行，因为 `this.computed` 属性为真。接着检查了 `this.dep.subs.length === 0` 的真假，我们知道既然是计算属性的观察者，那么 `this.dep` 中将收集渲染函数作为依赖(或其他观察该计算属性变化的观察者对象作为依赖)，所以当依赖的数量不为 `0` 时，在 `else` 语句块内会调用 `this.dep.notify()` 方法继续触发响应，这回导致 `this.dep.subs` 属性中收集到的所有观察者对象的更新，如果此时 `this.dep.subs` 中包含渲染函数的观察者，那么这就会导致重新渲染，最终完成视图的更新。
+
+以上就是计算属性的实现思路，本质上计算属性观察者对象就是一个桥梁，它搭建在响应式数据与渲染函数观察者中间，另外大家注意上面的代码中并非直接调用 `this.dep.notify()` 方法触发响应，而是将这个方法作为 `this.getAndInvoke` 方法的回调去执行的，为什么这么做呢？那是因为 `this.getAndInvoke` 方法会重新求值并对比新旧值是否相同，如果满足相同条件则不会触发响应，只有当值确实变化时才会触发响应，这就是文档中的描述，现在你明白了吧：
+
+![](http://7xlolm.com1.z0.glb.clouddn.com/2018-06-10-080745.png)
+
+
+
