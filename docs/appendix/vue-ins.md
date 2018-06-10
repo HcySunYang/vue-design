@@ -48,4 +48,7 @@ vm._data
 
 // mountComponent()   src/core/instance/lifecycle.js
 vm.$el
+
+// initComputed()   src/core/instance/state.js
+vm._computedWatchers = Object.create(null)
 ```
