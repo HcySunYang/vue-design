@@ -380,7 +380,7 @@ var vm = new Vue({
 })
 ```
 
-为什么会这么设计呢？因为在使用 `webpack` 配合 `vue-loader` 的环境中， `vue-loader` 会借助 (`vuejs@component-compiler-utils`)[https://github.com/vuejs/component-compiler-utils] 将 `template` 编译为不使用 `with` 语句包裹的遵循严格模式的 JavaScript，并为编译后的 `render` 方法设置 `render._withStripped = true`。在不使用 `with` 语句的 `render` 方法中，模板内的变量都是通过属性访问操作 `vm['a']` 或 `vm.a` 的形式访问的，从前文中我们了解到 `Proxy` 的 `has` 无法拦截属性访问操作，所以这里需要使用 `Proxy` 中可以拦截到属性访问的 `get`，同时也省去了 `has` 中的全局变量检查(全局变量的的访问不会被 `get` 拦截)。
+为什么会这么设计呢？因为在使用 `webpack` 配合 `vue-loader` 的环境中， `vue-loader` 会借助 [`vuejs@component-compiler-utils`](https://github.com/vuejs/component-compiler-utils) 将 `template` 编译为不使用 `with` 语句包裹的遵循严格模式的 JavaScript，并为编译后的 `render` 方法设置 `render._withStripped = true`。在不使用 `with` 语句的 `render` 方法中，模板内的变量都是通过属性访问操作 `vm['a']` 或 `vm.a` 的形式访问的，从前文中我们了解到 `Proxy` 的 `has` 无法拦截属性访问操作，所以这里需要使用 `Proxy` 中可以拦截到属性访问的 `get`，同时也省去了 `has` 中的全局变量检查(全局变量的的访问不会被 `get` 拦截)。
 
 现在，我们基本知道了 `initProxy` 的目的，就是设置渲染函数的作用域代理，其目的是为我们提供更好的提示信息。但是我们忽略了一些细节没有讲清楚，回到下面这段代码：
 
