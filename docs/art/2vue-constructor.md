@@ -4,7 +4,7 @@
 
 ## Vue 构造函数的原型
 
-在 [了解 Vue 这个项目](./了解Vue这个项目.md) 一节中，我们在最后提到这套文章将会以 `npm run dev` 为切入点：
+在 [了解 Vue 这个项目](./1start-learn.md) 一节中，我们在最后提到这套文章将会以 `npm run dev` 为切入点：
 
 ```js
 "dev": "rollup -w -c scripts/config.js --environment TARGET:web-full-dev",
