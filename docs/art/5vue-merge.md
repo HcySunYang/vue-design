@@ -35,7 +35,7 @@ for (key in parent) {
 ```js
 Vue.options = {
   components: {
-      KeepAlive
+      KeepAlive,
       Transition,
       TransitionGroup
   },
@@ -1056,9 +1056,9 @@ components: {
 ```js
 Vue.options = {
 	components: {
-	  KeepAlive
+	  KeepAlive,
 	  Transition,
-    	  TransitionGroup
+	  TransitionGroup
 	},
 	directives: Object.create(null),
 	directives:{
@@ -1074,7 +1074,7 @@ Vue.options = {
 
 ```js
 {
-  KeepAlive
+  KeepAlive,
   Transition,
   TransitionGroup
 }
@@ -1095,7 +1095,7 @@ res = {
   ChildComponent
   // 原型
   __proto__: {
-    KeepAlive
+    KeepAlive,
     Transition,
     TransitionGroup
   }
