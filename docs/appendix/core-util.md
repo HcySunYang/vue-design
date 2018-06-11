@@ -198,7 +198,7 @@ try {
 } catch (e) {
     handleError(e, vm, `${hook} hook`)
 }
-```
+
     * `{any} vm` 这里应该传递 `Vue` 实例
     * `{String} info` `Vue` 特定的错误提示信息
 
