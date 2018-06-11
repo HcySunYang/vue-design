@@ -1056,14 +1056,14 @@ components: {
 ```js
 Vue.options = {
 	components: {
-		KeepAlive
-		Transition,
-    TransitionGroup
+	  KeepAlive
+	  Transition,
+    	  TransitionGroup
 	},
 	directives: Object.create(null),
 	directives:{
-		model,
-    show
+	  model,
+	  show
 	},
 	filters: Object.create(null),
 	_base: Vue
@@ -1483,31 +1483,3 @@ if (child.mixins) {
 上例中我们只涉及到 `created` 生命周期钩子的合并，所以会使用生命周期钩子的合并策略函数进行处理，现在我们已经知道 `mergeOptions` 会把生命周期选项合并为一个数组，所以所有的生命周期钩子都会被执行。那么不仅仅是生命周期钩子，任何写在 `mixins` 中的选项，都会使用 `mergeOptions` 中相应的合并策略进行处理，这就是 `mixins` 的实现方式。
 
 对于 `extends` 选项，与 `mixins` 相同，甚至由于 `extends` 选项只能是一个对象，而不能是数组，反而要比 `mixins` 的实现更为简单，连遍历都不需要。
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
