@@ -731,13 +731,13 @@ extend(Vue.options.components, platformComponents)
 Vue.options = {
 	components: {
 		KeepAlive,
-    		Transition,
-    		TransitionGroup
+		Transition,
+		TransitionGroup
 	},
 	directives: {
-    		model,
-    		show
- 	},
+		model,
+		show
+	},
 	filters: Object.create(null),
 	_base: Vue
 }
