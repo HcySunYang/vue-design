@@ -103,7 +103,7 @@
 
 ```js
 "scripts": {
-	// 构建完整版 cjs 模块的 Vue
+	// 构建完整版 umd 模块的 Vue
     "dev": "rollup -w -c scripts/config.js --environment TARGET:web-full-dev",
     // 构建运行时 cjs 模块的 Vue
     "dev:cjs": "rollup -w -c scripts/config.js --environment TARGET:web-runtime-cjs",
@@ -125,7 +125,7 @@
 
 观察其中 `dev` 系列的命令，其作用如同注释中所写的一样。
 
-另外说明一点：*这套源码分析的文章，大多数时候是基于 dev 脚本的（即：`npm run dev`），也就是完整版的 cjs 模块的 Vue*。原因是方便我们直接引用并使用，且完整版带了 `Compiler` 我们就不用单独去分析了。
+另外说明一点：*这套源码分析的文章，大多数时候是基于 dev 脚本的（即：`npm run dev`），也就是完整版的 umd 模块的 Vue*。原因是方便我们直接引用并使用，且完整版带了 `Compiler` 我们就不用单独去分析了。
 
 
 
