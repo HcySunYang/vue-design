@@ -778,7 +778,7 @@ constructor (
 
 这段模板被编译将生成如下渲染函数：
 
-```js {5}
+```js {6}
 // 编译生成的渲染函数是一个匿名函数
 function anonymous () {
   with (this) {
