@@ -1619,7 +1619,7 @@ callbacks = [
 ]
 ```
 
-接着调用了第一个 `$nextTick` 方法，`$nextTick` 方法会将其回调数添加到 `callbacks` 数组中，那么此时的 `callbacks` 数组如下：
+接着调用了第一个 `$nextTick` 方法，`$nextTick` 方法会将其回调函数添加到 `callbacks` 数组中，那么此时的 `callbacks` 数组如下：
 
 ```js
 callbacks = [
