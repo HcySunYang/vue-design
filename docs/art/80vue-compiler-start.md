@@ -1,5 +1,20 @@
 # Vue 的编译器初探
 
+至此，我们对 `Vue.prototype._init` 方法所做的初始化工作基本全部讲解到了，在讲解渲染函数的观察者时，我们也讲解了渲染函数是如何生成的以及渲染函数的作用。我们打开 `src/platforms/web/entry-runtime-with-compiler.js` 文件，找到 `$mount` 方法，该方法中有这样一段代码：
+
+```js
+const { render, staticRenderFns } = compileToFunctions(template, {
+  shouldDecodeNewlines,
+  shouldDecodeNewlinesForHref,
+  delimiters: options.delimiters,
+  comments: options.comments
+}, this)
+options.render = render
+options.staticRenderFns = staticRenderFns
+```
+
+我们知道渲染函数 `render` 就是通过 `compileToFunctions` 函数生成的，传递给该函数的第一个参数就是模板字符串，`compileToFunctions` 函数会把模板字符串编译为渲染函数，本章的内容将以 `compileToFunctions` 函数为切入点研究编译器。
+
 ## 寻找 compileToFunctions
 
 接下来我们的主要工作，就是搞清楚 `compileToFunctions` 函数，根据 `platforms/web/entry-runtime-with-compiler.js` 文件头部的 `import` 引用关系可知，`compileToFunctions` 函数来自于当前目录下的 `./compiler/index.js` 文件，打开 `./compiler/index.js` 文件，可以发现这样一句代码：
