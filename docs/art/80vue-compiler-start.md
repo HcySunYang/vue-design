@@ -188,7 +188,7 @@ export function createCompileToFunctionFn (compile: Function): Function {
 }
 ```
 
-以上是 `createCompileToFunctionFn` 函数的代码，我们发现这个函数的返回值是一个函数，该函数才是我们真正想要的 `compileToFunctions`，在返回这个函数之前定义了常量 `cache`，所以 `cache` 变量肯定是被 `compileToFunctions` 函数引用的，那么这里可以理解为创建了一个闭包，其实如果大家留意的话，在上面的讲解中我们已经遇到了很多利用闭包引用变量的场景，还是拿上面的代码为例，`createCompileToFunctionFn` 函数接受一个参数 `compile`，而这个参数其实也是被 `compileToFunctions` 闭包引用的。
+以上是 `createCompileToFunctionFn` 函数的代码，我们发现这个函数的返回值是一个函数，该函数才是我们真正想要的 `compileToFunctions`，在返回这个函数之前定义了常量 `cache`，所以 `cache` 常量肯定是被 `compileToFunctions` 函数引用的，那么这里可以理解为创建了一个闭包，其实如果大家留意的话，在上面的讲解中我们已经遇到了很多利用闭包引用变量的场景，还是拿上面的代码为例，`createCompileToFunctionFn` 函数接受一个参数 `compile`，而这个参数其实也是被 `compileToFunctions` 闭包引用的。
 
 至此我们经历了一波三折，终于找到了 `compileToFunctions` 函数，`/entry-runtime-with-compiler.js` 文件中执行的 `compileToFunctions` 函数，其实就是在执行 `src/compiler/to-function.js` 文件中 `createCompileToFunctionFn` 函数返回的 `compileToFunctions` 函数。
 
@@ -430,7 +430,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 ## compile 的作用
 
-回顾一下 `compileToFunctions` 函数中调用 `compile` 的方式：
+回顾一下 `src/compiler/to-function.js` 文件中的 `compileToFunctions` 函数调用 `compile` 函数的方式：
 
 ```js
 const compiled = compile(template, options)
@@ -550,7 +550,7 @@ export default [
 ]
 ```
 
-以上是该文件的全部代码，可以发现 `modules` 实际上就是一个数组，数组有三个元素 `klass`、`style` 以及 `model`，且这三个元素来自于当前目录下的三个同名 `js` 文件。简单查看这三个文件的输出，如下：
+以上是该文件的全部代码，可以发现 `modules` 实际上就是一个数组，数组有三个元素 `klass`、`style` 以及 `model`，并且这三个元素来自于当前目录下的三个相应名称的 `js` 文件。简单查看这三个文件的输出，如下：
 
 ```js
 // klass.js 的输出
@@ -644,7 +644,7 @@ export default function text (el: ASTElement, dir: ASTDirective) {
 
 `baseOptions` 的第四个属性是 `isPreTag`，它是一个函数，可以在附录 [platforms/web/util 目录下的工具方法全解](../appendix/web-util.md) 中查看其实现讲解，其作用是通过给定的标签名字检查标签是否是 `'pre'` 标签。
 
-`baseOptions` 的第五个属性是 `isUnaryTag`，它来自于与 `options.js` 文件同级目录下的 `util.js` 文件，即 `src/platforms/web/compiler/util.js` 文件，再看这个文件，找到 `isUnaryTag` 如下：
+`baseOptions` 的第五个属性是 `isUnaryTag`，它来自于与 `options.js` 文件同级目录下的 `util.js` 文件，即 `src/platforms/web/compiler/util.js` 文件，打开这个文件，找到 `isUnaryTag` 如下：
 
 ```js
 export const isUnaryTag = makeMap(
@@ -745,7 +745,7 @@ if (options.directives) {
 }
 ```
 
-由于 `directives` 是对象而不是数组，所以不能采用与 `modules` 相同的处理方式，对于 `directives` 采用原型链的原理实现对扩展属性与基本属性。首先通过 `Object.create(baseOptions.directives || null)` 创建一个以 `baseOptions.directives` 对象为原型的新对象，然后使用 `extend` 方法将 `options.directives` 的属性混合到新创建出来的对象中，并将该对象作为 `finalOptions.directives` 的值。
+由于 `directives` 是对象而不是数组，所以不能采用与 `modules` 相同的处理方式，对于 `directives` 采用原型链的原理实现扩展属性对基本属性的覆盖。首先通过 `Object.create(baseOptions.directives || null)` 创建一个以 `baseOptions.directives` 对象为原型的新对象，然后使用 `extend` 方法将 `options.directives` 的属性混合到新创建出来的对象中，并将该对象作为 `finalOptions.directives` 的值。
 
 最后对于 `options` 中既不是 `modules` 又不是 `directives` 的其他属性，采用直接复制过去的方式进行处理：
 
@@ -764,7 +764,7 @@ for (const key in options) {
 const compiled = baseCompile(template, finalOptions)
 ```
 
-上面的代码调用了 `baseCompile` 函数，并分别将字符串模板(`template`)，以及最终的编译器选项(`finalOptions`)传递了过去。这说明什么？这说明 `compile` 函数对模板的编译是通过委托给 `baseCompile` 完成的。`baseCompile` 函数是 `createCompilerCreator` 函数的形参，是在 `src/compiler/index.js` 文件中调用 `createCompilerCreator` 创建 `'编译器创建者' 的创建者时` 传递过来的：
+上面的代码调用了 `baseCompile` 函数，并分别将字符串模板(`template`)，以及最终的编译器选项(`finalOptions`)传递了过去。这说明什么？这说明 `compile` 函数对模板的编译是委托 `baseCompile` 完成的。`baseCompile` 函数是 `createCompilerCreator` 函数的形参，是在 `src/compiler/index.js` 文件中调用 `createCompilerCreator` 创建 `'编译器创建者' 的创建者时` 传递过来的：
 
 ```js
 export const createCompiler = createCompilerCreator(function baseCompile (
