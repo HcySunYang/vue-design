@@ -72,7 +72,49 @@ const ast = parse(template.trim(), options)
 
 本节中大量出现 `parse` 以及 `parser` 这两个单词，不要混淆这两个单词，`parse` 是动词，代表“解析”的过程，`parser` 是名词，代表“解析器”。
 
-打开 `src/compiler/parser/html-parser.js` 文件，该文件的开头是一段注释：
+回到 `baseCompile` 函数中的这句代码：
+
+```js
+const ast = parse(template.trim(), options)
+```
+
+由这句代码可知 `parse` 函数就是用来解析模板字符串的，最终生成 `AST`，根据文件头部的引用关系可知 `parse` 函数 `src/compiler/parser/index.js` 文件，打开该文件可以发现其的确导出了一个名字为 `parse` 的函数，如下：
+
+```js
+export function parse (
+  template: string,
+  options: CompilerOptions
+): ASTElement | void {
+  // 省略...
+
+  parseHTML(template, {
+    warn,
+    expectHTML: options.expectHTML,
+    isUnaryTag: options.isUnaryTag,
+    canBeLeftOpenTag: options.canBeLeftOpenTag,
+    shouldDecodeNewlines: options.shouldDecodeNewlines,
+    shouldDecodeNewlinesForHref: options.shouldDecodeNewlinesForHref,
+    shouldKeepComment: options.comments,
+    start (tag, attrs, unary) {
+      // 省略...
+    },
+    end () {
+      // 省略...
+    },
+    chars (text: string) {
+      // 省略...
+    },
+    comment (text: string) {
+      // 省略...
+    }
+  })
+  return root
+}
+```
+
+同时我们注意到在 `parse` 函数内部主要通过调用 `parseHTML` 函数对模板字符串进行解析，实际上 `parseHTML` 函数的作用就是用来做词法分析的，而 `parse` 函数的作用则是在词法分析的基础上做句法分析从而生成一颗 `AST`。本节我们主要分析一下 `Vue` 是如何对模板字符串进行词法分析的，也就是 `parseHTML` 函数的实现。
+
+根据文件头部的引用关系可知 `parseHTML` 函数来自 `src/compiler/parser/html-parser.js` 文件，实际上整个 `html-parser.js` 文件所做的事情都是在做词法分析，接下来我们就研究一下它是如何实现的。打开该文件，其开头是一段注释：
 
 ```js
 /**
@@ -87,7 +129,7 @@ const ast = parse(template.trim(), options)
  */
 ```
 
-通过这段注释我们可以了解到，`Vue` 的 `html parser` 的灵感来自于 [John Resig 所写的一个开源项目：http://erik.eae.net/simplehtmlparser/simplehtmlparser.js](http://erik.eae.net/simplehtmlparser/simplehtmlparser.js)，实际上，我们上一小节所讲的小例子就是在这个项目的基础上所做的修改。`Vue` 在此基础上做了很多完善的工作，下面我们就探究一下 `Vue` 中的 `html parser` 都做了哪些事情。
+通过这段注释我们可以了解到，`Vue` 的 `html parser` 是 `fork` 自 [John Resig 所写的一个开源项目：http://erik.eae.net/simplehtmlparser/simplehtmlparser.js](http://erik.eae.net/simplehtmlparser/simplehtmlparser.js)，`Vue` 在此基础上做了很多完善的工作，下面我们就探究一下 `Vue` 中的 `html parser` 都做了哪些事情。
 
 ## 正则分析
 
@@ -116,7 +158,7 @@ const conditionalComment = /^<!\[/
 
 ### attribute
 
-这与之前我们讲解的小例子中所定义的正则的作用基本是一致的，只不过 `Vue` 所定义的正则更加严谨和完善，我们一起看一下这些正则的作用。首先是 `attribute` 常量：
+首先是 `attribute` 正则常量：
 
 ```js
 // Regular Expressions for parsing tags and attributes
@@ -127,14 +169,14 @@ const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-12-04-111.jpg)
 
-我们在观察一个复杂表达式的时候，主要就是要观察它有几个分组(准确的说应该是有几个捕获的分组)，通过上图我们能够清晰的看到，这个表达式有五个捕获组，第一个捕获组用来匹配属性名，第二个捕获组用来匹配等于号，第三、第四、第五个捕获组都是用来匹配属性值的，同时 `?` 表明第三、四、五个分组是可选的。 这是因为在 `html` 标签中有4种写属性值的方式：
+我们在观察一个复杂的正则表达式时，主要就是要观察它有几个分组(准确的说应该是有几个捕获的分组)，通过上图我们能够清晰的看到，这个表达式有五个捕获组，第一个捕获组用来匹配属性名，第二个捕获组用来匹配等于号，第三、第四、第五个捕获组都是用来匹配属性值的，同时 `?` 表明第三、四、五个分组是可选的。 这是因为在 `html` 标签中有4种写属性值的方式：
 
 * 1、使用双引号把值引起来：`class="some-class"`
 * 2、使用单引号把值引起来：`class='some-class'`
 * 3、不使用引号：`class=some-class`
 * 4、单独的属性名：`disabled`
 
-正因如此，需要三个正则分组配合可选属性分别匹配四种情况，我们可以对这个正则做一个测试，如下：
+正因如此，需要三个正则分组并配合可选属性来分别匹配四种情况，我们可以对这个正则做一个测试，如下：
 
 ```js
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
@@ -159,7 +201,7 @@ console.log('disabled'.match(attribute))  // 测试无属性值
 
 数组共有从 `0` 到 `5` 六个元素，第 `0` 个元素是被整个正则所匹配的结果，从第 `1` 至第 `5` 个元素分别对应五个捕获组的匹配结果，我们可以看到，第 `1` 个元素对应第一个捕获组，匹配到了属性名(`class`)；第 `2` 个元素对应第二个捕获组，匹配到了等号(`=`)；第 `3` 个元素对应第三个捕获组，匹配到了带双引号的属性值；而第 `4` 和第 `5` 个元素分别对应第四和第五个捕获组，由于没有匹配到所以都是 `undefined`。
 
-所以通过以上结果我们很容易想到当属性值被单引号起来和不使用引号的情况，所得到的匹配结果是什么，变化主要就在匹配结果数组的第 `3`、`4`、`5` 个元素，匹配到哪种情况，那么对应的位置就是属性值，其他位置则是 `undefined`，如下：
+所以通过以上结果我们很容易想到当属性值被单引号起来和不使用引号的情况下所得到的匹配结果是什么，变化主要就在匹配结果数组的第 `3`、`4`、`5` 个元素，匹配到哪种情况，那么对应的位置就是属性值，其他位置则是 `undefined`，如下：
 
 ```js
 // 对于单引号的情况
@@ -225,7 +267,7 @@ const ncname = '[a-zA-Z_][\\w\\-\\.]*'
 
 我们可以在 `Vue` 的源码中看到其给出了一个连接：[https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName](https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName)，其实 `qname` 就是：`<前缀:标签名称>`，也就是合法的XML标签。
 
-了解了这些，我们再来看 `ncname` 的正则表达式，它定了 `ncname` 的合法组成，这个正则所匹配的内容很简单：*字母、数字或下划线开头，后面可以跟任意数量的字符、中横线和 `.`*。
+了解了这些，我们再来看 `ncname` 的正则表达式，它定义了 `ncname` 的合法组成，这个正则所匹配的内容很简单：*字母、数字或下划线开头，后面可以跟任意数量的字符、中横线和 `.`*。
 
 ### qnameCapture
 
@@ -235,7 +277,7 @@ const ncname = '[a-zA-Z_][\\w\\-\\.]*'
 const qnameCapture = `((?:${ncname}\\:)?${ncname})`
 ```
 
-我们知道 `qname` 实际上就是合法的标签名称，它是有可选项的 `前缀`、`冒号` 以及 `名称` 组成，观察 `qnameCapture` 可知它有一个捕获分组，捕获的内容就是整个 `qname` 名称，即整个标签的名称。
+我们知道 `qname` 实际上就是合法的标签名称，它是由可选项的 `前缀`、`冒号` 以及 `名称` 组成，观察 `qnameCapture` 可知它有一个捕获分组，捕获的内容就是整个 `qname` 名称，即整个标签的名称。
 
 ### startTagOpen
 
@@ -713,7 +755,7 @@ const conditionalEnd = html.indexOf(']>')
 
 如果没有找到，说明这不是一个条件注释节点，什么都不做。否则会作为条件注释节点对待，不过与注释节点不同，注释节点拥有 `parser` 选项 `options.comment`，在调用 `advance` 函数之前，会先将注释节点的内容传递给 `options.comment` 函数。而对于条件注释节点则没有相应的 `parser` 钩子，也就是说 `Vue` 模板永远都不会保留条件注释节点的内容，所以直接调用 `advance` 函数以及执行 `continue` 语句结束此次循环。
 
-其中传递给 `advance` 函数的参数是 `conditionalEnd` 常量，它保存着条件注释结束部分在字符串中的位置，道理与 `parse` 注释节点时相同。
+其中传递给 `advance` 函数的参数是 `conditionalEnd + 2`，它保存着条件注释结束部分在字符串中的位置，道理与 `parse` 注释节点时相同。
 
 ### parse Doctype节点
 
@@ -811,7 +853,7 @@ if (start) {
 
 * 1、`tagName`：它的值为 `start[1]` 即标签的名称。
 * 2、`attrs`：它的初始值是一个空数组，我们知道，开始标签是可能拥有属性的，而这个数组就是用来存储将来被匹配到的属性。
-* 3、`start`：它的值被设置为 `index`，也就是当前字符流读入位置在整个 `html` 字符串中的位置。
+* 3、`start`：它的值被设置为 `index`，也就是当前字符流读入位置在整个 `html` 字符串中的相对位置。
 
 接着开始标签的开始部分就匹配完成了，所以要调用 `advance` 函数，参数为 `start[0].length`，即匹配到的字符串的长度。
 
@@ -835,7 +877,7 @@ if (start) {
 !(end = html.match(startTagClose)) && (attr = html.match(attribute))
 ```
 
-循环的条件有两个，第一个条件是：**没有匹配到开始标签的结束部分**，这个条件的实现方式是使用 `html` 字符串的 `match` 方法去匹配 `startTagClose` 正则，并将结果保存到 `end` 变量中。第二个条件是：**匹配到了属性**，实现方式是使用  `html` 字符串的 `match` 方法去匹配 `attribute`正则。简单一句话总结这个条件的成立要素：**没有匹配到开始标签的结束部分，并且匹配到了开始标签中的属性**。这个时候循环体将被执行。
+循环的条件有两个，第一个条件是：**没有匹配到开始标签的结束部分**，这个条件的实现方式是使用 `html` 字符串的 `match` 方法去匹配 `startTagClose` 正则，并将结果保存到 `end` 变量中。第二个条件是：**匹配到了属性**，实现方式是使用  `html` 字符串的 `match` 方法去匹配 `attribute`正则。简单一句话总结这个条件的成立要素：**没有匹配到开始标签的结束部分，并且匹配到了开始标签中的属性**，这个时候循环体将被执行，直到遇到开始标签的结束部分为止。
 
 在循环体内，由于此时匹配到了开始标签的属性，所以 `attr` 变量将保存着匹配结果，匹配的结果与 `attribute` 正则及其捕获组有关，详细内容我们在前面分析正则的时候讲到过，比如有如下 `html` 字符串：
 
@@ -1037,7 +1079,7 @@ const l = match.attrs.length
 const attrs = new Array(l)
 ```
 
-其中常量 `unary` 是一个布尔值，当它为真时代表着标签是一元标签，否则是二元标签。对于一元标签判断的方法是首先调用 `isUnaryTag` 函数，并将标签名(`tagName`)作为参数传递，其中 `isUnaryTag` 函数前面提到过它是 `parser` 选项，实际上它是编译器选项透传过来的，我们在 [7Vue的编译器初探](./80vue-compiler-start.md) 一节中对 `isUnaryTag` 函数有过讲解，简单的说 `isUnaryTag` 函数能够判断标准 `HTML` 中规定的那些一元标签，但是仅仅使用这一个判断条件是不够的，因为在 `Vue` 中我们免不了会写组件，而组件又是以自定义标签的形式存在的，比如：
+其中常量 `unary` 是一个布尔值，当它为真时代表着标签是一元标签，否则是二元标签。对于一元标签判断的方法是首先调用 `isUnaryTag` 函数，并将标签名(`tagName`)作为参数传递，其中 `isUnaryTag` 函数前面提到过它是 `parser` 选项，实际上它是编译器选项透传过来的，我们在 [Vue的编译器初探](./80vue-compiler-start.md) 一节中对 `isUnaryTag` 函数有过讲解，简单的说 `isUnaryTag` 函数能够判断标准 `HTML` 中规定的那些一元标签，但是仅仅使用这一个判断条件是不够的，因为在 `Vue` 中我们免不了会写组件，而组件又是以自定义标签的形式存在的，比如：
 
 ```js
 <my-component />
