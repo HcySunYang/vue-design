@@ -1504,7 +1504,7 @@ if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
 }
 ```
 
-相信大家应该了解过 `Web Workers`，实际上 `Web Workers` 的内部实现就是用到了 `MessageChannel`，一个 `MessageChannel` 实例对象拥有两个属性 `port1` 和 `prot2`，我们只需要让其中一个 `prot` 监听 `onmessage` 事件，然后使用另外一个 `prot` 的 `postMessage` 向前一个 `prot` 发送消息即可，这样前一个 `prot` 的 `onmessage` 回调就会被注册为 `(macro)task`，由于它也不需要做任何检测工作，所以性能也要优于 `setTimeout`。总之 `macroTimerFunc` 函数的作用就是将 `flushCallbacks` 注册为 `(macro)task`。
+相信大家应该了解过 `Web Workers`，实际上 `Web Workers` 的内部实现就是用到了 `MessageChannel`，一个 `MessageChannel` 实例对象拥有两个属性 `port1` 和 `port2`，我们只需要让其中一个 `port` 监听 `onmessage` 事件，然后使用另外一个 `port` 的 `postMessage` 向前一个 `port` 发送消息即可，这样前一个 `port` 的 `onmessage` 回调就会被注册为 `(macro)task`，由于它也不需要做任何检测工作，所以性能也要优于 `setTimeout`。总之 `macroTimerFunc` 函数的作用就是将 `flushCallbacks` 注册为 `(macro)task`。
 
 现在是时候仔细看一下 `nextTick` 函数都做了什么事情了，不过为了更融入理解 `nextTick` 函数的代码，我们需要从 `$nextTick` 方法入手，如下：
 
