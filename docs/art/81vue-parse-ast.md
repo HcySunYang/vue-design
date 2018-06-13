@@ -1511,8 +1511,238 @@ if (tagName) {
 
 ## textEnd 大于等于 0 的情况
 
+以上是 `textEnd` 等于 `0` 的情况，此时代表字符 `<` 为字符串的第一个字符，所以会优先作为 **注释标签**、**条件注释**、**开始标识** 以及 **结束标签** 处理，但以即使字符串的第一个字符是 `<` 以不能保证成功匹配以上四种情况，比如字符串 `'< 2'`，这个字符串虽然以 `<` 开头，但他什么标签都不是，这是将会进入另外一个 `if` 语句块的判断，即如下代码：
+
+```js
+let text, rest, next
+if (textEnd >= 0) {
+  rest = html.slice(textEnd)
+  while (
+    !endTag.test(rest) &&
+    !startTagOpen.test(rest) &&
+    !comment.test(rest) &&
+    !conditionalComment.test(rest)
+  ) {
+    // < in plain text, be forgiving and treat it as text
+    next = rest.indexOf('<', 1)
+    if (next < 0) break
+    textEnd += next
+    rest = html.slice(textEnd)
+  }
+  text = html.substring(0, textEnd)
+  advance(textEnd)
+}
+```
+
+这段代码用来处理那些第一个字符是 `<` 但没有成功匹配标签，或第一个字符不是 `<` 的字符串。为了更好理解我们可以举个例子，假设 `html` 字符串如下：
+
+```js
+html = '0<1<1'
+```
+
+如果字符串长成这个样子，那么 `textEnd` 的值应该为 `1`，我们查看 `if` 条件语句内的第一句代码：
+
+```js
+rest = html.slice(textEnd)
+```
+
+这句代码使用 `textEnd` 截取了字符串 `html` 并将截取后的值赋值给 `rest` 变量，所以此时 `rest` 变量的值应该为 `<1<2`，接着开启一个 `while` 循环，如下：
+
+```js {2-5}
+while (
+  !endTag.test(rest) &&
+  !startTagOpen.test(rest) &&
+  !comment.test(rest) &&
+  !conditionalComment.test(rest)
+) {
+  // < in plain text, be forgiving and treat it as text
+  next = rest.indexOf('<', 1)
+  if (next < 0) break
+  textEnd += next
+  rest = html.slice(textEnd)
+}
+```
+
+这个 `while` 循环共有四个条件，这四个条件的作用是什么呢？我们知道截取后的字符串是 `<1<2`，依然是一个以符号 `<` 开头的字符串，所以这个字符串很有可能匹配成标签，而 `while` 循环的条件保证了只有截取后的字符串不能匹配标签的情况下才会执行，这说明符号 `<` 存在于普通文本中。我们看循环内第一句执行的代码，如下：
+
+```js
+next = rest.indexOf('<', 1)
+```
+
+我们知道此时 `rest` 的值为 `<1<2`，所以上面代码的作用是寻找下一个符号 `<` 的位置，并将位置索引存储在 `next` 变量中。由于字符串 `rest` 的值为 `<1<2`，所以 `next` 值将会为 `3`，它指向字符串 `rest` 第二个 `<` 符号的位置。接着将会执行如下代码：
+
+```js
+if (next < 0) break
+textEnd += next
+rest = html.slice(textEnd)
+```
+
+由于 `next` 值为 `3` 不小于 `0`，所以代码会继续执行，可以看到这句代码：`textEnd += next`，更新了 `textEnd` 的值，更新后的 `textEnd` 的值将是第二个 `<` 符号的索引，之后又使用新的 `textEnd` 对原始字符串 `html` 进行截取，并将新截取的字符串赋值给 `rest` 变量，如此往复直到遇到一个能够成功匹配标签的 `<` 符号为止，或者当再也遇到不下一个 `<` 符号时，`while` 循环会 `break`，此时循环也会终止。
+
+当循环终止后，代码会继续执行，来到最后两句：
+
+```js
+text = html.substring(0, textEnd)
+advance(textEnd)
+```
+
+如果字符串 `html` 为 `0<1<2`，我们知道此时 `textEnd` 保存着字符串中第二个 `<` 符号的位置索引，所以当循环终止时变量 `text` 的值将是 `0<1`，接着调用 `advance` 函数。
+
+另外我们可以发现如下高亮部分代码：
+
+```js {9-11}
+if (textEnd >= 0) {
+  // 省略...
+}
+
+if (textEnd < 0) {
+  // 省略...
+}
+
+if (options.chars && text) {
+  options.chars(text)
+}
+```
+
+根据上例，此时 `text` 的值为字符串 `0<1`，所以这部分字符串将被作为普通字符串处理，如果 `options.chars` 存在，则会调用该钩子函数并将字符串传递过去。
+
+大家也许注意到了，原始的 `html` 被分拆为两部分，其中一部分为 `0<1`，这部分被作为普通文本对待，那么剩余的字符串 `<2` 呢？这部分字符串将会在下一次整体的 `while` 循环处理，此时由于 `html` 字符串的值将被更新为 `<2`，第一个字符为 `<`，所以该字符的索引为 `0`，这时既会匹配 `textEnd` 等于 `0` 的情况，也会匹配 `textEnd` 大于等于 `0` 的情况，但是由于字符串 `<2` 既不能匹配标签，也不会被 `textEnd` 大于等于 `0` 的 `if` 语句块处理，所以代码最终会来到这里：
+
+```js
+if (html === last) {
+  options.chars && options.chars(html)
+  if (process.env.NODE_ENV !== 'production' && !stack.length && options.warn) {
+    options.warn(`Mal-formatted tag at end of template: "${html}"`)
+  }
+  break
+}
+```
+
+这是整体的 `while` 循环的最后一段代码，由于字符串 `html` (它的值为 `<2`)没有被处理，所以当程序运行到如上这段代码时，条件 `html === last` 将会成立，所以如上这段 `if` 语句块的代码将被执行，可以看到在 `if` 语句块内，执行调用了 `options.chars` 并将整个 `html` 字符串作为普通字符串处理，换句话说最终字符串 `<2` 也会作为普通字符串处理。
+
+另外大家可能注意到了如下这段代码：
+
+```js
+if (process.env.NODE_ENV !== 'production' && !stack.length && options.warn) {
+  options.warn(`Mal-formatted tag at end of template: "${html}"`)
+}
+```
+
+这段代码的作用是什么呢？我们想象一下什么情况下会使这段 `if` 语句的条件成立，关键在于第二个条件：`!stack.length`，`stack` 栈为空代表着标签被处理完毕了，但此时仍然有剩余的字符串未处理，距离例子假设 `html` 字符串为：`<div></div><a`，在解析这个字符串时首先会成功解析 `div` 的开始标签，此时 `stack` 栈中将存有 `div` 的开始标签，接着会成功解析 `div` 的结束标签，此时 `stack` 栈会被清空，接着会解析剩余的字符串 `<a`，此时由于 `stack` 栈被清空了，所以将满足上面 `if` 语句的判断条件。这时会打印警告信息，提示你 `html` 字符串的结尾不符合标签格式，很显然字符串 `<div></div><a` 是不合法的。
+
 ## textEnd 小于 0 的情况
 
+对于 `textEnd` 小于 `0` 的情况，处理方式很简单：
 
+```js
+if (textEnd < 0) {
+  text = html
+  html = ''
+}
+```
 
+就将整个 `html` 字符串作为文本处理就好了，
 
+## 对纯文本元素的处理
+
+我们再来看一下整体的 `while` 循环，如下：
+
+```js {3-7}
+while (html) {
+  last = html
+  if (!lastTag || !isPlainTextElement(lastTag)) {
+    // 省略...
+  } else {
+    // 省略...
+  }
+
+  // 省略...
+}
+```
+
+在这个 `while` 循环内有一个 `if...else` 语句块，代码被该 `if...else` 语句块分为两部分处理，前面我们所讲的都是 `if` 语句块内的代码，我们知道 `else` 语句块的代码只有当 `lastTag` 存在并且 `lastTag` 为纯文本标签是才会被执行，所以可想而知 `else` 语句块的代码就是用来处理纯文本标签内的内容的，什么是纯文本标签呢？根据 `isPlainTextElement` 函数可知纯文本标签包括 `script` 标签、`style` 标签以及 `textarea` 标签。
+
+下面我们就看一下它是如何处理纯文本标签的内容的，首先我们要明确的一点是 `else` 分支的代码处理的是纯文本标签的**内容**，并不是纯文本标签。假设我们的 `html` 字符串如下：
+
+```js
+html = '<textarea>aaaabbbb</textarea>'
+```
+
+该字符串是一个 `textarea` 标签并包含了一些文本，在解析这段字符串的时候首先会遇到开始标签 `<textarea>`，该标签会被正常处理，并且我们知道此时 `lastTag` 变量的值将被设置为 `textarea`，之后 `html` 字符串将变为 `aaaabbbb</textarea>`，接着以新的 `html` 字符串重新执行 `while` 循环，此时当遇到如下 `if` 语句块时：
+
+```js
+if (!lastTag || !isPlainTextElement(lastTag)) {
+  // 省略...
+} else {
+  // 省略...
+}
+```
+
+由于 `lastTag` 的值为 `textarea`，并且 `textarea` 标签为纯文本标签，所以会执行 `else` 分支的代码。在 `else` 语句块内首先定义了一个变量和两个常量，如下：
+
+```js
+let endTagLength = 0
+const stackedTag = lastTag.toLowerCase()
+const reStackedTag = reCache[stackedTag] || (reCache[stackedTag] = new RegExp('([\\s\\S]*?)(</' + stackedTag + '[^>]*>)', 'i'))
+```
+
+变量 `endTagLength` 的初始值为 `0`，后面我们会看到 `endTagLength` 变量用来保存纯文本标签闭合标签的字符长度。`stackedTag` 常量的值为纯文本标签的小写版，`reStackedTag` 常量稍微复杂一些，它的值是一个正则表达式实例，并且使用 `reCache[stackedTag]` 做了缓存，我们看下一啊 `reStackedTag` 正则的作用是什么，如下：
+
+```js
+new RegExp('([\\s\\S]*?)(</' + stackedTag + '[^>]*>)', 'i'))
+```
+
+该正则表达式中使用到了 `stackedTag` 常量，我们假设纯文本标签是 `textarea`，那么 `stackedTag` 常量的值也应该是 `textarea`，所以此时正则表达式应该为：
+
+```js
+new RegExp('([\\s\\S]*?)(</textarea[^>]*>)', 'i'))
+```
+
+该正则表达式由两个分组组成，我们先看第一个分组，`\s` 用来匹配空白符，而 `\S` 则用来匹配非空白符，由于二者同时存在于中括号(`[]`)中，所以它匹配的是二者的并集，也就是字符全集，大家注意中括号后面的 `*?`，其代表懒惰模式，也就是说只要第二个分组的内容匹配成功就立刻停止匹配。可以发现第一个分组的内容用来匹配纯文本标签的内容。第二个分组很简单它用来匹配纯文本标签的结束标签。总的来说正则 `reStackedTag` 的作用是用来匹配纯文本标签的内容以及结束标签的。
+
+接着代码来到这里：
+
+```js
+const rest = html.replace(reStackedTag, function (all, text, endTag) {
+  endTagLength = endTag.length
+  if (shouldIgnoreFirstNewline(stackedTag, text)) {
+    text = text.slice(1)
+  }
+  if (options.chars) {
+    options.chars(text)
+  }
+  return ''
+})
+```
+
+这段代码使用正则 `reStackedTag` 匹配字符串 `html` 并将其替换为空字符串，我们可以注意到 `replace` 函数的回调函数返回值为空字符串。还是拿前面的例子，此时 `html` 的值为字符串 `aaaabbbb</textarea>`，可以看到该字符串将被 `reStackedTag` 正则完全匹配，并将其替换为空字符串，所以最终 `rest` 常量的值就为空字符串。但是假如 `html` 字符串为 `aaaabbbb</textarea>ddd`，我们发现在 `</textarea>` 标签的后面还有三个字符 `ddd`，如果这个字符串使用 `reStackedTag` 进行匹配替换，可知常量 `rest` 的值将是字符串 `ddd`，总之常量 `rest` 将保存剩余的字符。
+
+接下来我们看一下 `replace` 函数的回调函数内的代码，回调函数接收三个参数，其中参数 `all` 保存着整个匹配的字符串，即：`aaaabbbb</textarea>`。参数 `text` 为第一个捕获组的值，也就是纯文本标签的内容，即：`aaaabbbb`。参数 `endTag` 保存着结束标签，即：`</textarea>`。在回调函数内部，首先使用结束标签的字符长度更新了 `endTagLength` 的值，然后执行了一个 `if` 语句块，如下：
+
+```js
+if (shouldIgnoreFirstNewline(stackedTag, text)) {
+  text = text.slice(1)
+}
+```
+
+我们前面遇到过类似的 `if` 语句块，其作用是忽略 `<pre>` 标签和 `<textarea>` 标签的内容中的第一个换行符。在这段 `if` 语句块的下面是如下代码：
+
+```js
+if (options.chars) {
+  options.chars(text)
+}
+```
+
+这段代码的作用很明显，将纯文本标签的内容全部作为纯文本对待。
+
+回过头来继续看 `else` 分支的代码，如下是 `else` 语句块最后的几句代码：
+
+```js
+index += html.length - rest.length
+html = rest
+parseEndTag(stackedTag, index - endTagLength, index)
+```
+
+上面的代码中，首先跟新 `index` 的值，用 `html` 原始字符串的值减去 `rest` 字符串的长度，我们知道 `rest` 常量保存着剩余的字符串，所以二者的差就是被替换掉的那部分字符串的字符数。接着将 `rest` 常量的值赋值给 `html`，所以如果有剩余的字符串的话，它们将在下一次 `while` 循环被处理，最后调用 `parseEndTag` 函数解析纯文本标签的结束标签，这样就大功告成了。
+
+可以发现对于纯文本标签的处理宗旨就是将其内容作为纯文本对待。
