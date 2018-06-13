@@ -944,9 +944,9 @@ const data = {
   a: {
     // 属性 b 通过 setter/getter 通过闭包引用着 dep 和 childOb
     b: 1
-    __ob__: {a, dep, vmCount}
+    __ob__: {value: data.a.b.__ob__, dep, vmCount}
   }
-  __ob__: {data, dep, vmCount}
+  __ob__: {value: data.a.__ob__, dep, vmCount}
 }
 ```
 
