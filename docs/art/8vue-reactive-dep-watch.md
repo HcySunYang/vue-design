@@ -1699,7 +1699,7 @@ export function nextTick (cb?: Function, ctx?: Object) {
 
 ## $watch和watch选项的实现
 
-前面我们已经讲了足够多关于 `Watcher` 类的内容，接下来是时候看一下 `$watch` 方法已经 `watch` 选项的实现了。实际上无论是 `$watch` 方法还是 `watch` 选项，他们的实现都是基于 `Watcher` 的封装。首先我们来看一下 `$watch` 方法，它定义在 `src/core/instance/state.js` 文件的 `stateMixin` 函数中，如下：
+前面我们已经讲了足够多关于 `Watcher` 类的内容，接下来是时候看一下 `$watch` 方法以及 `watch` 选项的实现了。实际上无论是 `$watch` 方法还是 `watch` 选项，他们的实现都是基于 `Watcher` 的封装。首先我们来看一下 `$watch` 方法，它定义在 `src/core/instance/state.js` 文件的 `stateMixin` 函数中，如下：
 
 ```js
 Vue.prototype.$watch = function (
