@@ -633,7 +633,7 @@ extend(Vue.options.directives, platformDirectives)
 extend(Vue.options.components, platformComponents)
 ```
 
-安装特定平台运行时的指令和组件，大家还记 `Vue.options` 长什么样吗？在执行这两句代码之前，它长成这样：
+安装特定平台运行时的指令和组件，大家还记得 `Vue.options` 长什么样吗？在执行这两句代码之前，它长成这样：
 
 ```js
 Vue.options = {
