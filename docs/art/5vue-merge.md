@@ -268,7 +268,7 @@ if (childVal && typeof childVal !== 'function') {
 return mergeDataOrFn(parentVal, childVal)
 ```
 
-首先判断是否传递了子组件的 `data` 选项(即：`childVal`)，并且检测 `childVla` 的类型是不是 `function`，如果 `childVla` 的类型不是 `function` 则会给你一个警告，也就是说 `childVla` 应该是一个函数，如果不是函数会提示你 `data` 的类型必须是一个函数，这就是我们知道的：*子组件中的 `data` 必须是一个返回对象的函数*。如果不是函数，除了给你一段警告之外，会直接返回 `parentVal`。
+首先判断是否传递了子组件的 `data` 选项(即：`childVal`)，并且检测 `childVal` 的类型是不是 `function`，如果 `childVal` 的类型不是 `function` 则会给你一个警告，也就是说 `childVal` 应该是一个函数，如果不是函数会提示你 `data` 的类型必须是一个函数，这就是我们知道的：*子组件中的 `data` 必须是一个返回对象的函数*。如果不是函数，除了给你一段警告之外，会直接返回 `parentVal`。
 
 如果 `childVal` 是函数类型，那说明满足了子组件的 `data` 选项需要是一个函数的要求，那么就直接返回 `mergeDataOrFn` 函数的执行结果：
 
