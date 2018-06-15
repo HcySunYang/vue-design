@@ -1668,7 +1668,7 @@ function copyAugment (target: Object, src: Object, keys: Array<string>) {
 }
 ```
 
-`copyAugment` 函数接收的参数与 `protoAugment` 函数相同，不同的是 `copyAugment` 使用到了全部三个参数。在拦截数组变异方法的思路一节中我么讲解了在当前环境不支持 `__proto__` 属性的时候如何做兼容处理，实际上这就是 `copyAugment` 函数的作用。
+`copyAugment` 函数接收的参数与 `protoAugment` 函数相同，不同的是 `copyAugment` 使用到了全部三个参数。在拦截数组变异方法的思路一节中我们讲解了在当前环境不支持 `__proto__` 属性的时候如何做兼容处理，实际上这就是 `copyAugment` 函数的作用。
 
 我们知道 `copyAugment` 函数的第三个参数 `keys` 就是定义在 `arrayMethods` 对象上的所有函数的键，即所有要拦截的数组变异方法的名称。这样通过 `for` 循环对其进行遍历，并使用 `def` 函数在数组实例上定义与数组变异方法同名的且不可枚举的函数，这样就实现了拦截操作。
 
