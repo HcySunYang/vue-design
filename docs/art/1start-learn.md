@@ -90,7 +90,7 @@
 
 `package.json` 文件的作用这里就不说了，来看几个重要的字段：
 
-```sj
+```js
 "main": "dist/vue.runtime.common.js",
 "module": "dist/vue.runtime.esm.js",
 ```
