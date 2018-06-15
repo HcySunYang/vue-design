@@ -186,6 +186,29 @@ makeMap('slot,component', true)
 
 可知：`slot` 和 `component` 为 `Vue` 内置的标签
 
+## isReservedAttribute
+
+* 源码如下：
+
+```js
+/**
+ * Check if a attribute is a reserved attribute.
+ */
+export const isReservedAttribute = makeMap('key,ref,slot,slot-scope,is')
+```
+
+* 描述：检查给定字符串是否是内置的属性
+
+* 源码分析
+
+`isReservedAttribute` 是一个使用 `makeMap` 生成的函数：
+
+```js
+makeMap('key,ref,slot,slot-scope,is')
+```
+
+可知：`key`、`ref`、`slot`、`slot-scope` 以及 `is` 等属性皆属于内置属性，我们不能使用这些属性作为 `props` 的名字。
+
 ## remove
 
 * 源码如下：
@@ -296,16 +319,42 @@ export const camelize = cached((str: string): string => {
 })
 ```
 
-* 描述：中横线转驼峰
+* 描述：连字符转驼峰
 
 * 源码分析：
 
-这是一个很基本的函数，定义一个正则表达式：`/-(\w)/g`，用来全局匹配字符串中 *中横线及中横线后的一个字符*。真心没什么好说的.....
+这是一个很基本的函数，定义一个正则表达式：`/-(\w)/g`，用来全局匹配字符串中 *中横线及连字符后的一个字符*，注意该正则中拥有一个捕获组，用来捕获连字符后面的字符，在 `camelize` 函数体内，使用 `camelizeRE` 正则匹配字符串，如果连字符后有字符，则将匹配到的内容使用该字符的大写形式替换，否则使用空字符串替换即可。
 
 * 使用实例：
 
 ```js
 camelize('aaa-bbb')   // aaaBbb
+```
+
+## hyphenate
+
+* 源码如下：
+
+```js
+/**
+ * Hyphenate a camelCase string.
+ */
+const hyphenateRE = /\B([A-Z])/g
+export const hyphenate = cached((str: string): string => {
+  return str.replace(hyphenateRE, '-$1').toLowerCase()
+})
+```
+
+* 描述：驼峰转连字符
+
+* 源码分析：
+
+其作用与 `camelize` 恰好相反。用来将驼峰字符串转为连字符，实现方式同样是使用正则，正则 `/\B([A-Z])/g` 用来全局匹配字符串中的大写字母，并且该大写字母前必须要单子的边界。在 `hyphenate` 函数体内使用 `hyphenateRE` 正则匹配字符串，并将匹配的内容使用连字符和捕获组的字符替换，最后转为小写。
+
+* 使用实例：
+
+```js
+hyphenate('aaaBbb')   // aaa-bbb
 ```
 
 ## noop

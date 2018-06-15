@@ -51,4 +51,7 @@ vm.$el
 
 // initComputed()   src/core/instance/state.js
 vm._computedWatchers = Object.create(null)
+
+// initProps()    src/core/instance/state.js
+vm._props = {}
 ```
