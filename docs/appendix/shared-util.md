@@ -2,13 +2,15 @@
 
 ## emptyObject
 
-源码如下：
+* 源码如下：
 
 ```js
 export const emptyObject = Object.freeze({})
 ```
 
-* 描述：`emptyObject` 是一个冻结的空对象，这意味着 `emptyObject` 是不可扩展、不可配置、不可写的
+* 描述：创建一个空的冻结对象 `emptyObject`，这意味着 `emptyObject` 是不可扩展、不可配置、不可写的。
+
+* 源码分析：通过以空 `json` 对象 `{}` 为参数调用 `Object.freeze` 函数实现。
 
 ## isUndef
 
@@ -20,7 +22,52 @@ export function isUndef (v: any): boolean %checks {
 }
 ```
 
-* 描述：`isUndef` 函数用来判断给定的变量是否是未定义，要注意的是，这个函数认为即使变量值为 `null`，也会认为其是未定义的。
+* 描述：判断给定变量是否是未定义，当变量值为 `null`时，也会认为其是未定义。
+
+* 参数：
+  * `{Any} v` 任意变量
+
+## isDef
+
+源码如下：
+
+```js
+export function isDef (v: any): boolean %checks {
+  return v !== undefined && v !== null
+}
+```
+
+* 描述：判断给定变量是否是定义，当变量值为 `null`时，也会认为其是未定义。
+
+* 参数：
+  * `{Any} v` 任意变量
+
+## isTrue
+
+源码如下：
+
+```js
+export function isTrue (v: any): boolean %checks {
+  return v === true
+}
+```
+
+* 描述：判断给定变量值是否为 `true`。
+
+* 参数：
+  * `{Any} v` 任意变量
+
+## isFalse
+
+源码如下：
+
+```js
+export function isFalse (v: any): boolean %checks {
+  return v === false
+}
+```
+
+* 描述：判断给定变量值是否为 `false`。
 
 * 参数：
   * `{Any} v` 任意变量
@@ -41,10 +88,82 @@ export function isPrimitive (value: any): boolean %checks {
 }
 ```
 
-* 描述：`isPrimitive` 用来判断给定的变量是否是原始类型值，即：字符串、数字、布尔值以及 `symbol`。
+* 描述：判断给定变量是否是原始类型值，即：`string`、`number`、`boolean`以及 `symbol`。
 
 * 参数：
-  * `{Any} v` 任意变量
+  * `{Any} value` 任意变量
+
+## isObject
+
+* 源码如下：
+
+```js
+export function isObject (obj: mixed): boolean %checks {
+  return obj !== null && typeof obj === 'object'
+}
+```
+
+* 描述：当值为 JSON-compliant 类型时，用于区分对象和原始值，返回 `boolean` 值。
+
+* 参数：
+  * `{mixed} obj` 混合类型
+
+## toRawType
+
+* 源码如下：
+
+```js
+/**
+ * Get the raw type string of a value e.g. [object Object]
+ */
+const _toString = Object.prototype.toString
+
+export function toRawType (value: any): string {
+  return _toString.call(value).slice(8, -1)
+}
+```
+
+* 描述：返回给定变量的原始类型字符串。
+
+* 源码分析：
+
+首先使用 `Object.prototype.toString` 获取诸如这样的字符串：`[object Object]`，然后使用 `slice` 方法截取，最终结果类似于 `Object`。例如：调用 `toRawType(new Date)` 返回值为 `Date`。
+
+## isPlainObject
+
+* 源码如下：
+
+```js
+/**
+ * Strict object type check. Only returns true
+ * for plain JavaScript objects.
+ */
+export function isPlainObject (obj: any): boolean {
+  return _toString.call(obj) === '[object Object]'
+}
+```
+
+* 描述：判断给定变量是否是纯对象。
+
+* 源码分析：
+
+原理很简单，使用 `Object.prototype.toString` 与 `'[object Object]'` 做全等对比。
+
+## isRegExp
+
+* 源码如下：
+
+```js
+export function isRegExp (v: any): boolean {
+  return _toString.call(v) === '[object RegExp]'
+}
+```
+
+* 描述：判断给定变量是否是正则对象。
+
+* 源码分析：
+
+原理很简单，使用 `Object.prototype.toString` 与 `'[object RegExp]'` 做全等对比。
 
 ## isValidArrayIndex
 
@@ -57,39 +176,50 @@ export function isValidArrayIndex (val: any): boolean {
 }
 ```
 
-* 描述：`isValidArrayIndex` 函数用来判断给定的值是否是有效的数组索引。如果是有效的则返回 `true`，否则返回 `false`。
+* 描述：判断给定变量的值是否是有效的数组索引。如果是有效的则返回 `true`，否则返回 `false`。
 
 * 源码分析：
 
 一个有效的数组索引要满足两个条件：1、大于等于 `0` 的整数，2、在条件一的基础上，这个整数不能是无限的。在源码中条件 `n >= 0 && Math.floor(n) === n` 保证了索引是一个大于等于 `0` 的整数，而条件 `isFinite(val)` 保证了该值是有限的。
 
-## extend
+## toString
 
-源码如下：
+* 源码如下：
 
 ```js
 /**
- * Mix properties into target object.
+ * Convert a value to a string that is actually rendered.
  */
-export function extend (to: Object, _from: ?Object): Object {
-  for (const key in _from) {
-    to[key] = _from[key]
-  }
-  return to
+export function toString (val: any): string {
+  return val == null
+    ? ''
+    : typeof val === 'object'
+      ? JSON.stringify(val, null, 2)
+      : String(val)
 }
 ```
 
-* 描述：将 `_from` 对象的属性混合到 `to` 对象中
+* 描述：将给定变量的值转换为 string 类型并返回。
 
-* 参数：
-  * `{Object} to` 目标对象
-  * `{Object} _from` 源对象
+* 源码分析：
+当变量值为 `null` 时，返回空字符串；当值的类型为 `object` 返回 `JSON.stringify(val, null, 2)`，否则返回 `String(val)`。
 
-* 返回值：混合后的新对象
+## toNumber
 
-* 源码分析
+* 源码如下：
 
-`extend` 函数的实现还是挺简单的，使用一个 `for in` 语句实现。大家基本都能看得懂
+```js
+/**
+ * Convert a input value to a number for persistence.
+ * If the conversion fails, return original string.
+ */
+export function toNumber (val: string): number | string {
+  const n = parseFloat(val)
+  return isNaN(n) ? val : n
+}
+```
+
+* 描述：将给定 string 类型的值转换为 number 类型并返回。如果转换失败，返回初始值。
 
 ## makeMap
 
@@ -174,7 +304,7 @@ isVowel('b')  // false
 export const isBuiltInTag = makeMap('slot,component', true)
 ```
 
-* 描述：检查是否是内置的标签
+* 描述：检查是否是内置的标签。
 
 * 源码分析
 
@@ -197,7 +327,7 @@ makeMap('slot,component', true)
 export const isReservedAttribute = makeMap('key,ref,slot,slot-scope,is')
 ```
 
-* 描述：检查给定字符串是否是内置的属性
+* 描述：检查给定字符串是否是内置的属性。
 
 * 源码分析
 
@@ -214,6 +344,9 @@ makeMap('key,ref,slot,slot-scope,is')
 * 源码如下：
 
 ```js
+/**
+ * Remove an item from an array
+ */
 export function remove (arr: Array<any>, item: any): Array<any> | void {
   if (arr.length) {
     const index = arr.indexOf(item)
@@ -230,11 +363,27 @@ export function remove (arr: Array<any>, item: any): Array<any> | void {
   * `{Array} arr` 源数组
   * `{Any} item` 要从数组中移除的元素
 
-* 返回值：如果成功移除，则返回移除后的元素，否则返回 `undefined`。
+* 返回值：如果成功移除，则返回移除后的元素，否则无返回值。
 
 * 源码分析：
 
 首先判断数组 `arr` 的长度是否为 `0`，如果为 `0` 则说明没有任何需要移除的元素，如果不为 `0` 则使用 `indexOf` 函数查看要移除的元素是否在数组中以及在数组中的位置，然后使用 `splice` 方法将其移除。
+
+## hasOwn
+
+* 源码如下：
+
+```js
+/**
+ * Check whether the object has the property.
+ */
+const hasOwnProperty = Object.prototype.hasOwnProperty
+export function hasOwn (obj: Object | Array<*>, key: string): boolean {
+  return hasOwnProperty.call(obj, key)
+}
+```
+
+* 描述：检查对象 `obj` 是否具有属性值`key`。
 
 ## cached
 
@@ -293,18 +442,6 @@ return hit || (cache[str] = fn(str))
 
 可以看到，这就是一个函数式编程的玩法，也是比较简单的。
 
-## emptyObject
-
-* 源码如下：
-
-```js
-export const emptyObject = Object.freeze({})
-```
-
-* 描述：创建一个空的冻结对象
-
-* 源码分析：通过以空 `json` 对象 `{}` 为参数调用 `Object.freeze` 函数实现。
-
 ## camelize
 
 * 源码如下：
@@ -331,6 +468,25 @@ export const camelize = cached((str: string): string => {
 camelize('aaa-bbb')   // aaaBbb
 ```
 
+## capitalize
+
+源码如下：
+
+```js
+/**
+ * Capitalize a string.
+ */
+export const capitalize = cached((str: string): string => {
+  return str.charAt(0).toUpperCase() + str.slice(1)
+})
+```
+
+* 描述：首字母大写。这是一个由 `cached` 函数生成的新函数。
+
+* 源码分析：
+
+`str.charAt(0)` 获取str的第一项，利用 `toUpperCase()` 转换为大写字母，`str.slice(1)` 截取除第一项的 str 部分。
+
 ## hyphenate
 
 * 源码如下：
@@ -345,7 +501,7 @@ export const hyphenate = cached((str: string): string => {
 })
 ```
 
-* 描述：驼峰转连字符
+* 描述：驼峰转连字符。
 
 * 源码分析：
 
@@ -356,6 +512,90 @@ export const hyphenate = cached((str: string): string => {
 ```js
 hyphenate('aaaBbb')   // aaa-bbb
 ```
+
+## toArray
+
+源码如下：
+
+```js
+/**
+ * Convert an Array-like object to a real Array.
+ */
+export function toArray (list: any, start?: number): Array<any> {
+  start = start || 0
+  let i = list.length - start
+  const ret: Array<any> = new Array(i)
+  while (i--) {
+    ret[i] = list[i + start]
+  }
+  return ret
+}
+```
+
+* 描述：将类数组的对象转换为数组。
+
+* 参数：
+  * `{any} list` 类数组list
+  * `{number} start` 开始转换索引
+
+* 源码分析：
+`toArray` 接受2个参数，分别为类数组 `list` 和开始转换索引 `start`（默认从0开始）。通过`new Array()` 创建长度为 `i` 的新数组，`while` 循环对 `ret` 每一项赋值，最后返回转换后的新数组 `ret`。
+
+## extend
+
+源码如下：
+
+```js
+/**
+ * Mix properties into target object.
+ */
+export function extend (to: Object, _from: ?Object): Object {
+  for (const key in _from) {
+    to[key] = _from[key]
+  }
+  return to
+}
+```
+
+* 描述：将 `_from` 对象的属性混合到 `to` 对象中
+
+* 参数：
+  * `{Object} to` 目标对象
+  * `{Object} _from` 源对象
+
+* 返回值：混合后的 `to` 对象
+
+* 源码分析：
+
+`extend` 函数的实现还是挺简单的，使用一个 `for in` 语句实现。大家基本都能看得懂
+
+## toObject
+
+源码如下：
+
+```js
+/**
+ * Merge an Array of Objects into a single Object.
+ */
+export function toObject (arr: Array<any>): Object {
+  const res = {}
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i]) {
+      extend(res, arr[i])
+    }
+  }
+  return res
+}
+```
+
+* 描述：将一个对象数组合并到一个对象中，并返回该对象。
+
+* 参数：
+  * `{Array} arr`
+
+* 源码分析：
+
+声明一个 `res` 空对象作为函数返回值。通过 for 循环遍历对象数组，如果 `arr[i]` 存在，则调用 `extend` 函数合并对象属性。
 
 ## noop
 
@@ -389,62 +629,18 @@ export const no = (a?: any, b?: any, c?: any) => false
 
 * 描述：始终返回 `false` 的函数
 
-## toRawType
+## identity
 
 * 源码如下：
 
 ```js
 /**
- * Get the raw type string of a value e.g. [object Object]
+ * Return same value
  */
-const _toString = Object.prototype.toString
-
-export function toRawType (value: any): string {
-  return _toString.call(value).slice(8, -1)
-}
+export const identity = (_: any) => _
 ```
 
-* 描述：获取一个值的原始类型字符串。
-
-* 源码分析：
-
-首先使用 `Object.prototype.toString` 获取诸如这样的字符串：`[object Object]`，然后使用 `slice` 方法截取，最终结果类似于 `Object`。
-
-## isPlainObject
-
-* 源码如下：
-
-```js
-/**
- * Strict object type check. Only returns true
- * for plain JavaScript objects.
- */
-export function isPlainObject (obj: any): boolean {
-  return _toString.call(obj) === '[object Object]'
-}
-```
-
-* 描述：检测一个对象是否是纯对象。
-
-* 源码分析：
-
-原理很简单，使用 `Object.prototype.toString` 与 `'[object Object]'` 做全等对比。
-
-## isRegExp
-
-* 源码如下：
-
-```js
-export function isRegExp (v: any): boolean {
-  return _toString.call(v) === '[object RegExp]'
-}
-```
-
-* 描述：检测一个对象是否是正则对象。
-
-* 源码分析：
-
-原理很简单，使用 `Object.prototype.toString` 与 `'[object RegExp]'` 做全等对比。
+* 描述：一个输入和返回值一样的纯函数。
 
 ## genStaticKeys
 
@@ -492,3 +688,143 @@ export function genStaticKeys (modules: Array<ModuleOptions>): string {
 
 其实现方式很简单，对数组 `modules` 使用 `reduce` 函数进行归并，将所有的 `staticKeys` 归并到一个数组中，最后通过 `join(',')` 实现目的。
 
+## looseEqual
+
+* 源码如下：
+
+```js
+/**
+ * Check if two values are loosely equal - that is,
+ * if they are plain objects, do they have the same shape?
+ */
+export function looseEqual (a: any, b: any): boolean {
+  if (a === b) return true
+  const isObjectA = isObject(a)
+  const isObjectB = isObject(b)
+  if (isObjectA && isObjectB) {
+    try {
+      const isArrayA = Array.isArray(a)
+      const isArrayB = Array.isArray(b)
+      if (isArrayA && isArrayB) {
+        return a.length === b.length && a.every((e, i) => {
+          return looseEqual(e, b[i])
+        })
+      } else if (!isArrayA && !isArrayB) {
+        const keysA = Object.keys(a)
+        const keysB = Object.keys(b)
+        return keysA.length === keysB.length && keysA.every(key => {
+          return looseEqual(a[key], b[key])
+        })
+      } else {
+        /* istanbul ignore next */
+        return false
+      }
+    } catch (e) {
+      /* istanbul ignore next */
+      return false
+    }
+  } else if (!isObjectA && !isObjectB) {
+    return String(a) === String(b)
+  } else {
+    return false
+  }
+}
+```
+
+* 描述：检查两个值是否相等。
+
+* 源码分析：
+
+`looseEqual` 以a、b两个变量为参数，返回 `boolean` 值。
+当 `a === b` 时，返回true
+```js
+if (a === b) return true
+```
+否则进入if判断
+```js
+const isObjectA = isObject(a)
+const isObjectB = isObject(b)
+if (isObjectA && isObjectB) {
+  ……
+} else if (!isObjectA && !isObjectB) {
+  return String(a) === String(b)
+} else {
+  return false
+}
+```
+如果a、b均为 `object` 类型的值，进入try catch语句；如果a、b均不为 `object` 类型的值，对两个值调用 `String()` 方法进行比较；如果a、b中一个是 `object` 类型的值，一个不是，直接返回 false。接着对try catch分析
+```js
+try {
+  const isArrayA = Array.isArray(a)
+  const isArrayB = Array.isArray(b)
+  if (isArrayA && isArrayB) {
+    return a.length === b.length && a.every((e, i) => {
+      return looseEqual(e, b[i])
+    })
+  } else if (!isArrayA && !isArrayB) {
+    const keysA = Object.keys(a)
+    const keysB = Object.keys(b)
+    return keysA.length === keysB.length && keysA.every(key => {
+      return looseEqual(a[key], b[key])
+    })
+  } else {
+    /* istanbul ignore next */
+    return false
+  }
+} catch (e) {
+  /* istanbul ignore next */
+  return false
+}
+```
+对a、b调用 `Array.isArray()` 方法，再次进行判断。如果a、b均为数组，并且a、b的length相等，则对数组的每一个元素再次调用 `looseEqual` 进入递归；如果a、b均不为数组，获取a、b对象的key集合并比较长度，若长度相等，则调用 `looseEqual` 进入递归；如果a、b中一个是数组，一个是对象，直接返回 false。递归会将上述过程再次执行，直到满足某一条件 `return` 终止函数。
+
+## looseIndexOf
+
+* 源码如下：
+
+```js
+export function looseIndexOf (arr: Array<mixed>, val: mixed): number {
+  for (let i = 0; i < arr.length; i++) {
+    if (looseEqual(arr[i], val)) return i
+  }
+  return -1
+}
+```
+
+* 描述：返回 `val` 在 `arr` 中的索引。
+
+* 源码分析：
+
+`looseIndexOf` 以 `arr`、`val` 作为参数，返回 `val` 在 `arr` 中的索引。通过对数组遍历，调用 `looseEqual` 方法比较 `arr[i]` 与 `val` 是否相等，若为 true ，则返回当前索引 `i`，当循环结束且无和 `val` 相等的值则返回 `-1`。
+
+## once
+
+* 源码如下：
+
+```js
+/**
+ * Ensure a function is called only once.
+ */
+export function once (fn: Function): Function {
+  let called = false
+  return function () {
+    if (!called) {
+      called = true
+      fn.apply(this, arguments)
+    }
+  }
+}
+```
+
+* 描述：只调用一次的函数。
+
+* 源码分析：
+
+`once` 函数以 `fn` 作为参数并返回一个新函数。`called` 作为一个回调标识符，仅当值为false 时调用
+```js
+if (!called) {
+  called = true
+  fn.apply(this, arguments)
+}
+```
+且将 `called` 值修改为 true。再次调用将不再执行。
