@@ -330,7 +330,7 @@ let Target = null
 function $watch (exp, fn) {
   // 将 Target 的值设置为 fn
   Target = fn
-  // 读取字段值，触发 set 函数
+  // 读取字段值，触发 get 函数
   data[exp]
 }
 ```
