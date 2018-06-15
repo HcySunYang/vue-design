@@ -2025,9 +2025,9 @@ if (target._isVue || (ob && ob.vmCount)) {
 }
 ```
 
-这个 `if` 语句块有两个条件，只要有一个条件成立，就会执行 `if` 语句块内的代码。我们来看第一个条件 `target._isVue`，我们知道 `Vue` 实例对象拥有 `_isVue` 属性，所以当地一个条件成立时，那么说明你正在使用 `Vue.set/$set` 函数为 `Vue` 实例对象添加属性，为了避免属性覆盖的情况出现，`Vue.set/$set` 函数不允许这么做，在非生产环境下会打印警告信息。
+这个 `if` 语句块有两个条件，只要有一个条件成立，就会执行 `if` 语句块内的代码。我们来看第一个条件 `target._isVue`，我们知道 `Vue` 实例对象拥有 `_isVue` 属性，所以当第一个条件成立时，那么说明你正在使用 `Vue.set/$set` 函数为 `Vue` 实例对象添加属性，为了避免属性覆盖的情况出现，`Vue.set/$set` 函数不允许这么做，在非生产环境下会打印警告信息。
 
-第二个条件是：`(ob && ob.vmCount)`，我们知道 `ob` 就是 `target.__ob__` 那么 `ob.vmCount` 是什么呢？为了高清这个问题，我们回到 `observe` 工厂函数中，如下高亮代码：
+第二个条件是：`(ob && ob.vmCount)`，我们知道 `ob` 就是 `target.__ob__` 那么 `ob.vmCount` 是什么呢？为了搞清这个问题，我们回到 `observe` 工厂函数中，如下高亮代码：
 
 ```js {3-5}
 export function observe (value: any, asRootData: ?boolean): Observer | void {
@@ -2138,7 +2138,7 @@ if (target._isVue || (ob && ob.vmCount)) {
 }
 ```
 
-与不能使用 `Vue.set/$set` 函数一样为根数据或 `Vue` 实例对象添加属性一样，同样不能使用 `Vue.delete/$delete` 删除 `Vue` 实例对象或根数据的属性。不允许删除 `Vue` 实例对象的属性的，是出于安全因素的考虑。而不允许删除根数据对象的属性，是因为这样做也是触发不了响应的，关于触发不了响应的原因，我们在讲解 `Vue.set/$set` 时已经分析过了。
+与不能使用 `Vue.set/$set` 函数一样为根数据或 `Vue` 实例对象添加属性一样，同样不能使用 `Vue.delete/$delete` 删除 `Vue` 实例对象或根数据的属性。不允许删除 `Vue` 实例对象的属性，是出于安全因素的考虑。而不允许删除根数据对象的属性，是因为这样做也是触发不了响应的，关于触发不了响应的原因，我们在讲解 `Vue.set/$set` 时已经分析过了。
 
 接下来是 `Vue.delete/$delete` 函数的最后一段代码，如下：
 
