@@ -1840,7 +1840,7 @@ ins.arr[0] = 3  // 不能触发响应
 
 ## Vue.set($set) 和 Vue.delete($delete) 的实现
 
-现在我们时候后讲解一下 `Vue.set` 和 `Vue.delete` 函数的实现了，我们知道 `Vue` 数据响应系统的原理的核心是通过 `Object.defineProperty` 函数将数据对象的属性转换为访问器属性，从而使得我们能够拦截到属性的读取和设置，但正如官方文档中介绍的那样，`Vue` 是没有能力拦截到为一个对象(或数组)添加属性(或元素)的，而 `Vue.set` 和 `Vue.delete` 就是为了解决这个问题而诞生的。同时为了方便使用 `Vue` 还在实例对象上定义了 `$set` 和 `$delete` 方法，实际上 `$set` 和 `$delete` 方法仅仅是 `Vue.set` 和 `Vue.delete` 的别名，为了证明这点，我们首先来看看 `$set` 和 `$delete` 的实现，还记得 `$set` 和 `$delete` 方法定义在哪里吗？不记得也没关系，我们可以通过查看附录 [Vue 构造函数整理-原型](/appendix/vue-prototype.html) 找到 `$set` 和 `$delete` 方法的定义位置，我们发现 `$set` 和 `$delete` 定义在 `src/core/instance/state.js` 文件的 `stateMixin` 函数中，如下代码：
+现在我们是时候讲解一下 `Vue.set` 和 `Vue.delete` 函数的实现了，我们知道 `Vue` 数据响应系统的原理的核心是通过 `Object.defineProperty` 函数将数据对象的属性转换为访问器属性，从而使得我们能够拦截到属性的读取和设置，但正如官方文档中介绍的那样，`Vue` 是没有能力拦截到为一个对象(或数组)添加属性(或元素)的，而 `Vue.set` 和 `Vue.delete` 就是为了解决这个问题而诞生的。同时为了方便使用 `Vue` 还在实例对象上定义了 `$set` 和 `$delete` 方法，实际上 `$set` 和 `$delete` 方法仅仅是 `Vue.set` 和 `Vue.delete` 的别名，为了证明这点，我们首先来看看 `$set` 和 `$delete` 的实现，还记得 `$set` 和 `$delete` 方法定义在哪里吗？不记得也没关系，我们可以通过查看附录 [Vue 构造函数整理-原型](/appendix/vue-prototype.html) 找到 `$set` 和 `$delete` 方法的定义位置，我们发现 `$set` 和 `$delete` 定义在 `src/core/instance/state.js` 文件的 `stateMixin` 函数中，如下代码：
 
 ```js {4-5}
 export function stateMixin (Vue: Class<Component>) {
