@@ -474,7 +474,7 @@ if (Array.isArray(props)) {
       ? val
       : { type: val }
   }
-} else if (process.env.NODE_ENV !== 'production' && props) {
+} else if (process.env.NODE_ENV !== 'production') {
   ...
 }
 ```
@@ -546,7 +546,7 @@ function normalizeInject (options: Object, vm: ?Component) {
         ? extend({ from: key }, val)
         : { from: val }
     }
-  } else if (process.env.NODE_ENV !== 'production' && inject) {
+  } else if (process.env.NODE_ENV !== 'production') {
     warn(
       `Invalid value for option "inject": expected an Array or an Object, ` +
       `but got ${toRawType(inject)}.`,
@@ -617,7 +617,7 @@ if (Array.isArray(inject)) {
   }
 } else if (isPlainObject(inject)) {
   ...
-} else if (process.env.NODE_ENV !== 'production' && inject) {
+} else if (process.env.NODE_ENV !== 'production') {
   ...
 }
 ```
@@ -651,7 +651,7 @@ if (Array.isArray(inject)) {
       ? extend({ from: key }, val)
       : { from: val }
   }
-} else if (process.env.NODE_ENV !== 'production' && inject) {
+} else if (process.env.NODE_ENV !== 'production') {
   ...
 }
 ```
@@ -708,7 +708,7 @@ if (Array.isArray(inject)) {
   ...
 } else if (isPlainObject(inject)) {
   ...
-} else if (process.env.NODE_ENV !== 'production' && inject) {
+} else if (process.env.NODE_ENV !== 'production') {
   warn(
     `Invalid value for option "inject": expected an Array or an Object, ` +
     `but got ${toRawType(inject)}.`,
