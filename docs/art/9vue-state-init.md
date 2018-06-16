@@ -405,6 +405,196 @@ defineReactive(props, key, value, () => {
 
 ### props 的校验
 
+在这一小节我们主要聚焦在如下这句代码：
+
+```js
+const value = validateProp(key, propsOptions, propsData, vm)
+```
+
+也就是 `props` 的校验，和一些其他工作，比如获取默认值等。如上这句代码是在 `initProps` 函数体内的 `for...in` 循环语句，传递给 `validateProp` 函数的四个参数分别是：
+
+* `key`：`prop` 的名字
+* `propsOptions`：整个 `props` 选项对象
+* `propsData`：整个 `props` 数据来源对象
+* `vm`：组件实例对象
+
+假如我们定义了如下组件：
+
+```js
+{
+  name: 'someComp',
+  props: {
+    prop1: String
+  }
+}
+```
+
+并像如下代码这样使用：
+
+```html
+<some-comp prop1="str" />
+```
+
+那么 `validateProp` 函数接收的四个参数将会是：
+
+```js
+// props 的名字
+key = 'prop1'
+// props 选项参数
+propOptions = {
+  prop1: {
+    type: String
+  }
+}
+// props 数据
+propsData = {
+  prop1: 'str'
+}
+// 组件实例对象
+vm = vm
+```
+
+了解了 `validateProp` 函数的参数之后，我们可以开始研究 `validateProp` 函数内的代码了，在该函数的一开头定义了两个常量和一个变量，如下：
+
+```js
+const prop = propOptions[key]
+const absent = !hasOwn(propsData, key)
+let value = propsData[key]
+```
+
+其中常量 `prop` 的值为 `propOptions[key]`，也就是名字为 `key` 的 `props` 的定义，拿上面的例子来说，如果 `key` 的值为 `prop1`，那么常量 `prop` 的值为：
+
+```js
+const prop = {
+  type: String
+}
+```
+
+第二个常量是 `absent`，它是一个布尔值，代表着对应的 `prop` 在 `propsData` 上是否有数据，或者换句话说外界是否传递了该 `prop` 给组件。如果 `absent` 为真，则代表 `prop` 数据缺失。
+
+第三个定义的 `value` 是一个变量，它的值是通过读取 `propsData` 得到的，当然了如果外界没有向组件传递相应的 `prop` 数据，那么 `value` 就是 `undefined`。
+
+再往下定义了 `booleanIndex` 常量：
+
+```js
+const booleanIndex = getTypeIndex(Boolean, prop.type)
+```
+
+`booleanIndex` 常量的值是调用 `getTypeIndex` 函数的返回值，那么 `getTypeIndex` 函数的作用是什么呢？首先 `getTypeIndex` 函数接收两个参数，这两个参数都是某一个类型数据结构的构造函数，它可以是 `javascript` 原生数据类型的构造函数，也可以是自定义构造函数。`getTypeIndex` 函数的作用准备的说是用来查找第一个参数所指定的类型构造函数是否存在于第二个参数所指定的类型构造函数数组中，没错第二个参数可能是一个数组，比如我们像如下这样定义 `props`：
+
+```js
+props: {
+  prop1: [Number, String]
+}
+```
+
+那么经过规范化后 `propOptions` 将是：
+
+```js
+propOptions = {
+  prop1: {
+    type: [Number, String]
+  }
+}
+```
+
+回过头来，如果 `getTypeIndex` 函数第一个参数所指定的类型构造函数存在于第二个参数所指定的类型构造函数数组中，那么 `getTypeIndex` 函数将返回第一个参数在第二个参数数组中的位置，否则返回 `-1`，这说明第一个参数指定的类型构造函数不在第二个参数指定类型构造函数数组中。最后补充一下，第二个参数可能是数组也可能是单一的一个类型构造函数。
+
+具体看一下 `getTypeIndex` 函数的实现，找到 `getTypeIndex` 函数，它定义在 `src/core/util/props.js` 文件的最下方，如下：
+
+```js
+function getTypeIndex (type, expectedTypes): number {
+  if (!Array.isArray(expectedTypes)) {
+    return isSameType(expectedTypes, type) ? 0 : -1
+  }
+  for (let i = 0, len = expectedTypes.length; i < len; i++) {
+    if (isSameType(expectedTypes[i], type)) {
+      return i
+    }
+  }
+  return -1
+}
+```
+
+我们可以看到在 `getTypeIndex` 函数内部首先检测了 `expectedTypes` 是否为数组，如果不是数组那说明是一个单一的类型构造函数，此时会执行如下高亮的代码：
+
+```js {2}
+if (!Array.isArray(expectedTypes)) {
+  return isSameType(expectedTypes, type) ? 0 : -1
+}
+```
+
+这句代码调用了 `isSameType` 函数，并将两个类型构造函数作为参数传递，`isSameType` 函数的作用就是用来判断给定的两个类型构造函数是否相同，找到 `isSameType` 函数，它定义在 `getTypeIndex` 函数的上方，如下：
+
+```js
+function getType (fn) {
+  const match = fn && fn.toString().match(/^\s*function (\w+)/)
+  return match ? match[1] : ''
+}
+function isSameType (a, b) {
+  return getType(a) === getType(b)
+}
+```
+
+通过如上代码可知 `isSameType` 函数是通过调用 `getType` 函数获取到类型的描述后进行比较的，有的同学可能会问直接将两个类型作比较不就可以了吗？为什么要这么麻烦？实际上这么做肯定是有原因的，我们可以看到在 `getType` 函数上方有这样一段注释：
+
+```js
+/**
+ * Use function string name to check built-in types,
+ * because a simple equality check will fail when running
+ * across different vms / iframes.
+ */
+```
+
+这是在说简单的类型之间直接比较在不同的 `iframes / vms` 之间是不管用的，我们回想一下如何判断一个数据是否是数组的方法，其中一个方法就是使用 `instanceof` 操作符：
+
+```js
+someData instanceof Array
+```
+
+这种方式的问题就在于，不同 `iframes` 之间的 `Array` 构造函数本身都是不相等的。所以以上判断方法只适用于在同一个 `iframes` 环境下。
+
+同理，为了做到更严谨的判断，我们需要使用 `getType` 函数，如下：
+
+```js
+function getType (fn) {
+  const match = fn && fn.toString().match(/^\s*function (\w+)/)
+  return match ? match[1] : ''
+}
+```
+
+`getType` 函数很简单，它接收一个函数作为参数，然后使用正则去匹配该函数 `toString()` 后的字符串，并捕获函数的名字，最后如果捕获成功则返回函数名字，否则返回空字符串。这样一来，在做类型比较的时候本质上是做字符串之间的比较，这样就永远不会有问题。
+
+我们再回到 `isSameType` 函数：
+
+```js
+function isSameType (a, b) {
+  return getType(a) === getType(b)
+}
+```
+
+可知如果两个参数给定的类型构造函数相同则 `isSameType` 函数返回真，否则返回假。我们再来查看 `getTypeIndex` 函数：
+
+```js {3}
+function getTypeIndex (type, expectedTypes): number {
+  if (!Array.isArray(expectedTypes)) {
+    return isSameType(expectedTypes, type) ? 0 : -1
+  }
+  for (let i = 0, len = expectedTypes.length; i < len; i++) {
+    if (isSameType(expectedTypes[i], type)) {
+      return i
+    }
+  }
+  return -1
+}
+```
+
+如果 `expectedTypes` 不是数组，那么如果传递给 `getTypeIndex` 函数的两个参数类型相同，则返回数字 `0`，否则返回数字 `-1`。
+
+接着如果 `expectedTypes` 是一个数组，则通过 `for` 循环遍历该数组中的每一个类型构造函数，并使用 `isSameType` 函数让其与给定的类型构造函数做对比，如果二者相同则直接返回给定类型构造函数在 `expectedTypes` 数组中的位置，如果没有在 `expectedTypes` 数组中找到给定的类型构造函数则 `getTypeIndex` 函数最后会返回 `-1`。
+
+总之 `getTypeIndex` 函数的返回值如果大于 `-1`，则说明给定的类型构造函数在期望的类型构造函数之中。
+
 
 
 
