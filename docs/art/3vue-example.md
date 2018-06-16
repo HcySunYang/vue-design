@@ -29,7 +29,11 @@ var vm = new Vue({
 <div id="app">1</div>
 ```
 
-其中 `{{test}}` 被替换成了 `1`，并且当我们尝试修改 `data.test` 的值的时候：
+::: v-pre
+其中
+`{{ test }}`
+被替换成了 `1`，并且当我们尝试修改 `data.test` 的值的时候
+:::
 
 ```js
 vm.$data.test = 2
