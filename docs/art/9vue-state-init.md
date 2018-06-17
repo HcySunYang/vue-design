@@ -595,9 +595,346 @@ function getTypeIndex (type, expectedTypes): number {
 
 总之 `getTypeIndex` 函数的返回值如果大于 `-1`，则说明给定的类型构造函数在期望的类型构造函数之中。
 
+再回过头来看这段代码：
 
+```js
+const booleanIndex = getTypeIndex(Boolean, prop.type)
+if (booleanIndex > -1) {
+  if (absent && !hasOwn(prop, 'default')) {
+    value = false
+  } else if (value === '' || value === hyphenate(key)) {
+    // only cast empty string / same name to boolean if
+    // boolean has higher priority
+    const stringIndex = getTypeIndex(String, prop.type)
+    if (stringIndex < 0 || booleanIndex < stringIndex) {
+      value = true
+    }
+  }
+}
+```
 
+也就是说常量 `booleanIndex` 的值如果大于 `-1`，说明在定义 `props` 时指定了 `Boolean` 类型。此时如上代码中 `if` 语句块的内容将被执行，在 `if` 语句块内首先检测如下条件：
 
+```js
+absent && !hasOwn(prop, 'default')
+```
+
+其中 `absent` 常量我们前面介绍过，它为真说明外界没有向组件传递该 `prop`，所以如上条件所代表的意思是：**外界没有为组件传递该 `prop`，并且该 `prop` 也没有指定默认值**。在这种情况下如果你指定该 `prop` 的类型为 `Boolean`，那么 `Vue` 会自动将该 `prop` 的值设置为 `false`。
+
+如果 `absent` 为假，说明外界向组件传递了该 `prop`，此时会进入 `else...if` 判断，判断条件如下：
+
+```js
+value === '' || value === hyphenate(key)
+```
+
+这说明外界向组件传递的 `prop` 要么是一个空字符串，要么就是一个名字由驼峰转连字符后与值为相同字符串的 `prop`，如下：
+
+```html
+<!-- 值为空字符串 -->
+<some-comp prop1="" />
+<!-- 名字由驼峰转连字符后与值为相同字符串 -->
+<some-comp someProp="some-prop" />
+```
+
+如果你想如上代码那样为组件传递 `props`，并且这些指定了这些 `props` 的类型包括 `Boolean` 类型。那么此时 `else...if` 语句块的代码将被执行，如下：
+
+```js
+// only cast empty string / same name to boolean if
+// boolean has higher priority
+const stringIndex = getTypeIndex(String, prop.type)
+if (stringIndex < 0 || booleanIndex < stringIndex) {
+  value = true
+}
+```
+
+这句代码首先定义了 `stringIndex` 常量，该常量的值是 `String` 类型在 `prop` 类型定义中的位置。接着是一个 `if` 条件语句，我们看一下判断条件：
+
+```js
+stringIndex < 0 || booleanIndex < stringIndex
+```
+
+如果 `stringIndex < 0` 则说明没有为该 `prop` 指定 `String` 类型，否则说明为 `prop` 指定了 `String` 类型，但由于之前的判断能够确定的是已经为 `prop` 指定了 `Boolean` 类型，那么说明此时至少为该 `prop` 指定了两种类型：`String` 和 `Boolean`。这时会将 `booleanIndex` 与 `stringIndex` 作比较，比较的目的是检测 `String` 和 `Boolean` 这两个类型谁定义在前面，所以如上条件成立所代表的意思是：
+
+* 1、没有定义 `String` 类型
+* 2、虽然定义了 `String` 类型，但是 `String` 类型的优先级没有 `Boolean` 高
+
+这时会将该 `prop` 的值设置为 `true`，而非字符串。举个例子：
+
+```js
+{
+  name: 'someComp',
+  props: {
+    prop1: {
+      type: [String, Boolean]
+    }
+  }
+}
+```
+
+上面的代码中我们定义了组件 `<some-comp/>`，并且定义了一个名字叫做 `prop1` 的 `prop`，我们为该 `prop` 制定了两个类型构造函数 `String` 和 `Boolean`，而且 `String` 的优先级要高于 `Boolean`，所以此时你如果像如下这样使用该组件：
+
+```html
+<!-- 值为空字符串 -->
+<some-comp prop1="" />
+<!-- 名字由驼峰转连字符后与值为相同字符串 -->
+<some-comp someProp="some-prop" />
+```
+
+那么该组件接收到的 `prop` 就会作为普通字符串处理，即 `prop1` 的值就是空字符串或字符串 `'some-prop'`。
+
+如果我们调换一下 `prop1` 的类型构造函数的顺序，如下：
+
+```js {5}
+{
+  name: 'someComp',
+  props: {
+    prop1: {
+      type: [Boolean, String]
+    }
+  }
+}
+```
+
+我们先定义了 `Boolean` 类型，如果此时你依然像如下这样使用组件：
+
+```html
+<!-- 值为空字符串 -->
+<some-comp prop1="" />
+<!-- 名字由驼峰转连字符后与值为相同字符串 -->
+<some-comp someProp="some-prop" />
+```
+
+那么 `prop1` 的值将会是布尔类型 `true`。最后补充一点，实际上如下两种使用 `props` 的方式是等价的：
+
+```html
+<some-comp prop1="" />
+<!-- 等价于 -->
+<some-comp prop1 />
+``` 
+
+最后我们再来回顾一下 `validateProp` 函数中的这段代码：
+
+```js
+const booleanIndex = getTypeIndex(Boolean, prop.type)
+if (booleanIndex > -1) {
+  if (absent && !hasOwn(prop, 'default')) {
+    value = false
+  } else if (value === '' || value === hyphenate(key)) {
+    // only cast empty string / same name to boolean if
+    // boolean has higher priority
+    const stringIndex = getTypeIndex(String, prop.type)
+    if (stringIndex < 0 || booleanIndex < stringIndex) {
+      value = true
+    }
+  }
+}
+```
+
+现在我们知道了这段代码的作用实际上对 `prop` 的类型为布尔值时的特殊处理。接下来我们继续查看 `validateProp` 函数的后续代码，如下：
+
+```js
+// check default value
+if (value === undefined) {
+  value = getPropDefaultValue(vm, prop, key)
+  // since the default value is a fresh copy,
+  // make sure to observe it.
+  const prevShouldObserve = shouldObserve
+  toggleObserving(true)
+  observe(value)
+  toggleObserving(prevShouldObserve)
+}
+```
+
+这段代码用来检测该 `prop` 的值是否是 `undefined`，我们知道 `prop` 是可以指定默认值的，当外界没有为组件传递该 `prop` 时，则取默认值作为该 `prop` 的数据。根据如上代码可知获取默认值的操作由 `getPropDefaultValue` 函数来完成，并将获取到的默认值重新赋值给 `value` 变量，获取完默认值之后我们可以看到如下这段代码：
+
+```js
+const prevShouldObserve = shouldObserve
+toggleObserving(true)
+observe(value)
+toggleObserving(prevShouldObserve)
+```
+
+有这段代码首先使用 `prevShouldObserve` 常量保存了之前的 `shouldObserve` 状态，紧接着将开关开启，是的 `observe` 函数能够将 `value` 定义为响应式数据，最后又还原了 `shouldObserve` 的状态。之所以这么做是因为取到的默认值是非响应式的，我们需要将其重新定义为响应式数据。
+
+接着我们再回头看一下 `getPropDefaultValue` 函数是如何获取默认值的，`getPropDefaultValue` 函数定义在 `validateProp` 函数的下方，如下是 `getPropDefaultValue` 函数的签名：
+
+```js
+function getPropDefaultValue (vm: ?Component, prop: PropOptions, key: string): any {
+  // 省略...
+}
+```
+
+`getPropDefaultValue` 函数接收三个参数，分别是组件实例对象 `vm`、`prop` 的定义对象，以及 `prop` 的名字 `key`。在 `getPropDefaultValue` 函数体内，首先是这样一段代码：
+
+```js
+if (!hasOwn(prop, 'default')) {
+  return undefined
+}
+const def = prop.default
+```
+
+我们知道在定义 `prop` 时可以在对象中使用 `default` 属性指定默认值，所以如上代码用来检测开发者在定义 `prop` 时是否指定了默认值，如果没有指定默认值则直接返回 `undefined`。另外如果开发者指定了默认值则定义 `def` 常量，用来保存默认值。
+
+再往下是这样一段代码：
+
+```js
+if (process.env.NODE_ENV !== 'production' && isObject(def)) {
+  warn(
+    'Invalid default value for prop "' + key + '": ' +
+    'Props with type Object/Array must use a factory function ' +
+    'to return the default value.',
+    vm
+  )
+}
+```
+
+在非生产环境下，如果你的 `prop` 默认值是对象类型，那么则会打印警告信息，告诉你需要用一个工厂函数返回这个对象类型的默认值，比如：
+
+```js
+props: {
+  prop1: {
+    default: {
+      a: 1
+    }
+  },
+  prop2: {
+    default: [1, 2, 3]
+  }
+}
+```
+
+如上代码定义了两个 `prop`，其中 `prop1` 的默认值是一个对象，`prop2` 的默认值是一个数组，这两个 `prop` 都是不合法的，你需要用工程函数将默认值返回，如下：
+
+```js
+props: {
+  prop1: {
+    default () {
+      return {
+        a: 1
+      }
+    }
+  },
+  prop2: {
+    default () {
+      return [1, 2, 3]
+    }
+  }
+}
+```
+
+这么做的目的是防止多个组件实例共享一份数据所造成的问题。
+
+再往下是这样一段代码：
+
+```js
+if (vm && vm.$options.propsData &&
+  vm.$options.propsData[key] === undefined &&
+  vm._props[key] !== undefined
+) {
+  return vm._props[key]
+}
+```
+
+我们现在还没有讲解创建子组件与根组件的区别，或许大家看到这段代码会有些疑惑。比如上面的 `if` 条件语句中有这样一个条件：
+
+```js
+vm.$options.propsData[key] === undefined
+```
+
+大家别忘了我们目前讲解的代码是 `getPropDefaultValue` 函数中的代码，代码既然已经执行到了 `getPropDefaultValue` 函数那么说明外界没有向组件传递该 `prop` 数据，那也就是说 `vm.$options.propsData[key]` 很显然的应该是 `undefined`。为什么还需要如上判断呢？实际上事情并非像我们想象的那样。这是因为**组件第一次创建与后续的更新走的是两套不太一致的逻辑**。为了证明这一点，我们需要打开 `src/core/instance/lifecycle.js` 文件找到 `updateChildComponent` 函数，大家现在只需要知道组件的更新是由 `updateChildComponent` 函数来完成的即可，在 `updateChildComponent` 函数内有这样一段代码：
+
+```js {8}
+if (propsData && vm.$options.props) {
+  toggleObserving(false)
+  const props = vm._props
+  const propKeys = vm.$options._propKeys || []
+  for (let i = 0; i < propKeys.length; i++) {
+    const key = propKeys[i]
+    const propOptions: any = vm.$options.props // wtf flow?
+    props[key] = validateProp(key, propOptions, propsData, vm)
+  }
+  toggleObserving(true)
+  // keep a copy of raw propsData
+  vm.$options.propsData = propsData
+}
+```
+
+注意如上高亮的那句代码，这句代码同样调用 `validateProp` 函数，所以 `getPropDefaultValue` 函数的如下代码完全是为组件更新时准备的：
+
+```js
+if (vm && vm.$options.propsData &&
+  vm.$options.propsData[key] === undefined &&
+  vm._props[key] !== undefined
+) {
+  return vm._props[key]
+}
+```
+
+当执行 `updateChildComponent` 函数更新组件时，在调用 `validateProp` 函数之前 `vm.$options.propsData` 还没有被更新，注意如下高亮代码：
+
+```js {13}
+// updateChildComponent 函数
+if (propsData && vm.$options.props) {
+  toggleObserving(false)
+  const props = vm._props
+  const propKeys = vm.$options._propKeys || []
+  for (let i = 0; i < propKeys.length; i++) {
+    const key = propKeys[i]
+    const propOptions: any = vm.$options.props // wtf flow?
+    props[key] = validateProp(key, propOptions, propsData, vm)
+  }
+  toggleObserving(true)
+  // keep a copy of raw propsData
+  vm.$options.propsData = propsData
+}
+```
+
+可以看到 `vm.$options.propsData` 的更新是在调用 `validateProp` 之后进行的，所以当组件更新时如下代码中的 `vm.$options.propsData` 是上一次组件更新或创建时的数据：
+
+```js
+if (vm && vm.$options.propsData &&
+  vm.$options.propsData[key] === undefined &&
+  vm._props[key] !== undefined
+) {
+  return vm._props[key]
+}
+```
+
+明白了这些我们再来重新审视一下这些判断条件，其中条件 `vm.$options.propsData[key] === undefined` 说明上一次组件更新或创建时外界就没有向组件传递该 `prop` 数据，条件 `vm._props[key] !== undefined` 说明该 `prop` 存在非未定义的默认值，又由于上面这段代码存在于 `getPropDefaultValue` 函数中，所以如上 `if` 条件成立则说明：
+
+* 1、当前组件处于更新状态，且没有传递该 `prop` 数据给组件
+* 2、上一次更新或创建时外界也没有向组件传递该 `prop` 数据
+* 3、上一次组件更新或创建时该 `prop` 拥有一个不为 `undefined` 的默认值
+
+那么此时应该返回之前的 `prop` 值(即默认值)作为本次渲染该 `prop` 的默认值。这样就能避免触发没有意义的响应。为什么能避免触发无意义的响应呢？很简单，假设每次都重新获取默认值而不是返回之前的默认值，那么如下 `prop` 的默认值将总是会变化的：
+
+```js
+props: {
+  prop1: {
+    default () {
+      return { a: 1 }
+    }
+  }
+}
+```
+
+由于 `prop1` 的默认值是由工厂函数返回的对象，这个对象每次都是不同的，即使看上去数据是一样的，但他们具有不同的引用，这样每次都会触发响应，但试图并没有任何变化，也就是说触发了没有意义的响应。而解决办法就是前面所介绍的，返回上一次的默认值就可以了。
+
+最后我们再来看 `getPropDefaultValue` 函数中的最后一段代码：
+
+```js
+return typeof def === 'function' && getType(prop.type) !== 'Function'
+  ? def.call(vm)
+  : def
+```
+
+我们知道 `def` 常量为该 `prop` 的 `default` 属性的值，它代表了默认值，但是由于默认值可能是由工厂函数执行产生的，所以如果 `def` 的类型是函数值通过执行 `def.call(vm)` 来获取默认值，否则直接使用 `def` 作为默认值。当然了我们还需要一个判断条件，即：
+
+```js
+getType(prop.type) !== 'Function'
+```
+
+这说明我们指定了该 `prop` 的默认值类型为函数类型，所以此时我们就不应该通过执行 `def` 函数来获取默认值了，应该直接将 `def` 函数本身作为默认值看待，因为该 `prop` 所期望的值就是一个函数。
 
 
 
