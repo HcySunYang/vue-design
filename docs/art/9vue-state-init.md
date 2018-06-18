@@ -936,7 +936,286 @@ getType(prop.type) !== 'Function'
 
 这说明我们指定了该 `prop` 的默认值类型为函数类型，所以此时我们就不应该通过执行 `def` 函数来获取默认值了，应该直接将 `def` 函数本身作为默认值看待，因为该 `prop` 所期望的值就是一个函数。
 
+再往下是 `validateProp` 函数的最后一段代码，如下：
 
+```js
+if (
+  process.env.NODE_ENV !== 'production' &&
+  // skip validation for weex recycle-list child component props
+  !(__WEEX__ && isObject(value) && ('@binding' in value))
+) {
+  assertProp(prop, key, value, vm, absent)
+}
+```
+
+经过前面的讲解，我们知道 `validateProp` 一开始并没有对 `props` 的类型做校验，首先如果一个 `prop` 的类型是布尔类型，则为其设置合理的布尔值，其次又调用了 `getPropDefaultValue` 函数获取 `prop` 的默认值，而如上这段代码才是真正用来对 `props` 的类型做校验的。通过如上 `if` 语句的条件可知，仅在非生产环境下才会对 `props` 做类型校验，另外还有一个条件是用来跳过 `weex` 环境下某种条件的判断的，我们不做讲解。总之真正的校验工作是由 `assertProp` 函数完成的。
+
+`assertProp` 函数定义在 `getPropDefaultValue` 函数的下方，如下是其函数签名：
+
+```js
+function assertProp (
+  prop: PropOptions,
+  name: string,
+  value: any,
+  vm: ?Component,
+  absent: boolean
+) {
+  // 省略...
+}
+```
+
+`assertProp` 函数接收五个参数，第一个参数 `prop` 为该prop的定义对象，第二个参数 `name` 是该 `prop` 的名字，第三个参数 `value` 是该 `prop` 的值，第四个参数 `vm` 为组件实例对象，第五个参数 `absent` 为一个布尔值代表外界是否向组件传递了该 `prop` 数据。我们来看 `assertProp` 函数的第一段代码，如下：
+
+```js
+if (prop.required && absent) {
+  warn(
+    'Missing required prop: "' + name + '"',
+    vm
+  )
+  return
+}
+```
+
+这段代码用来检测开发者是否传递了那些必须传递的 `prop` 数据，我们知道开发者可以在定义 `prop` 时指定 `required` 选项为 `true`，代表该 `prop` 为必传的。所以如上 `if` 语句的条件成立则说明该 `prop` 为必传 `prop`，但是外界却没有向组件传递该 `prop` 的值。此时需要打印警告信息提示开发者缺少必传的 `prop`。注意在打印完警告信息之后函数理解返回，不会执行后续操作。
+
+再往下是这样一段代码：
+
+```js
+if (value == null && !prop.required) {
+  return
+}
+```
+
+可以看到如果这段代码中 `if` 语句条件成立，则函数立即返回，同样不会做后续的校验。如果该 `if` 语句条件成立，则说明 `value` 值为 `null` 或 `undefined`，并且该 `prop` 是非必须的，在这种情况下就不需要做后续的校验了。
+
+再往下是这样一段代码：
+
+```js
+let type = prop.type
+let valid = !type || type === true
+const expectedTypes = []
+if (type) {
+  if (!Array.isArray(type)) {
+    type = [type]
+  }
+  for (let i = 0; i < type.length && !valid; i++) {
+    const assertedType = assertType(value, type[i])
+    expectedTypes.push(assertedType.expectedType || '')
+    valid = assertedType.valid
+  }
+}
+```
+
+这段代码的作用是用来做类型断言的，即判断外界传递的 `prop` 值的类型与期望的类型是否相符。首先定义了 `type` 变量它的值为 `prop.type` 的值。接着定义了 `valid` 变量，该变量为一个布尔值，代表着类型校验成功与否，我们可以看到其初始值为：
+
+```js
+let valid = !type || type === true
+```
+
+其中 `!type` 说明如果开发者在定义 `prop` 时没有规定该 `prop` 值的类型，则不需要校验，所以自然就认为无论外界传递了什么数据都是有效的，或者干脆在定义 `prop` 时直接将类型设置为 `true`，也代表不需要做 `prop` 校验。
+
+再往下定义了 `expectedTypes` 常量，它的初始值为空数组，该常量用来保存类型的字符串表示，当校验失败时会通过打印该数组中收集的类型来提示开发者应该传递哪些类型的数据。接着进入一个 `if` 语句块，其判断条件为 `if (type)`，只有当 `type` 存在时才需要做类型校验，在改 `if` 语句块内首先是这样一段代码：
+
+```js
+if (!Array.isArray(type)) {
+  type = [type]
+}
+```
+
+检测 `type` 是否是一个数组，如果不是数组则将其包装成一个数组。然后开启一个 `for` 循环，该 `for` 循环用来遍历 `type` 数组，如下：
+
+```js
+for (let i = 0; i < type.length && !valid; i++) {
+  const assertedType = assertType(value, type[i])
+  expectedTypes.push(assertedType.expectedType || '')
+  valid = assertedType.valid
+}
+```
+
+在循环内部，首先调用 `assertType` 函数分别将该 `prop` 的值 `value` 以及类型作为参数传递，所以真正的类型断言是由 `assertType` 函数来完成的，`assertType` 函数的具体实现我们后面再讲，现在大家只需要知道 `assertType` 函数的返回值是一个如下结构的对象即可：
+
+```js
+{
+  expectedType: 'String',
+  valid: true
+}
+```
+
+该对象拥有两个属性，分别是 `expectedType` 和 `valid`。其中 `expectedType` 属性就是类型的字符串表示，而 `valid` 属性是一个布尔值，它的真假代表了该 `prop` 值是否通过了校验。
+
+再回头看如下代码：
+
+```js
+for (let i = 0; i < type.length && !valid; i++) {
+  const assertedType = assertType(value, type[i])
+  expectedTypes.push(assertedType.expectedType || '')
+  valid = assertedType.valid
+}
+```
+
+可以看到，定义了 `assertedType` 常量，该常量就是 `assertType` 函数的返回值。接着将 `assertedType.expectedType` 添加到 `expectedTypes` 数组中，然后使用 `assertedType.valid` 的值重写 `valid` 变量。我们可以注意到 `for` 循环的终止条件为：
+
+```js
+i < type.length && !valid
+```
+
+所以一旦某个类型校验通过，那么 `valid` 的值将变为真，此时 `for` 循环内的语句将不再执行，这是因为该 `prop` 值的类型只要满足期望类型中的一个即可。假设 `for` 循环遍历结束之后 `valid` 变量依然为假，则说明该 `prop` 值的类型不在期望的类型之中。此时在 `for` 循环之后的代码将发挥作用，如下：
+
+```js
+if (!valid) {
+  warn(
+    `Invalid prop: type check failed for prop "${name}".` +
+    ` Expected ${expectedTypes.map(capitalize).join(', ')}` +
+    `, got ${toRawType(value)}.`,
+    vm
+  )
+  return
+}
+```
+
+如果代码运行到了这里，且 `valid` 的值为假，那么则打印警告信息提示开发者所传递的 `prop` 值的类型不符合预期。通过上面代码我们可以看到，在提示信息中通过打印 `expectedTypes` 数组中的类型字符串来提示开发者该 `prop` 所期望的类型。同时通过 `toRawType` 函数获取真正的 `prop` 值的类型，用来提示开发者所传递的值的类型是什么。最后函数直接返回不做后续操作。
+
+再往下将是 `assertProp` 函数的最后一段代码，如下：
+
+```js
+const validator = prop.validator
+if (validator) {
+  if (!validator(value)) {
+    warn(
+      'Invalid prop: custom validator check failed for prop "' + name + '".',
+      vm
+    )
+  }
+}
+```
+
+如果代码运行到了这里，说明前面的校验全部通过。但是我们知道在定义 `prop` 时可以通过 `validator` 属性指定一个校验函数实现自定义校验，该函数的返回值作为校验的结果。实际上在 `Vue` 内部实现非常简单，如上代码所示，定义了 `validator` 常量，它的值就是开发者定义的 `prop.validator` 函数，接着只需要调用该函数并判断其返回值的真假即可，如果返回值为假说明自定义校验失败，则直接打印警告信息提示开发者该 `prop` 自定义校验失败即可。
+
+最后我们再来看一下 `assertType` 函数的实现，前面我们已经知道了 `assertType` 函数的作用，它接收两个参数，分别为 `prop` 的值和 `prop` 的类型，然后将值与类型之间做比较，检查是否符合预期并返回一个对象形式的检查结果供其他函数使用。
+
+`assertType` 函数定义在 `assertProp` 函数的下方，如下：
+
+```js
+const simpleCheckRE = /^(String|Number|Boolean|Function|Symbol)$/
+
+function assertType (value: any, type: Function): {
+  valid: boolean;
+  expectedType: string;
+} {
+  // 省略...
+}
+```
+
+可以看到在定义 `assertType` 函数之前定义了常量 `simpleCheckRE`，用来匹配字符串：`'String'`、`'Number'`、`'Boolean'`、`'Function'` 以及 `'Symbol'`，这个正则将会在 `assertType` 函数中用到。在 `assertType` 函数内部首先定义了 `valid` 变量以及 `expectedType` 常量，如下：
+
+```js {5,6,9,10}
+function assertType (value: any, type: Function): {
+  valid: boolean;
+  expectedType: string;
+} {
+  let valid
+  const expectedType = getType(type)
+  // 省略...
+  return {
+    valid,
+    expectedType
+  }
+}
+```
+
+可以发现变量 `valid` 以及常量 `expectedType` 将会被作为返回值对象的属性。其中 `expectedType` 常量的值为通过 `getType` 函数获取到的类型字符串表示。接着将进入一连串的 `if...elseif...else` 语句块，如下：
+
+```js
+if (simpleCheckRE.test(expectedType)) {
+  const t = typeof value
+  valid = t === expectedType.toLowerCase()
+  // for primitive wrapper objects
+  if (!valid && t === 'object') {
+    valid = value instanceof type
+  }
+} else if (expectedType === 'Object') {
+  valid = isPlainObject(value)
+} else if (expectedType === 'Array') {
+  valid = Array.isArray(value)
+} else {
+  valid = value instanceof type
+}
+```
+
+我们一个一个来看，首先看 `if` 判断语句的条件：
+
+```js
+if (simpleCheckRE.test(expectedType))
+```
+
+使用 `simpleCheckRE` 去匹配字符串 `expectedType`，如果匹配成功则说明期望的类型为一下五种类型之一：`'String'`、`'Number'`、`'Boolean'`、`'Function'` 以及 `'Symbol'`，这五种类型有什么特点呢？它们的特点是都可以通过 `typeof` 操作符进行区分判断。在 `if` 语句块内执行的是如下代码：
+
+```js
+const t = typeof value
+valid = t === expectedType.toLowerCase()
+// for primitive wrapper objects
+if (!valid && t === 'object') {
+  valid = value instanceof type
+}
+```
+
+首先定义了常量 `t`，它的值就是通过 `typeof` 操作符获取到 `value` 的类型字符串，然后使用 `t` 与 `expectedType` 的小写作比较，如果全等则说明该 `prop` 的值与期望类型相同，此时 `valid` 将会为真。接着是一个 `if` 判断语句，可以看到这个判断语句的条件为：
+
+```js
+if (!valid && t === 'object')
+```
+
+也就是说通过前面对比，发现该 `prop` 值的类型与期望的类型不符。大家注意如果上面的 `if` 语句条件为真，则我们能够确定以下几点：
+
+* 1、期望的类型是这五种类型之一：`'String'`、`'Number'`、`'Boolean'`、`'Function'` 以及 `'Symbol'`
+* 2、并且通过 `typeof` 操作符取到的该 `prop` 值的类型为 `object`
+
+这时我们能够否定 `prop` 的值不符合预期吗？答案是不能的，因为在 `javascript` 有个概念叫做**基本包装类型**，比如可以这样定义一个字符串：
+
+```js
+const str = new String('基本包装类型')
+```
+
+此时通过 `typeof` 获取 `str` 的类型将得到 `'object'` 字符串。但 `str` 的的确确是一个字符串，所以在这种情况下我们还需要做进一步的检查，即：
+
+```js {2}
+if (!valid && t === 'object') {
+  valid = value instanceof type
+}
+```
+
+如上高亮代码所示使用 `instanceof` 操作符判断 `value` 是否是 `type` 的实例，如果是则依然认为该 `prop` 值是有效的。
+
+处理完了以上类型的检查，还要处理对象和数组已经自定义类型的检查，如下：
+
+```js
+if (simpleCheckRE.test(expectedType)) {
+  // 省略...
+} else if (expectedType === 'Object') {
+  valid = isPlainObject(value)
+} else if (expectedType === 'Array') {
+  valid = Array.isArray(value)
+} else {
+  valid = value instanceof type
+}
+```
+
+可以看到如果 `expectedType` 全等于字符串 `'Object'`，则使用 `isPlainObject` 函数检查该 `prop` 值的有效性，如果 `expectedType` 全等于字符串 `'Array'`，则使用 `Array.isArray` 函数判断该 `prop` 值的有效性，如果 `expectedType` 没有匹配前面的任何 `if...elseif` 语句，那么 `else` 语句块的代码将被执行，此时说明开发者在定义 `prop` 时所指定的期望类型为自定义类型，如：
+
+```js {6}
+// 自定义类型构造函数
+function Dog () {}
+
+props: {
+  prop1: {
+    type: Dog
+  }
+}
+```
+
+对于自定义类型，只需要检查值是否为该自定义类型构造函数的实例即可。
+
+以上就是我们对 `props` 选项的解析。
 
 ## methods 选项的初始化及实现
 
