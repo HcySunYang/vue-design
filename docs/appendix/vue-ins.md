@@ -54,4 +54,7 @@ vm._computedWatchers = Object.create(null)
 
 // initProps()    src/core/instance/state.js
 vm._props = {}
+
+// initProvide()    src/core/instance/inject.js
+vm._provided
 ```

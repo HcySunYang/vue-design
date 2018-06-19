@@ -1219,6 +1219,155 @@ props: {
 
 ## methods 选项的初始化及实现
 
+讲完了 `props` 选项的初始化及实现，接下来我们看一下 `methods` 选项的初始化及实现。`methods` 选项实现要简单的多，打开 `src/core/instance/state.js` 文件找到 `initMethods` 函数，如下：
+
+```js
+function initMethods (vm: Component, methods: Object) {
+  const props = vm.$options.props
+  for (const key in methods) {
+    if (process.env.NODE_ENV !== 'production') {
+      if (methods[key] == null) {
+        warn(
+          `Method "${key}" has an undefined value in the component definition. ` +
+          `Did you reference the function correctly?`,
+          vm
+        )
+      }
+      if (props && hasOwn(props, key)) {
+        warn(
+          `Method "${key}" has already been defined as a prop.`,
+          vm
+        )
+      }
+      if ((key in vm) && isReserved(key)) {
+        warn(
+          `Method "${key}" conflicts with an existing Vue instance method. ` +
+          `Avoid defining component methods that start with _ or $.`
+        )
+      }
+    }
+    vm[key] = methods[key] == null ? noop : bind(methods[key], vm)
+  }
+}
+```
+
+`initMethods` 函数同样接收两个参数，第一个参数 `vm` 为组件实例对象，第二个参数为 `methods` 选项。观察如上代码我们发现，有很大一部分代码是在非生产环境下执行的，假如我们忽略这部分代码，那么 `initMethods` 函数将更加简短，如下：
+
+```js
+function initMethods (vm: Component, methods: Object) {
+  const props = vm.$options.props
+  for (const key in methods) {
+    if (process.env.NODE_ENV !== 'production') {
+      // 省略...
+    }
+    vm[key] = methods[key] == null ? noop : bind(methods[key], vm)
+  }
+}
+```
+
+这样一来可以很清晰的看到 `methods` 选项是如何实现的，就是通过 `for...in` 循环遍历 `methods` 选项对象，其中 `key` 就是每个方法的名字。最关键的是循环的最后一句代码：
+
+```js
+vm[key] = methods[key] == null ? noop : bind(methods[key], vm)
+```
+
+通过这句代码可知，之所以能够通过组件实例对象访问 `methods` 选项中定义的方法，就是因为在组件实例对象上定义了与 `methods` 选项中所定义的同名方法，当然了在定义到组件实例对象之前要检测该方法是否真正的有定义：`methods[key] == null`，如果没有则添加一个空函数到组件实例对象上。
+
+虽然 `methods` 选项实现很简单，但非生产环境下还是要做一些检测的工作，接下来我们就看一下都需要检测哪些内容，首先是如下这段代码：
+
+```js
+if (process.env.NODE_ENV !== 'production') {
+  if (methods[key] == null) {
+    warn(
+      `Method "${key}" has an undefined value in the component definition. ` +
+      `Did you reference the function correctly?`,
+      vm
+    )
+  }
+  // 省略...
+}
+```
+
+这段代码用来检测该方法是否真正的有定义，如果没有定义则打印警告信息，提示开发者是否正确的引用了函数。
+
+接着是如下这段检测代码：
+
+```js
+if (props && hasOwn(props, key)) {
+  warn(
+    `Method "${key}" has already been defined as a prop.`,
+    vm
+  )
+}
+```
+
+其中 `props` 常量定义在 `initMethods` 函数开头：
+
+```js
+const props = vm.$options.props
+```
+
+所以 `props` 常量就是 `vm.$options.props` 的引用，我们知道 `props` 选项的初始化要先于 `methods` 选项，并且每个 `prop` 都需要挂载到组件实例对象下，如此一来 `methods` 选项中的方法名字很有可能与 `props` 选项中的属性名字相同，这样会导致覆盖的问题，为此需要检测 `methods` 选项中定义的方法名字是否在 `props` 选项中有定义，如果有的话则需要打印警告信息提示开发者：方法名已经被用于 `prop`，你换一个名字吧。
+
+再往下是最后一段检测代码，我们看看它做了什么检测工作：
+
+```js
+if ((key in vm) && isReserved(key)) {
+  warn(
+    `Method "${key}" conflicts with an existing Vue instance method. ` +
+    `Avoid defining component methods that start with _ or $.`
+  )
+}
+```
+
+上面代码中首先检测方法名字 `key` 是否已经在组件实例对象 `vm` 中有了定义，并且该名字 `key` 为保留的属性名，什么是保留的属性名呢？根据 [isReserved](../appendix/core-util.md#isreserved) 函数可知以字符 `$` 或 `_` 开头的名字为保留名，如果这两个条件都成立，说明你定义的方法与 `Vue` 原生提供的内置方法冲突，比如：
+
+```js
+methods: {
+  $set () {
+    alert('这个方法将覆盖 Vue 原生 $set 方法')
+  }
+}
+```
+
+如上代码中我们定义了 `$set` 方法，但是 `Vue` 已经内置了叫做 `$set` 的方法，如果允许这样做那么 `Vue` 内置的方法将被覆盖，所以需要打印警告信息提示开发者，让其更换一个方法名字。
+
 ## provide 选项的初始化及实现
+
+再往下我们将研究最后两个选项的初始化工作，即 `provide` 选项以及 `inject` 选项。在这之前我们来回顾一下这两个选项的作用，实际上 `Vue` 的官方文档已经明确告诉我们这两个选项主要用来辅助测试的，在正真的业务代码中是不推荐使用的，一般情况下我们也不需要使用这两个选项。
+
+如果一个组件使用了 `provide` 选项，那么该选项指定的数据将会被注入到该组件的所有后代组件中，在后代组件中可以使用 `inject` 选项选择性注入，这样后代组件就拿到了祖先组件提供的数据，这么做的好处是方便了为高阶组件提供数据并测试。
+
+切入正题，如下是 `Vue.prototype._init` 方法中的一段用来完成初始化工作的代码：
+
+```js {5,7}
+initLifecycle(vm)
+initEvents(vm)
+initRender(vm)
+callHook(vm, 'beforeCreate')
+initInjections(vm) // resolve injections before data/props
+initState(vm)
+initProvide(vm) // resolve provide after data/props
+callHook(vm, 'created')
+```
+
+可以发现 `initInjections` 函数在 `initProvide` 函数之前被调用，这说明对于任何一个组件来讲，总是要优先初始化 `inject` 选项，再初始化 `provide` 选项，这么做是有原因的，我们后面会提到。但是我们知道 `inject` 选项的数据需要从父代组件中的 `provide` 获取，所以我们优先来了解 `provide` 选项的实现，然后再查看 `inject` 选项的实现。
+
+打开 `src/core/instance/inject.js` 文件，找到 `initProvide` 函数，如下：
+
+```js
+export function initProvide (vm: Component) {
+  const provide = vm.$options.provide
+  if (provide) {
+    vm._provided = typeof provide === 'function'
+      ? provide.call(vm)
+      : provide
+  }
+}
+```
+
+如上是 `initProvide` 函数的全部代码，它接收组件实例对象作为参数。在 `initProvide` 函数内部首先定义了 `provide` 常量，它的值是 `vm.$options.provide` 选项的引用，接着是一个 `if` 条件语句，只有在 `provide` 选项存在的情况下才会执行 `if` 语句块内的代码，我们知道 `provide` 选项可以是对象，也可以是一个返回对象的函数。所以在 `if` 语句块内使用 `typeof` 操作符检测 `provide` 常量的类型，如果是函数则执行该函数说获取数据，否则直接将 `provide` 本身作为数据。最后将数据复制给组件实例对象的 `vm._provided` 属性，后面我们可以看到当组件初始化 `inject` 选项是，其注入的数据就是从父代组件实例的 `vm._provided` 属性中获取的。
+
+以上就是 `provide` 选项的初始化及实现，它本质上就是在组件实例对象上添加了 `vm._provided` 属性，并保存了用于子代组件的数据。
 
 ## inject 选项的初始化及实现
