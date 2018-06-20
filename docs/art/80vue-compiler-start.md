@@ -1,6 +1,6 @@
 # Vue 的编译器初探
 
-至此，我们对 `Vue.prototype._init` 方法所做的初始化工作基本全部讲解到了，在讲解渲染函数的观察者时，我们也讲解了渲染函数是如何生成的以及渲染函数的作用。我们打开 `src/platforms/web/entry-runtime-with-compiler.js` 文件，找到 `$mount` 方法，该方法中有这样一段代码：
+至此，我们对 `Vue.prototype._init` 方法所做的初始化工作基本全部讲解到了，在讲解渲染函数的观察者时，我们也讲解了渲染函数是如何生成的以及渲染函数的作用。接下来我们将开启新的篇章，即看一看渲染函数是如何通过编译器生成的。我们打开 `src/platforms/web/entry-runtime-with-compiler.js` 文件，找到 `$mount` 方法，该方法中有这样一段代码：
 
 ```js
 const { render, staticRenderFns } = compileToFunctions(template, {
