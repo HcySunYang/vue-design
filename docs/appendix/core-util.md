@@ -150,6 +150,22 @@ global['process'].env.VUE_ENV === 'server'
 
 注意，在 `isServerRendering` 中使用全局变量 `_isServer` 保存了最终的值，如果发现 `_isServer` 有定义，那么就不会重新计算，从而提升性能。毕竟环境是不会改变的，只需要求值一次即可。
 
+### hasSymbol
+
+源码如下：
+
+```js
+export const hasSymbol =
+  typeof Symbol !== 'undefined' && isNative(Symbol) &&
+  typeof Reflect !== 'undefined' && isNative(Reflect.ownKeys)
+```
+
+* 描述：`hasSymbol` 常量是一个布尔值，用来判断当前宿主环境是否支持原生 `Symbol` 和 `Reflect.ownKeys` 的可用性。
+
+* 源码解析：
+
+首先判断 `Symbol` 和 `Reflect` 是否存在，并使用 `isNative` 函数保证 `Symbol` 与 `Reflect.ownKeys` 全部是原生定义。
+
 ## error.js 文件代码说明
 
 该文件只导出一个函数：`handleError`，在看这个函数的实现之前，我们需要回顾一下 `Vue` 的文档，我们知道 `Vue` 提供了一个全局配置 `errorHandler`，用来捕获组件生命周期函数等的内部错误，使用方法如下：

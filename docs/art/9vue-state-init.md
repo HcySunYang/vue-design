@@ -1371,3 +1371,227 @@ export function initProvide (vm: Component) {
 以上就是 `provide` 选项的初始化及实现，它本质上就是在组件实例对象上添加了 `vm._provided` 属性，并保存了用于子代组件的数据。
 
 ## inject 选项的初始化及实现
+
+看完了 `provide` 选项的初始化及实现，接下来我们研究一下 `inject` 选项的初始化及实现。找到 `initInjections` 函数，它也定义在 `src/core/instance/inject.js` 文件，如下是 `initInjections` 函数的整体结构：
+
+```js
+export function initInjections (vm: Component) {
+  const result = resolveInject(vm.$options.inject, vm)
+  if (result) {
+    // 省略...
+  }
+}
+```
+
+`initInjections` 函数接收组件实例对象作为参数，在 `initInjections` 函数内部首先定义了 `result` 常量，并且我们能够初一到接下来的 `if` 条件语句的判断条件就是 `result` 常量，只有 `result` 为真的情况下才会执行 `if` 语句块内的代码。我们首先来看一下 `result` 常量的值是什么，可以看到它是 `resolveInject` 函数的返回值。通过上一节的讲解我们知道了子组件中通过 `inject` 选项注入的数据其实是存放在其父代组件实例的 `vm._provided` 属性中，实际上 `resolveInject` 函数的作用就是根据当前组件的 `inject` 选项去父代组件中寻找注入的数据，并将最终的数据返回。
+
+找到 `resolveInject` 函数，它定义在 `initInjections` 函数的下方，如下是其函数签名：
+
+```js
+export function resolveInject (inject: any, vm: Component): ?Object {
+  // 省略...
+}
+```
+
+`resolveInject` 函数接收两个参数，分别是 `inject` 选项以及组件实例对象。我们可以看到在 `initInjections` 函数中调用 `resolveInject` 函数时所传递的参数分别是 `vm.$options.inject` 以及 `vm`：
+
+```js {2}
+export function initInjections (vm: Component) {
+  const result = resolveInject(vm.$options.inject, vm)
+  if (result) {
+    // 省略...
+  }
+}
+```
+
+接下来我们就具体查看一下 `resolveInject` 函数，看它是如何向父代组件查着数据的。在 `resolveInject` 函数体内所有代码都被包含在了一个 `if` 语句块中：
+
+```js {2,4}
+export function resolveInject (inject: any, vm: Component): ?Object {
+  if (inject) {
+    // 省略...
+    return result
+  }
+}
+```
+
+并且我们能够看到 `if` 语句块内的最后一句代码将 `result` 返回，该 `result` 就是最终寻找到的注入的数据。如果 `inject` 选项不存在则返回 `undefined`。
+
+在 `if` 语句块内首先是这样一段代码：
+
+```js
+const result = Object.create(null)
+const keys = hasSymbol
+  ? Reflect.ownKeys(inject).filter(key => {
+    /* istanbul ignore next */
+    return Object.getOwnPropertyDescriptor(inject, key).enumerable
+  })
+  : Object.keys(inject)
+```
+
+这段代码定义了 `result` 常量，该常量的值为通过 `Object.create(null)` 创建的空对象，并且 `result` 常量的值将来会作为返回值被返回。接着定义了 `keys` 常量，它的值是一个数组，即由 `inject` 选项对象所有键名组成的数组，在 [Vue 选项的规范化](./4vue-normalize.md#规范化-inject（normalizeinject）) 一节中我们讲到了 `inject` 选项被规范化后将会是一个对象，并且该对象必然会包含 `from` 属性。例如如果你的 `inject` 选项是一个字符串数组：
+
+```js
+inject: ['data1', 'data2']
+```
+
+那么被规范化后 `vm.$options.inject` 选项将变为：
+
+```js
+{
+  'data1': { from: 'data1' },
+  'data2': { from: 'data2' }
+}
+```
+
+如果你的 `inject` 选项是一个对象，那么这个对象你可以有好几种写法：
+
+```js
+inject: {
+  // 第一种写法
+  data1: 'd1',
+  // 第二种写法
+  data2: {
+    someProperty: 'someValue'
+  }
+}
+```
+
+如上这两种最终都将被格式化为：
+
+```js
+inject: {
+  'data1': { from: 'd1' },
+  'data2': { from: 'data2', someProperty: 'someValue' }
+}
+```
+
+可以看到被规范化后的每个 `inject` 选项值也都是一个对象，并且都包含 `from` 属性。同时我们注意到 `someProperty` 属性被保留了，所以你完全可以把 `someProperty` 属性替换成 `default` 属性：
+
+```js
+inject: {
+  data1: {
+    default: 'defaultValue'
+  }
+}
+```
+
+这就是 `Vue` 文档中提到的可以使用 `default` 属性为注入的值指定默认值。
+
+明白了这些我们再回到 `resolveInject` 函数，还是如下这段代码：
+
+```js
+const result = Object.create(null)
+const keys = hasSymbol
+  ? Reflect.ownKeys(inject).filter(key => {
+    /* istanbul ignore next */
+    return Object.getOwnPropertyDescriptor(inject, key).enumerable
+  })
+  : Object.keys(inject)
+```
+
+现在我们知道 `keys` 常量中保存中 `inject` 选项对象的每一个键值，但我们注意到这里有一个对 [hasSymbol](../appendix/core-util.html#hassymbol) 的判断，其目的是保证 `Symbol` 类型与 `Reflect.ownKeys` 可用且为宿主环境原生提供，如果 `hasSymbol` 为真，则说明可用，此时会使用 `Reflect.ownKeys` 获取 `inject` 对象中所有可枚举的键名，否则使用 `Object.keys` 作为降级处理。实际上 `Reflect.ownKeys` 配合可枚举过滤等价于 `Object.keys` 与 `Object.getOwnPropertySymbols` 配合可枚举过滤之和，其好处是支持 `Symbol` 类型作为键名，当然了这一切都建立在宿主环境的支持之上，所以 `Vue` 官网中提到了**`inject` 选项对象的属性可以使用 `ES2015 Symbols` 作为 `key`，但是只在原生支持 `Symbol` 和 `Reflect.ownKeys` 的环境下可工作**。
+
+回过头来继续看 `resolveInject` 函数的代码，接下来的代码使用 `for` 循环，用来遍历刚刚获取到的 `keys` 数组：
+
+```js
+for (let i = 0; i < keys.length; i++) {
+  // 省略...
+}
+```
+
+在循环内部首先定义了两个常量以及一个变量：
+
+```js
+const key = keys[i]
+const provideKey = inject[key].from
+let source = vm
+```
+
+其中 `key` 常量就是 `keys` 数组中的每一个值，即 `inject` 选项的每一个键值，`provideKey` 常量保存的是每一个 `inject` 选项内所定义的注入对象的 `from` 属性的值，我们知道 `from` 属性的值代表着 `vm._provided` 数据中的每个数据的键名，所以 `provideKey` 常量将用来查找所注入的数据。最后定义了 `source` 变量，它的初始值是当前组件实例对象。
+
+接下来将开启一个 `while` 循环，用来查着注入数据的工作，如下：
+
+```js
+while (source) {
+  if (source._provided && hasOwn(source._provided, provideKey)) {
+    result[key] = source._provided[provideKey]
+    break
+  }
+  source = source.$parent
+}
+```
+
+我们知道 `source` 是当前组件实例对象，在循环内部有一个 `if` 条件语句，如下：
+
+```js
+if (source._provided && hasOwn(source._provided, provideKey))
+```
+
+该条件检测了 `source._provided` 属性是否存在，并且 `source._provided` 对象自身是否拥有 `provideKey` 键，如果有则说明找到了注入的数据：`source._provided[provideKey]`，并将它赋值给 `result` 对象的同名同名属性。有的同学会问：“`source` 变量的初始值为当前组件实例对象，那么如果在当前对象下找到了通过 `provide` 选项提供的值，那岂不是自身给自身注入数据？”。大家不要忘了 `inject` 选项的初始化是在 `provide` 选项初始化之前的，也就是说即使该组件通过 `provide` 选项提供的数据中的确存 `inject` 选项注入的数据，也不会有任何影响，因为在 `inject` 选项查找数据时 `provide` 提供的数据还没有被初始化，所以当一个组件使用 `provide` 提供数据时，该数据只有子待组件可用。
+
+那么如果 `if` 判断条件为假怎么办？没关系，注意 `while` 循环的最后一句代码：
+
+```js
+source = source.$parent
+```
+
+重新赋值 `source` 变量，使其引用父组件，以及类推就完成了向父代组件查找数据的需求，直到找到数据为止。但是如果一直找到了根组件，但依然没有找到数据怎么办？我们看接下来的代码：
+
+```js
+if (!source) {
+  if ('default' in inject[key]) {
+    const provideDefault = inject[key].default
+    result[key] = typeof provideDefault === 'function'
+      ? provideDefault.call(vm)
+      : provideDefault
+  } else if (process.env.NODE_ENV !== 'production') {
+    warn(`Injection "${key}" not found`, vm)
+  }
+}
+```
+
+我们知道根组件实例对象的 `vm.$parent` 属性为 `null`，所以如上 `if` 条件语句的判断条件如果成立，说明一直寻找到根组件也没有找到要数据，此时需要查看 `inject[key]` 对象中是否定义了 `default` 选项，如果定义了 `default` 选项则使用 `default` 选项提供的数据作为注入的数据，否则在非生产环境下会提示开发者**未找到注入的数据**。另外我们可以看到 `default` 选项可以是一个函数，此时会通过执行该函数来获取注入的数据。
+
+最后如果查询到了数据，`resolveInject` 函数会将 `result` 作为返回值返回，并且 `result` 对象的键就是注入数据的名字，`result` 对象每个键的值就是注入的数据。
+
+下面我们回到 `initInjections` 函数，如下：
+
+```js
+export function initInjections (vm: Component) {
+  const result = resolveInject(vm.$options.inject, vm)
+  if (result) {
+    // 省略...
+  }
+}
+```
+
+此时我们已经通过 `resolveInject` 函数取得了注入的数据，并赋值给 `result` 常量，我们知道 `result` 常量的值有可能是不存在的，所以需要一个 `if` 条件语句对 `result` 进行判断，当条件为真时说明成功取得注入的数据，此时会执行 `if` 语句块内的代码。在 `if` 语句块内所做的事情其实很简单：
+
+```js
+toggleObserving(false)
+Object.keys(result).forEach(key => {
+  /* istanbul ignore else */
+  if (process.env.NODE_ENV !== 'production') {
+    defineReactive(vm, key, result[key], () => {
+      warn(
+        `Avoid mutating an injected value directly since the changes will be ` +
+        `overwritten whenever the provided component re-renders. ` +
+        `injection being mutated: "${key}"`,
+        vm
+      )
+    })
+  } else {
+    defineReactive(vm, key, result[key])
+  }
+})
+toggleObserving(true)
+```
+
+就是通过遍历 `result` 常量并调用 `defineReactive` 函数在当前组件实例对象 `vm` 上定义与注入名称相同的变量，并赋予取得的值。这里有一个对环境的判断，在非生产环境下调用 `defineReactive` 函数时会多传递一个参数，即 `customSetter`，当你尝试设置注入的数据时会提示你不要这么做。
+
+另外大家也注意到了在使用 `defineReactive` 函数为组件实例对象定义属性之前，调用了 `toggleObserving(false)` 函数关闭了响应式定义的开关，之后又将开关开启：`toggleObserving(true)`。前面我们已经讲到了类似的情况，这么做将会导致使用 `defineReactive` 定义属性时不会将该属性的值转换为响应式的，所以 `Vue` 文档中提到了：
+
+>提示：provide 和 inject 绑定并不是可响应的。这是刻意为之的。然而，如果你传入了一个可监听的对象，那么其对象的属性还是可响应的。
+
+当然啦，如果父代组件提供的数据本身就是响应式的，即使 `defineReactive` 不转，那么最终这个数据也还是响应式的。
