@@ -1746,3 +1746,138 @@ parseEndTag(stackedTag, index - endTagLength, index)
 上面的代码中，首先跟新 `index` 的值，用 `html` 原始字符串的值减去 `rest` 字符串的长度，我们知道 `rest` 常量保存着剩余的字符串，所以二者的差就是被替换掉的那部分字符串的字符数。接着将 `rest` 常量的值赋值给 `html`，所以如果有剩余的字符串的话，它们将在下一次 `while` 循环被处理，最后调用 `parseEndTag` 函数解析纯文本标签的结束标签，这样就大功告成了。
 
 可以发现对于纯文本标签的处理宗旨就是将其内容作为纯文本对待。
+
+## parseHTML 的使用
+
+以上对于整个词法分析的过程我们就讲解完毕了，我们发现其实现方式就是通过读取字符流配合正则一点一点的解析字符串，直到整个字符串都被解析完毕为止。并且每当遇到一个特定的 `token` 时都会调用相应的钩子函数，同时将有用的参数传递过去。比如每当遇到一个开始标签都会调用 `options.start` 钩子函数，并传递给该钩子五个参数，所以我们可以像如下这样使用 `html-parser.js` 文件中的 `parseHTML` 函数：
+
+```js
+import { parseHTML } from './html-parser'
+
+parseHTML(templateString, {
+  // ...其他选项参数
+  start (tagName, attrs, unary, start, end) {
+    console.log('tagName: ', tagName)
+    console.log('attrs: ', attrs)
+    console.log('unary: ', unary)
+    console.log('start: ', start)
+    console.log('end: ', end)
+  }
+})
+```
+
+上面的代码中我们调用了 `parseHTML` 函数，并传递了两个参数，分别是模板字符串 `templateString` 以及一些选项参数，并且这些选项参数中包含 `start` 钩子函数，假如我们的模板字符串如下：
+
+```js
+templateString = '<div v-for="item of list" @click="handleClick">普通文本</div>'
+```
+
+那么 `start` 钩子函数将被调用，其 `console.log` 语句将得到如下输出：
+
+* tagName
+
+它的值为开始标签的的名字：`'div'`。
+
+* attrs
+
+它是一个数组，包含所有属于该标签的属性：
+
+```js
+[
+  {
+    name: 'v-for',
+    value: 'item of list'
+  },
+  {
+    name: '@click',
+    value: 'handleClick'
+  }
+]
+```
+
+* unary
+
+它是一个布尔值，代表该标签是否是一元标签，由于 `div` 标签是非一元标签，所以 `unary` 的值将为 `false`。
+
+* start
+
+它的值为开始标签第一个字符在整个模板字符串中的位置，所以是 `0`。
+
+* end
+
+注意，`end` 的值为开始标签最后一个字符在整个模板字符串中的位置加 `1`，所以是 `47`。
+
+同样的，如果我们在调用 `parseHTML` 函数时传递了 `end` 钩子函数，该函数同样会被调用：
+
+```js {6-10}
+parseHTML(templateString, {
+  // ...其他选项参数
+  start (tagName, attrs, unary, start, end) {
+    // ...
+  },
+  end (tagName, start, end) {
+    console.log('tagName: ', tagName)
+    console.log('start: ', start)
+    console.log('end: ', end)
+  }
+})
+```
+
+`end` 钩子函数会得到三个参数：
+
+* tagName
+
+它的值为结束标签的名字：`'div'`。
+
+* start
+
+它的值为结束标签在整个模板字符串中的位置，所以是：`51`。
+
+* end
+
+它的值同样是结束标签最后一个字符在整个模板字符串中的位置加 `1`，所以是：`57`
+
+另外我们的 `templateString` 模板字符串中的 `div` 标签中包含一段普通文本，所以如果我们在调用 `parseHTML` 时传递了 `chars` 钩子函数，那么 `chars` 钩子函数也将会被调用：
+
+```js {9-11}
+parseHTML(templateString, {
+  // ...其他选项参数
+  start (tagName, attrs, unary, start, end) {
+    // ...
+  },
+  end (tagName, start, end) {
+    // ...
+  },
+  chars (text) {
+    console.log('text: ', text)
+  }
+})
+```
+
+`chars` 钩子函数只接收一个参数，即文本内容：
+
+* text
+
+它的值为：`'普通文本'`
+
+最后如果你的模板字符串中包含注释节点，那么在调用 `parseHTML` 函数时可以传递 `comment` 钩子函数：
+
+```js {12-14}
+parseHTML(templateString, {
+  // ...其他选项参数
+  start (tagName, attrs, unary, start, end) {
+    // ...
+  },
+  end (tagName, start, end) {
+    // ...
+  },
+  chars (text) {
+    // ...
+  },
+  comment (text) {
+    console.log('text: ', text)
+  }
+})
+```
+
+`comment` 钩子函数也接收一个参数，该参数的值为注释节点的内容。
