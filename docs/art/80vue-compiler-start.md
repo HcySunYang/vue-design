@@ -280,7 +280,7 @@ if (cache[key]) {
 }
 ```
 
-首先定义常量 `key`，其值为一个字符串，我们知道 `options.delimiters` 是一个数组，如果 `options.delimiters` 存在，则使用 `String` 方法将其转换成字符串并与 `template` 拼接作为 `key` 的值，否则直接使用 `template` 字符串作为 `key` 的值，然后判断 `cache[key]` 是否存在，如果存在直接返回 `cache[key]`。这么做的目的是缓存字符串模板的编译结果，防止重复编译，提升性能，我们在看一下 `compileToFunctions` 函数的最后一句代码：
+首先定义常量 `key`，其值为一个字符串，我们知道 `options.delimiters` 是一个数组，如果 `options.delimiters` 存在，则使用 `String` 方法将其转换成字符串并与 `template` 拼接作为 `key` 的值，否则直接使用 `template` 字符串作为 `key` 的值，然后判断 `cache[key]` 是否存在，如果存在直接返回 `cache[key]`。这么做的目的是缓存字符串模板的编译结果，防止重复编译，提升性能，我们再看一下 `compileToFunctions` 函数的最后一句代码：
 
 ```js
 return (cache[key] = res)
@@ -354,7 +354,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 另外，这段代码也是运行在非生产环境的，且错误信息 `compiled.errors` 和提示信息 `compiled.tips` 都是数组，需要遍历打印，不同的是错误信息使用 `warn` 函数进行打印，而提示信息使用 `tip` 函数进行打印，其中 `tip` 函数也来自于 `core/util/debug.js` 文件。
 
-在往下是这样一段代码：
+再往下是这样一段代码：
 
 ```js
 // turn code into functions
