@@ -918,7 +918,7 @@ props: {
 }
 ```
 
-由于 `prop1` 的默认值是由工厂函数返回的对象，这个对象每次都是不同的，即使看上去数据是一样的，但他们具有不同的引用，这样每次都会触发响应，但试图并没有任何变化，也就是说触发了没有意义的响应。而解决办法就是前面所介绍的，返回上一次的默认值就可以了。
+由于 `prop1` 的默认值是由工厂函数返回的对象，这个对象每次都是不同的，即使看上去数据是一样的，但他们具有不同的引用，这样每次都会触发响应，但视图并没有任何变化，也就是说触发了没有意义的响应。而解决办法就是前面所介绍的，返回上一次的默认值就可以了。
 
 最后我们再来看 `getPropDefaultValue` 函数中的最后一段代码：
 
@@ -1014,7 +1014,7 @@ let valid = !type || type === true
 
 其中 `!type` 说明如果开发者在定义 `prop` 时没有规定该 `prop` 值的类型，则不需要校验，所以自然就认为无论外界传递了什么数据都是有效的，或者干脆在定义 `prop` 时直接将类型设置为 `true`，也代表不需要做 `prop` 校验。
 
-再往下定义了 `expectedTypes` 常量，它的初始值为空数组，该常量用来保存类型的字符串表示，当校验失败时会通过打印该数组中收集的类型来提示开发者应该传递哪些类型的数据。接着进入一个 `if` 语句块，其判断条件为 `if (type)`，只有当 `type` 存在时才需要做类型校验，在改 `if` 语句块内首先是这样一段代码：
+再往下定义了 `expectedTypes` 常量，它的初始值为空数组，该常量用来保存类型的字符串表示，当校验失败时会通过打印该数组中收集的类型来提示开发者应该传递哪些类型的数据。接着进入一个 `if` 语句块，其判断条件为 `if (type)`，只有当 `type` 存在时才需要做类型校验，在该 `if` 语句块内首先是这样一段代码：
 
 ```js
 if (!Array.isArray(type)) {
@@ -1366,7 +1366,7 @@ export function initProvide (vm: Component) {
 }
 ```
 
-如上是 `initProvide` 函数的全部代码，它接收组件实例对象作为参数。在 `initProvide` 函数内部首先定义了 `provide` 常量，它的值是 `vm.$options.provide` 选项的引用，接着是一个 `if` 条件语句，只有在 `provide` 选项存在的情况下才会执行 `if` 语句块内的代码，我们知道 `provide` 选项可以是对象，也可以是一个返回对象的函数。所以在 `if` 语句块内使用 `typeof` 操作符检测 `provide` 常量的类型，如果是函数则执行该函数说获取数据，否则直接将 `provide` 本身作为数据。最后将数据复制给组件实例对象的 `vm._provided` 属性，后面我们可以看到当组件初始化 `inject` 选项是，其注入的数据就是从父代组件实例的 `vm._provided` 属性中获取的。
+如上是 `initProvide` 函数的全部代码，它接收组件实例对象作为参数。在 `initProvide` 函数内部首先定义了 `provide` 常量，它的值是 `vm.$options.provide` 选项的引用，接着是一个 `if` 条件语句，只有在 `provide` 选项存在的情况下才会执行 `if` 语句块内的代码，我们知道 `provide` 选项可以是对象，也可以是一个返回对象的函数。所以在 `if` 语句块内使用 `typeof` 操作符检测 `provide` 常量的类型，如果是函数则执行该函数说获取数据，否则直接将 `provide` 本身作为数据。最后将数据复制给组件实例对象的 `vm._provided` 属性，后面我们可以看到当组件初始化 `inject` 选项时，其注入的数据就是从父代组件实例的 `vm._provided` 属性中获取的。
 
 以上就是 `provide` 选项的初始化及实现，它本质上就是在组件实例对象上添加了 `vm._provided` 属性，并保存了用于子代组件的数据。
 
@@ -1383,7 +1383,7 @@ export function initInjections (vm: Component) {
 }
 ```
 
-`initInjections` 函数接收组件实例对象作为参数，在 `initInjections` 函数内部首先定义了 `result` 常量，并且我们能够初一到接下来的 `if` 条件语句的判断条件就是 `result` 常量，只有 `result` 为真的情况下才会执行 `if` 语句块内的代码。我们首先来看一下 `result` 常量的值是什么，可以看到它是 `resolveInject` 函数的返回值。通过上一节的讲解我们知道了子组件中通过 `inject` 选项注入的数据其实是存放在其父代组件实例的 `vm._provided` 属性中，实际上 `resolveInject` 函数的作用就是根据当前组件的 `inject` 选项去父代组件中寻找注入的数据，并将最终的数据返回。
+`initInjections` 函数接收组件实例对象作为参数，在 `initInjections` 函数内部首先定义了 `result` 常量，并且我们能够注意到接下来的 `if` 条件语句的判断条件就是 `result` 常量，只有 `result` 为真的情况下才会执行 `if` 语句块内的代码。我们首先来看一下 `result` 常量的值是什么，可以看到它是 `resolveInject` 函数的返回值。通过上一节的讲解我们知道了子组件中通过 `inject` 选项注入的数据其实是存放在其父代组件实例的 `vm._provided` 属性中，实际上 `resolveInject` 函数的作用就是根据当前组件的 `inject` 选项去父代组件中寻找注入的数据，并将最终的数据返回。
 
 找到 `resolveInject` 函数，它定义在 `initInjections` 函数的下方，如下是其函数签名：
 
@@ -1404,7 +1404,7 @@ export function initInjections (vm: Component) {
 }
 ```
 
-接下来我们就具体查看一下 `resolveInject` 函数，看它是如何向父代组件查着数据的。在 `resolveInject` 函数体内所有代码都被包含在了一个 `if` 语句块中：
+接下来我们就具体查看一下 `resolveInject` 函数，看它是如何向父代组件查找数据的。在 `resolveInject` 函数体内所有代码都被包含在了一个 `if` 语句块中：
 
 ```js {2,4}
 export function resolveInject (inject: any, vm: Component): ?Object {
@@ -1510,7 +1510,7 @@ let source = vm
 
 其中 `key` 常量就是 `keys` 数组中的每一个值，即 `inject` 选项的每一个键值，`provideKey` 常量保存的是每一个 `inject` 选项内所定义的注入对象的 `from` 属性的值，我们知道 `from` 属性的值代表着 `vm._provided` 数据中的每个数据的键名，所以 `provideKey` 常量将用来查找所注入的数据。最后定义了 `source` 变量，它的初始值是当前组件实例对象。
 
-接下来将开启一个 `while` 循环，用来查着注入数据的工作，如下：
+接下来将开启一个 `while` 循环，用来查找注入数据的工作，如下：
 
 ```js
 while (source) {
@@ -1528,7 +1528,7 @@ while (source) {
 if (source._provided && hasOwn(source._provided, provideKey))
 ```
 
-该条件检测了 `source._provided` 属性是否存在，并且 `source._provided` 对象自身是否拥有 `provideKey` 键，如果有则说明找到了注入的数据：`source._provided[provideKey]`，并将它赋值给 `result` 对象的同名同名属性。有的同学会问：“`source` 变量的初始值为当前组件实例对象，那么如果在当前对象下找到了通过 `provide` 选项提供的值，那岂不是自身给自身注入数据？”。大家不要忘了 `inject` 选项的初始化是在 `provide` 选项初始化之前的，也就是说即使该组件通过 `provide` 选项提供的数据中的确存 `inject` 选项注入的数据，也不会有任何影响，因为在 `inject` 选项查找数据时 `provide` 提供的数据还没有被初始化，所以当一个组件使用 `provide` 提供数据时，该数据只有子待组件可用。
+该条件检测了 `source._provided` 属性是否存在，并且 `source._provided` 对象自身是否拥有 `provideKey` 键，如果有则说明找到了注入的数据：`source._provided[provideKey]`，并将它赋值给 `result` 对象的同名属性。有的同学会问：“`source` 变量的初始值为当前组件实例对象，那么如果在当前对象下找到了通过 `provide` 选项提供的值，那岂不是自身给自身注入数据？”。大家不要忘了 `inject` 选项的初始化是在 `provide` 选项初始化之前的，也就是说即使该组件通过 `provide` 选项提供的数据中的确存 `inject` 选项注入的数据，也不会有任何影响，因为在 `inject` 选项查找数据时 `provide` 提供的数据还没有被初始化，所以当一个组件使用 `provide` 提供数据时，该数据只有子代组件可用。
 
 那么如果 `if` 判断条件为假怎么办？没关系，注意 `while` 循环的最后一句代码：
 
@@ -1551,7 +1551,7 @@ if (!source) {
 }
 ```
 
-我们知道根组件实例对象的 `vm.$parent` 属性为 `null`，所以如上 `if` 条件语句的判断条件如果成立，说明一直寻找到根组件也没有找到要数据，此时需要查看 `inject[key]` 对象中是否定义了 `default` 选项，如果定义了 `default` 选项则使用 `default` 选项提供的数据作为注入的数据，否则在非生产环境下会提示开发者**未找到注入的数据**。另外我们可以看到 `default` 选项可以是一个函数，此时会通过执行该函数来获取注入的数据。
+我们知道根组件实例对象的 `vm.$parent` 属性为 `null`，所以如上 `if` 条件语句的判断条件如果成立，说明一直寻找到根组件也没有找到要的数据，此时需要查看 `inject[key]` 对象中是否定义了 `default` 选项，如果定义了 `default` 选项则使用 `default` 选项提供的数据作为注入的数据，否则在非生产环境下会提示开发者**未找到注入的数据**。另外我们可以看到 `default` 选项可以是一个函数，此时会通过执行该函数来获取注入的数据。
 
 最后如果查询到了数据，`resolveInject` 函数会将 `result` 作为返回值返回，并且 `result` 对象的键就是注入数据的名字，`result` 对象每个键的值就是注入的数据。
 
