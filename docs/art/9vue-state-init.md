@@ -480,7 +480,7 @@ const prop = {
 const booleanIndex = getTypeIndex(Boolean, prop.type)
 ```
 
-`booleanIndex` 常量的值是调用 `getTypeIndex` 函数的返回值，那么 `getTypeIndex` 函数的作用是什么呢？首先 `getTypeIndex` 函数接收两个参数，这两个参数都是某一个类型数据结构的构造函数，它可以是 `javascript` 原生数据类型的构造函数，也可以是自定义构造函数。`getTypeIndex` 函数的作用准备的说是用来查找第一个参数所指定的类型构造函数是否存在于第二个参数所指定的类型构造函数数组中，没错第二个参数可能是一个数组，比如我们像如下这样定义 `props`：
+`booleanIndex` 常量的值是调用 `getTypeIndex` 函数的返回值，那么 `getTypeIndex` 函数的作用是什么呢？首先 `getTypeIndex` 函数接收两个参数，这两个参数都是某一个类型数据结构的构造函数，它可以是 `javascript` 原生数据类型的构造函数，也可以是自定义构造函数。`getTypeIndex` 函数的作用准确地说是用来查找第一个参数所指定的类型构造函数是否存在于第二个参数所指定的类型构造函数数组中，没错第二个参数可能是一个数组，比如我们像如下这样定义 `props`：
 
 ```js
 props: {
@@ -636,7 +636,7 @@ value === '' || value === hyphenate(key)
 <some-comp someProp="some-prop" />
 ```
 
-如果你想如上代码那样为组件传递 `props`，并且这些指定了这些 `props` 的类型包括 `Boolean` 类型。那么此时 `else...if` 语句块的代码将被执行，如下：
+如果你像如上代码那样为组件传递 `props`，并且这些指定了这些 `props` 的类型包括 `Boolean` 类型。那么此时 `else...if` 语句块的代码将被执行，如下：
 
 ```js
 // only cast empty string / same name to boolean if
@@ -976,7 +976,7 @@ if (prop.required && absent) {
 }
 ```
 
-这段代码用来检测开发者是否传递了那些必须传递的 `prop` 数据，我们知道开发者可以在定义 `prop` 时指定 `required` 选项为 `true`，代表该 `prop` 为必传的。所以如上 `if` 语句的条件成立则说明该 `prop` 为必传 `prop`，但是外界却没有向组件传递该 `prop` 的值。此时需要打印警告信息提示开发者缺少必传的 `prop`。注意在打印完警告信息之后函数理解返回，不会执行后续操作。
+这段代码用来检测开发者是否传递了那些必须传递的 `prop` 数据，我们知道开发者可以在定义 `prop` 时指定 `required` 选项为 `true`，代表该 `prop` 为必传的。所以如上 `if` 语句的条件成立则说明该 `prop` 为必传 `prop`，但是外界却没有向组件传递该 `prop` 的值。此时需要打印警告信息提示开发者缺少必传的 `prop`。注意在打印完警告信息之后函数立即返回，不会执行后续操作。
 
 再往下是这样一段代码：
 
@@ -1490,7 +1490,7 @@ const keys = hasSymbol
   : Object.keys(inject)
 ```
 
-现在我们知道 `keys` 常量中保存中 `inject` 选项对象的每一个键值，但我们注意到这里有一个对 [hasSymbol](../appendix/core-util.html#hassymbol) 的判断，其目的是保证 `Symbol` 类型与 `Reflect.ownKeys` 可用且为宿主环境原生提供，如果 `hasSymbol` 为真，则说明可用，此时会使用 `Reflect.ownKeys` 获取 `inject` 对象中所有可枚举的键名，否则使用 `Object.keys` 作为降级处理。实际上 `Reflect.ownKeys` 配合可枚举过滤等价于 `Object.keys` 与 `Object.getOwnPropertySymbols` 配合可枚举过滤之和，其好处是支持 `Symbol` 类型作为键名，当然了这一切都建立在宿主环境的支持之上，所以 `Vue` 官网中提到了**`inject` 选项对象的属性可以使用 `ES2015 Symbols` 作为 `key`，但是只在原生支持 `Symbol` 和 `Reflect.ownKeys` 的环境下可工作**。
+现在我们知道 `keys` 常量中保存中 `inject` 选项对象的每一个键值，但我们注意到这里有一个对 [hasSymbol](../appendix/core-util.html#hassymbol) 的判断，其目的是保证 `Symbol` 类型与 `Reflect.ownKeys` 可用且为宿主环境原生提供，如果 `hasSymbol` 为真，则说明可用，此时会使用 `Reflect.ownKeys` 获取 `inject` 对象中所有可枚举的键名，否则使用 `Object.keys` 作为降级处理。实际上 `Reflect.ownKeys` 配合可枚举过滤等价于 `Object.keys` 与 `Object.getOwnPropertySymbols` 配合可枚举过滤之和，其好处是支持 `Symbol` 类型作为键名，当然了这一切都建立在宿主环境的支持之上，所以 `Vue` 官网中提到了** `inject` 选项对象的属性可以使用 `ES2015 Symbols` 作为 `key`，但是只在原生支持 `Symbol` 和 `Reflect.ownKeys` 的环境下可工作**。
 
 回过头来继续看 `resolveInject` 函数的代码，接下来的代码使用 `for` 循环，用来遍历刚刚获取到的 `keys` 数组：
 
@@ -1528,7 +1528,7 @@ while (source) {
 if (source._provided && hasOwn(source._provided, provideKey))
 ```
 
-该条件检测了 `source._provided` 属性是否存在，并且 `source._provided` 对象自身是否拥有 `provideKey` 键，如果有则说明找到了注入的数据：`source._provided[provideKey]`，并将它赋值给 `result` 对象的同名属性。有的同学会问：“`source` 变量的初始值为当前组件实例对象，那么如果在当前对象下找到了通过 `provide` 选项提供的值，那岂不是自身给自身注入数据？”。大家不要忘了 `inject` 选项的初始化是在 `provide` 选项初始化之前的，也就是说即使该组件通过 `provide` 选项提供的数据中的确存 `inject` 选项注入的数据，也不会有任何影响，因为在 `inject` 选项查找数据时 `provide` 提供的数据还没有被初始化，所以当一个组件使用 `provide` 提供数据时，该数据只有子代组件可用。
+该条件检测了 `source._provided` 属性是否存在，并且 `source._provided` 对象自身是否拥有 `provideKey` 键，如果有则说明找到了注入的数据：`source._provided[provideKey]`，并将它赋值给 `result` 对象的同名属性。有的同学会问：“`source` 变量的初始值为当前组件实例对象，那么如果在当前对象下找到了通过 `provide` 选项提供的值，那岂不是自身给自身注入数据？”。大家不要忘了 `inject` 选项的初始化是在 `provide` 选项初始化之前的，也就是说即使该组件通过 `provide` 选项提供的数据中的确存在 `inject` 选项注入的数据，也不会有任何影响，因为在 `inject` 选项查找数据时 `provide` 提供的数据还没有被初始化，所以当一个组件使用 `provide` 提供数据时，该数据只有子代组件可用。
 
 那么如果 `if` 判断条件为假怎么办？没关系，注意 `while` 循环的最后一句代码：
 
