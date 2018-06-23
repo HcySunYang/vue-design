@@ -613,6 +613,223 @@ const matchs = 'v-on.click.stop'.match(modifierRE)
 matchs[0].slice(1)  // 'stop'
 ```
 
+### HTML 实体解码函数 decodeHTMLCached
+
+源码如下：
+
+```js
+const decodeHTMLCached = cached(he.decode)
+```
+
+`cached` 函数我们前面遇到过，它的作用是接收一个函数作为参数并返回一个新的函数，新函数的功能与作为参数传递的函数功能相同，唯一不同的是多了新函数将会缓存值，如果一个函数在接收相同参数的情况下所返回的值总是相同的，那么 `cached` 函数将会为该函数提供性能提升的优势。
+
+可以看到传递给 `cached` 函数的参数是 `he.decode` 函数，其中 `he` 为第三方的库，`he.decode` 函数用于 `HTML` 字符实体的解码工作，如：
+
+```js
+console.log(he.decode('&#x26;'))  // &#x26; -> '&'
+```
+
+由于字符实体 `&#x26;` 代表的字符为 `&`。所以字符串 `&#x26;` 经过解码后将变为字符 `&`。`decodeHTMLCached` 函数在后面将被用于对纯文本的解码，如果不进行解码，那么用户将无法使用字符实体编写字符。
+
+### 定义平台化选项变量
+
+再往下，定义了一些平台化的选项变量，如下：
+
+```js
+export let warn: any
+let delimiters
+let transforms
+let preTransforms
+let postTransforms
+let platformIsPreTag
+let platformMustUseProp
+let platformGetTagNamespace
+```
+
+上面的代码中定义了 `7` 个平台化的变量，为什么说上面这些变量为平台化的选项变量呢？后面当我们讲解 `parse` 函数时，我们能够看到这些变量将被初始化一个值，这些值都是平台化的编译器选项参数，不同平台这些变量将被初始化的值是不同的。我们可以找到 `parse` 函数看一下：
+
+```js
+export function parse (
+  template: string,
+  options: CompilerOptions
+): ASTElement | void {
+  warn = options.warn || baseWarn
+
+  platformIsPreTag = options.isPreTag || no
+  platformMustUseProp = options.mustUseProp || no
+  platformGetTagNamespace = options.getTagNamespace || no
+
+  transforms = pluckModuleFunction(options.modules, 'transformNode')
+  preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
+  postTransforms = pluckModuleFunction(options.modules, 'postTransformNode')
+
+  delimiters = options.delimiters
+
+  // 省略...
+}
+```
+
+如上代码所示，可以清晰的看到在 `parse` 函数的一开始为这 `7` 个平台化的变量进行了初始化，初始化的值都是我们曾经讲过的编译器的选项参数，由于我们前面所讲解的都是 `web` 平台下的编译器选项，所以这里初始化的值都只用于 `web` 平台。
+
+### createASTElement 函数
+
+在平台化变量的后面，定义了 `createASTElement` 函数，这个函数的作用就是方便我们创建一个节点，或者说方便我们创建一个元素的描述对象，如下：
+
+```js
+export function createASTElement (
+  tag: string,
+  attrs: Array<Attr>,
+  parent: ASTElement | void
+): ASTElement {
+  return {
+    type: 1,
+    tag,
+    attrsList: attrs,
+    attrsMap: makeAttrsMap(attrs),
+    parent,
+    children: []
+  }
+}
+```
+
+它接收三个参数，分别是标签名字 `tag`，该标签拥有的属性数组 `attrs` 以及该标签的父标签描述对象的引用。比如我们使用 `parseHTML` 解析如下标签时：
+
+```html
+<div v-for="obj of list" class="box"></div>
+```
+
+当遇 `div` 的开始标签时 `parseHTML` 函数的 `start` 钩子函数的前连个参数分别是：
+
+```js
+const html = '<div v-for="obj of list" class="box"></div>'
+parseHTML(html, {
+  start (tag, attrs) {
+    console.log(tag)    // 'div'
+    console.log(attrs)  // [ { name: 'v-for', value: 'obj of list' }, { name: 'class', value: 'box' } ]
+  }
+})
+```
+
+此时我们只需要调用 `createASTElement` 函数并将这两个参数传递过去，即可创建该 `div` 标签的描述对象：
+
+```js {6}
+const html = '<div v-for="obj of list" class="box"></div>'
+parseHTML(html, {
+  start (tag, attrs) {
+    console.log(tag)    // 'div'
+    console.log(attrs)  // [ { name: 'v-for', value: 'obj of list' }, { name: 'class', value: 'box' } ]
+    const element = createASTElement(tag, attrs)
+  }
+})
+```
+
+最终创建出来的元素描述对象如下：
+
+```js
+element = {
+  type: 1,
+  tag: 'div',
+  attrsList: [
+    {
+      name: 'v-for',
+      value: 'obj of list'
+    },
+    {
+      name: 'class',
+      value: 'box'
+    }
+  ],
+  attrsMap: makeAttrsMap(attrs),
+  parent,
+  children: []
+}
+```
+
+上面的描述对象中的 `parent` 属性我们没有细说，其实在上一小节我们讲解思路的时候已经接触过 `currentParent` 变量的作用，实际上元素描述对象间的引用关系就是通过 `currentParent` 完成的，后面会仔细讲解。另外我们注意到描述对象中除了 `attrsList` 属性是原始的标签属性数组之后，还有一个叫做 `attrsMap` 属性：
+
+```js {3}
+{
+  // 省略...
+  attrsMap: makeAttrsMap(attrs),
+  // 省略...
+}
+```
+
+这个属性是什么呢？可以看到它的值是 `makeAttrsMap` 函数的返回值，并且 `makeAttrsMap` 函数接收一个参数，该参数恰好是标签的属性数组 `attrs`，此时我们需要查看一下 `makeAttrsMap` 的代码，如下：
+
+```js
+function makeAttrsMap (attrs: Array<Object>): Object {
+  const map = {}
+  for (let i = 0, l = attrs.length; i < l; i++) {
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      map[attrs[i].name] && !isIE && !isEdge
+    ) {
+      warn('duplicate attribute: ' + attrs[i].name)
+    }
+    map[attrs[i].name] = attrs[i].value
+  }
+  return map
+}
+```
+
+我们首先注意 `makeAttrsMap` 函数的第一句代码和最后一句代码，第一句代码定义了 `map` 常量并在最后一句代码中将其返回，在这两句代码中间是一个 `for` 循环，用于遍历 `attrs` 数组，注意 `for` 循环内有这样一句代码：
+
+```js
+map[attrs[i].name] = attrs[i].value
+```
+
+也就是说，如果标签的属性数组 `attrs` 为：
+
+```js
+attrs = [
+  {
+    name: 'v-for',
+    value: 'obj of list'
+  },
+  {
+    name: 'class',
+    value: 'box'
+  }
+]
+```
+
+那么最终生成的 `map` 对象则是：
+
+```js
+map = {
+  'v-for': 'obj of list',
+  'class': 'box'
+}
+```
+
+所以 `makeAttrsMap` 函数的作用就是将标签的属性数组转换成名值对一一对象的对象。这么做坑定是有目的的，我们后面遇到了再讲，总之最终生成的元素描述对象如下：
+
+```js
+element = {
+  type: 1,
+  tag: 'div',
+  attrsList: [
+    {
+      name: 'v-for',
+      value: 'obj of list'
+    },
+    {
+      name: 'class',
+      value: 'box'
+    }
+  ],
+  attrsMap: {
+    'v-for': 'obj of list',
+    'class': 'box'
+  },
+  parent,
+  children: []
+}
+```
+
+以上就是 `parse` 函数之前定义的所有常量、变量以及函数的讲解，接下来我们将正式进入 `parse` 函数的实现讲解。
+
 ## 对令牌的加工
 
 ### 增强的 class
