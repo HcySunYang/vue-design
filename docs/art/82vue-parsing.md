@@ -485,6 +485,134 @@ el = {
 
 ### 正则常量 onRE
 
+接下来我们将讲解定义在该文件中的一系列常量，首先要讲解的 `onRE` 正则常量，其源码如下：
+
+```js
+export const onRE = /^@|^v-on:/
+```
+
+这个常量用来匹配以字符 `@` 或 `v-on:` 开头的字符串，主要作用是检测标签属性名是否是监听事件的指令。
+
+### 正则常量 dirRE
+
+正则常量 `dirRE` 源码如下：
+
+```js
+export const dirRE = /^v-|^@|^:/
+```
+
+它用来匹配以字符 `v-` 或 `@` 或 `:` 开头的字符串，主要作用是检测标签属性名是否是指令。所以通过这个正则我们可以知道，在 `vue` 中所以 `v-` 开头的属性都被认为是指令，另外 `@` 字符是 `v-on` 的缩写，`:` 字符是 `v-bind` 的缩写。
+
+### 正则常量 forAliasRE
+
+其源码如下：
+
+```js
+export const forAliasRE = /([^]*?)\s+(?:in|of)\s+([^]*)/
+```
+
+该正则包含三个分组，第一个分组为 `([^]*?)`，该分组是一个惰性匹配的分组，它匹配的内容为任何字符，包括换行符等。第二个分组为 `(?:in|of)`，该分组用来匹配字符串 `in` 或者 `of`，并且该分组是非捕获的分组。第三个分组为 `([^]*)`，与第一个分组类似，不同的是第三个分组是非惰性匹配。同时每个分组之间都会匹配至少一个空白符 `\s+`。通过以上说明可知，正则 `forAliasRE` 用来匹配 `v-for` 属性的值，并捕获 `in` 或 `of` 前后的字符串。假设我们像如下这样使用 `v-for`：
+
+```html
+<div v-for="obj of list"></div>
+```
+
+那么正则 `forAliasRE` 用来匹配字符串 `'obj of list'`，并捕获到两个字符串 `'obj'` 和 `'list'`。
+
+### 正则常量 forIteratorRE
+
+源码如下：
+
+```js
+export const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
+```
+
+该正则用来匹配 `forAliasRE` 第一个捕获组所捕获到的字符串，可以看到如上正则中拥有三个分组，有两个捕获的分组，第一个捕获组用来捕获一个不包含字符 `}` 和 `]` 的字符串，且该字符串前面有一个字符 `,`，如：`', index'`。第二个分组为非捕获的分组，第三个分组为捕获的分组，其捕获的内容与第一个捕获组相同。
+
+举几个例子，我们知道 `v-for` 有几种不同的写法，其中一种使用 `v-for` 的方式是：
+
+```js
+<div v-for="obj of list"></div>
+```
+
+如果像如上这样使用 `v-for`，那么 `forAliasRE` 正则的第一个捕获组的内容为字符串 `'obj'`，此时使用 `forIteratorRE` 正则去匹配字符串 `'obj'` 将得不到任何内容。
+
+第二种使用 `v-for` 的方式为：
+
+```js
+<div v-for="(obj, index) of list"></div>
+```
+
+此时 `forAliasRE` 正则的第一个捕获组的内容为字符串 `'(obj, index)'`，如果去掉左右括号则该字符串为 `'obj, index'`，如果使用 `forIteratorRE` 正则去匹配字符串 `'obj, index'` 则会匹配成功，并且 `forIteratorRE` 正则的第一个捕获组将捕获到字符串 `'index'`，但第二个捕获组捕获不到任何内容。
+
+第三种使用 `v-for` 的方式为：
+
+```js
+<div v-for="(value, key, index) in object"></div>
+```
+
+以上方式主要用于遍历对象而非数组，此时 `forAliasRE` 正则的第一个捕获组的内容为字符串 `'(value, key, index)'`，如果去掉左右括号则该字符串为 `'value, key, index'`，如果使用 `forIteratorRE` 正则去匹配字符串 `'value, key, index'` 则会匹配成功，并且 `forIteratorRE` 正则的第一个捕获组将捕获到字符串 `'key'`，但第二个捕获组将捕获到字符串 `'index'`。
+
+### 正则常量 stripParensRE
+
+源码如下：
+
+```js
+const stripParensRE = /^\(|\)$/g
+```
+
+这个捕获组用来捕获要么以字符 `(` 开头，要么以字符 `)` 结尾的字符串，或者两者都满足。那么这个正则的作用是什么呢？我们在讲解正则 `forIteratorRE` 时有个细节不知道大家注意到了没有，就是 `forIteratorRE` 正则所匹配的字符串是 `'obj, index'`，而不是 `'(obj, index)'`，这两个字符串的区别就在于第二个字符串拥有左右括号，所以在使用 `forIteratorRE` 正则之前，需要使用 `stripParensRE` 正则去掉字符串 `'(obj, index)'` 中的左右括号，实现方式很简单：
+
+```js
+'(obj, index)'.replace(stripParensRE, '')
+```
+
+### 正则常量 argRE
+
+源码如下：
+
+```js
+const argRE = /:(.*)$/
+```
+
+正则 `argRE` 用来匹配指令中的参数，如下：
+
+```html
+<div v-on:click.stop="handleClick"></div>
+```
+
+其中 `v-on` 为指令，`click` 为传递给 `v-on` 指令的参数，`stop` 为修饰符。所以 `argRE` 正则用来匹配指令编写中的参数，并且拥有一个捕获组，用来捕获参数的名字。
+
+### 正则常量 bindRE
+
+源码如下：
+
+```js
+export const bindRE = /^:|^v-bind:/
+```
+
+该正则用来匹配以字符 `:` 或字符串 `v-bind:` 开头的字符串，主要用来检测一个标签的属性是否是绑定(`v-bind`)。
+
+### 正则常量 modifierRE
+
+源码如下：
+
+```js
+const modifierRE = /\.[^.]+/g
+```
+
+该正则用来匹配修饰符的，但是并没有捕获任何东西，举例如下：
+
+```js
+const matchs = 'v-on.click.stop'.match(modifierRE)
+```
+
+那么 `matchs` 数组第一个元素为字符串 `'.stop'`，所以指令名字应该是：
+
+```js
+matchs[0].slice(1)  // 'stop'
+```
+
 ## 对令牌的加工
 
 ### 增强的 class
