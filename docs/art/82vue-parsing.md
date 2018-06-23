@@ -357,6 +357,134 @@ function parse (html) {
 
 ## 解析前的准备工作
 
+前面说过，整个 `src/compiler/parser/index.js` 文件的所做的工作都是在创建 `AST`，所以我们应该先了解一下这个文件的结构，以方便后续的理解。在改文件的开头定义了一些常量和变量，其中包括一些正则常量，我们后续会详细讲解。
+
+接着定义了 `createASTElement` 函数，如下：
+
+```js
+export function createASTElement (
+  tag: string,
+  attrs: Array<Attr>,
+  parent: ASTElement | void
+): ASTElement {
+  return {
+    type: 1,
+    tag,
+    attrsList: attrs,
+    attrsMap: makeAttrsMap(attrs),
+    parent,
+    children: []
+  }
+}
+```
+
+`createASTElement` 函数用来创建一个元素的描述对象，这样我们在创建元素描述对象时就不需要手动编写对象字面量了，方便的同时还能提高代码整洁性。
+
+再往下定义了整个文件最重要的一个函数，即 `parse` 函数，它的结构如下：
+
+```js
+export function parse (
+  template: string,
+  options: CompilerOptions
+): ASTElement | void {
+  /*
+   * 省略...
+   * 省略的代码用来初始化一些变量的值，以及创建一些新的变量，其中包括 root 变量，该变量为 parse 函数的返回值，即 AST
+   */
+  
+  function warnOnce (msg) {
+    // 省略...
+  }
+
+  function closeElement (element) {
+    // 省略...
+  }
+
+  parseHTML(template, {
+    // 其他选项...
+    start (tag, attrs, unary, start, end) {
+      // 省略...
+    },
+
+    end (tag, start, end) {
+      // 省略...
+    },
+
+    chars (text: string) {
+      // 省略...
+    },
+    comment (text: string) {
+      // 省略...
+    }
+  })
+  return root
+}
+```
+
+通过如上代码的简化，我们可以清晰的看到 `parse` 函数的结构，在 `parse` 函数开头代码用来初始化一些变量的值，以及创建一些新的变量，其中包括 `root` 变量，该变量为 `parse` 函数的返回值，即最终的 `AST`。然后定义了两个函数 `warnOnce` 和 `closeElement`。接着调用了 `parseHTML` 函数，通过上一小节的铺垫，相信大家看到这里已经大概知道了 `parse` 函数是如何创建 `AST` 的了。另外我们能够注意到在调用 `parseHTML` 函数时传递了很多选项，其中包括四个重要的钩子函数选项：`start`、`end`、`chars` 以及 `comment`。最后 `parse` 函数将 `root` 变量返回，也就是最终生成的 `AST`。
+
+在 `parse` 函数的后面，定义了非常多的函数，如下：
+
+```js
+function processPre (el) {/* 省略...*/}
+function processRawAttrs (el) {/* 省略...*/}
+export function processElement (element: ASTElement, options: CompilerOptions) {/* 省略...*/}
+function processKey (el) {/* 省略...*/}
+function processRef (el) {/* 省略...*/}
+export function processFor (el: ASTElement) {/* 省略...*/}
+export function parseFor (exp: string): ?ForParseResult {/* 省略...*/}
+function processIf (el) {/* 省略...*/}
+function processIfConditions (el, parent) {/* 省略...*/}
+function findPrevElement (children: Array<any>): ASTElement | void {/* 省略...*/}
+export function addIfCondition (el: ASTElement, condition: ASTIfCondition) {/* 省略...*/}
+function processOnce (el) {/* 省略...*/}
+function processSlot (el) {/* 省略...*/}
+function processComponent (el) {/* 省略...*/}
+function processAttrs (el) {/* 省略...*/}
+function checkInFor (el: ASTElement): boolean {/* 省略...*/}
+function parseModifiers (name: string): Object | void {/* 省略...*/}
+function makeAttrsMap (attrs: Array<Object>): Object {/* 省略...*/}
+function isTextTag (el): boolean {/* 省略...*/}
+function isForbiddenTag (el): boolean {/* 省略...*/}
+function guardIESVGBug (attrs) {/* 省略...*/}
+function checkForAliasModel (el, value) {/* 省略...*/}
+```
+
+我们能够发现这些函数的名字大部分都以 `process` 开头，并且接收的参数中基本都包含 `el`，那么 `el` 是什么呢？实际上 `el` 就是元素的描述对象，如下：
+
+```js
+el = {
+  type: 1,
+  tag,
+  attrsList: attrs,
+  attrsMap: makeAttrsMap(attrs),
+  parent,
+  children: []
+}
+```
+
+那么 `process*` 类的函数接收 `el` 参数后都做了什么呢？实际上 `process*` 类函数的作用就是对元素描述对象的进一步处理，比如其中一个函数叫做 `processPre`，这个函数的作用就是用来检测 `el` 元素是否拥有 `v-pre` 属性，如果有 `v-pre` 属性则会在 `el` 描述对象上添加一个 `pre` 属性，如下：
+
+```js {8}
+el = {
+  type: 1,
+  tag,
+  attrsList: attrs,
+  attrsMap: makeAttrsMap(attrs),
+  parent,
+  children: [],
+  pre: true
+}
+```
+
+类似的，所有 `process*` 类函数的作用都是为了让一个元素的描述对象更叫充实，使这个对象能更加详情的描述一个元素，并且这些函数都会用在 `parseHTML` 函数的钩子选项函数中。
+
+另外我们也能看到很多非 `process*` 类的函数，例如 `findPrevElement`、`makeAttrsMap` 等等，这些函数实际上就是工具函数。
+
+以上就是 `src/compiler/parser/index.js` 文件的整体结构。接下来我们将重新回到该文件的开头部分，来看看都定义了哪些常量或变量。
+
+### 正则常量 onRE
+
 ## 对令牌的加工
 
 ### 增强的 class
