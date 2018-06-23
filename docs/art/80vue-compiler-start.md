@@ -207,7 +207,7 @@ const { render, staticRenderFns } = compileToFunctions(template, {
 }, this)
 ```
 
-上面这段代码存在于 `Vue.prototype.$mount` 函数体内，我们已经知道 `compileToFunctions` 函数的作用是把传入的模板字符串编(`template`)译成渲染函数(`render`)的。所以传递给 `compileToFunctions` 的第一个参数就是模板字符串(`template`)，而第二个参数则是一些选项(`options`)，接下来我们先把这里传递的选项对象搞清楚，选项对象如下：
+上面这段代码存在于 `Vue.prototype.$mount` 函数体内，我们已经知道 `compileToFunctions` 函数的作用是把传入的模板字符串(`template`)编译成渲染函数(`render`)的。所以传递给 `compileToFunctions` 的第一个参数就是模板字符串(`template`)，而第二个参数则是一些选项(`options`)，接下来我们先把这里传递的选项对象搞清楚，选项对象如下：
 
 ```js
 {
@@ -218,7 +218,7 @@ const { render, staticRenderFns } = compileToFunctions(template, {
 }
 ```
 
-其中 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个变量来自于 `platforms/web/util.js` 文件，大家可以在附录 [platforms/web/util 目录下的工具方法全解](../appendix/web-util.md) 中查看这两个变量的作用，其目的是对浏览器的怪癖做兼容，具体在附录中都有讲到，并且这两个变量的类型都是布尔值。
+其中 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个变量来自于 `platforms/web/util/compat.js` 文件，大家可以在附录 [platforms/web/util 目录下的工具方法全解](../appendix/web-util.md) 中查看这两个变量的作用，其目的是对浏览器的怪癖做兼容，具体在附录中都有讲到，并且这两个变量的类型都是布尔值。
 
 对于 `options.delimiters` 和 `options.comments`，其中 `options` 就是当前 `Vue` 实例的 `$options` 属性，并且 `delimiters` 和 `comments` 都是 `Vue` 提供的选项。所以这里只是简单的将这两个选项透传了过去。
 
@@ -395,7 +395,7 @@ res.staticRenderFns = compiled.staticRenderFns.map(code => {
 })
 ```
 
-由这段代码可知 `res.staticRenderFns` 是一个函数数组，是通过对 `compiled.staticRenderFns` 变量生成的，这说明：*`compiled` 除了包含 `render` 字符串外，还包含一个字符串数组 `staticRenderFns`，且这个字符串数组最终也通过 `createFunction` 转为函数。* `staticRenderFns` 的主要作用是渲染优化，我们后面详细讲解。
+由这段代码可知 `res.staticRenderFns` 是一个函数数组，是通过对 `compiled.staticRenderFns` 遍历生成的，这说明：*`compiled` 除了包含 `render` 字符串外，还包含一个字符串数组 `staticRenderFns`，且这个字符串数组最终也通过 `createFunction` 转为函数。* `staticRenderFns` 的主要作用是渲染优化，我们后面详细讲解。
 
 再接下来就是 `compileToFunctions` 函数的最后一段代码：
 
@@ -423,7 +423,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 * 1、缓存编译结果，通过 `createCompileToFunctionFn` 函数内声明的 `cache` 常量实现。
 * 2、调用 `compile` 函数将模板字符串转成渲染函数字符串
-* 3、调用 `createFunction` 函数将渲染函数字符创转成真正的渲染函数
+* 3、调用 `createFunction` 函数将渲染函数字符串转成真正的渲染函数
 * 4、打印编译错误，包括：模板字符串 -> 渲染函数字符 以及 渲染函数字符串 -> 渲染函数 这两个阶段的错误
 
 最后，真正的 `模板字符串` 到 `渲染函数字符串` 的编译工作实际上是通过调用 `compile` 函数来完成的，所以接下来我们的任务就是弄清楚 `compile` 函数。
