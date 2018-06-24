@@ -3,6 +3,9 @@ module.exports = {
   title: 'Vue技术内幕',
   ga: 'UA-120533817-1',
   description: '逐行级别的 Vue 源码分析',
+  head: [
+    ['script', { async: '', src: 'http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js' }]
+  ],
   markdown: {
     toc: {
       includeLevel: [2, 3, 4, 5, 6]
