@@ -70,14 +70,21 @@ export const mustUseProp = (tag: string, type: ?string, attr: string): boolean =
 }
 ```
 
-* 描述：用来检测一个属性在标签中是否要使用 `props` 进行绑定
+* 描述：用来检测一个属性在标签中是否要使用元素对象原生的 `prop` 进行绑定，注意：**这里的 `prop` 指的是元素对象的属性，而非 `Vue` 中的 `props` 概念**。
+
+举个例子，如下：
+
+```js
+const el = document.createElement('div')
+el.innerHTML  // 这里的 el.innerHTML 属性就是元素对象的属性
+```
 
 * 参数：
     * `{String} tag` 标签名
     * `{String} type` 标签的 `type` 属性，多用于如 `<input type="button"/>`
     * `{String} attr` 属性名
 
-* 返回值：如果给定的属性 `attr`，在标签 `tag` 中要使用 `props` 进行绑定，那么就返回 `true`，否则 `false`。
+* 返回值：如果给定的属性 `attr` 在标签 `tag` 中要使用元素对象原生的 `prop` 进行绑定，那么就返回 `true`，否则 `false`。
 
 * 源码分析：
 
@@ -87,23 +94,23 @@ export const mustUseProp = (tag: string, type: ?string, attr: string): boolean =
 
 ```js
 return (
-    // `input,textarea,option,select,progress` 这些标签的 value 属性都应该使用 props 绑定（除了 type === 'button' 之外）
+    // `input,textarea,option,select,progress` 这些标签的 value 属性都应该使用元素对象的原生的 prop 绑定（除了 type === 'button' 之外）
     (attr === 'value' && acceptValue(tag)) && type !== 'button' ||
-    // option 标签的 selected 属性应该使用 props 绑定
+    // option 标签的 selected 属性应该使用元素对象的原生的 prop 绑定
     (attr === 'selected' && tag === 'option') ||
-    // input 标签的 checked 属性应该使用 props 绑定
+    // input 标签的 checked 属性应该使用元素对象的原生的 prop 绑定
     (attr === 'checked' && tag === 'input') ||
-    // video 标签的 muted 属性应该使用 props 绑定
+    // video 标签的 muted 属性应该使用元素对象的原生的 prop 绑定
     (attr === 'muted' && tag === 'video')
 )
 ```
 
-总结为：属于以下几种情况之一的，应该改使用 `props` 绑定：
+总结为：属于以下几种情况之一的，应该改使用元素对象的原生 `prop` 绑定：
 
-* `input,textarea,option,select,progress` 这些标签的 `value` 属性都应该使用 `props` 绑定（除了 `type === 'button'` 之外）
-* `option` 标签的 `selected` 属性应该使用 `props` 绑定
-* `input` 标签的 `checked` 属性应该使用 `props` 绑定
-* `video` 标签的 `muted` 属性应该使用 `props` 绑定
+* `input,textarea,option,select,progress` 这些标签的 `value` 属性都应该使用元素对象的原生的 `prop` 绑定（除了 `type === 'button'` 之外）
+* `option` 标签的 `selected` 属性应该使用元素对象的原生的 `prop` 绑定
+* `input` 标签的 `checked` 属性应该使用元素对象的原生的 `prop` 绑定
+* `video` 标签的 `muted` 属性应该使用元素对象的原生的 `prop` 绑定
 
 
 ## class.js 文件

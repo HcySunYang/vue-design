@@ -646,7 +646,7 @@ let platformMustUseProp
 let platformGetTagNamespace
 ```
 
-上面的代码中定义了 `7` 个平台化的变量，为什么说上面这些变量为平台化的选项变量呢？后面当我们讲解 `parse` 函数时，我们能够看到这些变量将被初始化一个值，这些值都是平台化的编译器选项参数，不同平台这些变量将被初始化的值是不同的。我们可以找到 `parse` 函数看一下：
+上面的代码中定义了 `8` 个平台化的变量，为什么说上面这些变量为平台化的选项变量呢？后面当我们讲解 `parse` 函数时，我们能够看到这些变量将被初始化一个值，这些值都是平台化的编译器选项参数，不同平台这些变量将被初始化的值是不同的。我们可以找到 `parse` 函数看一下：
 
 ```js
 export function parse (
@@ -669,7 +669,7 @@ export function parse (
 }
 ```
 
-如上代码所示，可以清晰的看到在 `parse` 函数的一开始为这 `7` 个平台化的变量进行了初始化，初始化的值都是我们曾经讲过的编译器的选项参数，由于我们前面所讲解的都是 `web` 平台下的编译器选项，所以这里初始化的值都只用于 `web` 平台。
+如上代码所示，可以清晰的看到在 `parse` 函数的一开始为这 `8` 个平台化的变量进行了初始化，初始化的值都是我们曾经讲过的编译器的选项参数，由于我们前面所讲解的都是 `web` 平台下的编译器选项，所以这里初始化的值都只用于 `web` 平台。
 
 ### createASTElement 函数
 
@@ -830,7 +830,255 @@ element = {
 
 以上就是 `parse` 函数之前定义的所有常量、变量以及函数的讲解，接下来我们将正式进入 `parse` 函数的实现讲解。
 
-## 对令牌的加工
+## 对元素描述对象的加工
+
+本节我们主要讲解 `parse` 函数的内容，正如前面说过的，`parse` 函数的主要作用有两点，除了构建一棵 `AST` 之外还会对 `AST` 中的每个节点做额外的处理。
+
+我们知道 `parse` 函数中主要是通过调用 `parseHTML` 函数来辅助完成 `AST` 构建的，但是在调用 `parseHTML` 函数之前还需要做一些准备工作，比如前面提过的在 `parseHTML` 函数的开头为平台化变量赋了值，如下是 `parseHTML` 函数的整体结构：
+
+```js
+export function parse (
+  template: string,
+  options: CompilerOptions
+): ASTElement | void {
+  warn = options.warn || baseWarn
+
+  platformIsPreTag = options.isPreTag || no
+  platformMustUseProp = options.mustUseProp || no
+  platformGetTagNamespace = options.getTagNamespace || no
+
+  transforms = pluckModuleFunction(options.modules, 'transformNode')
+  preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
+  postTransforms = pluckModuleFunction(options.modules, 'postTransformNode')
+
+  delimiters = options.delimiters
+
+  const stack = []
+  const preserveWhitespace = options.preserveWhitespace !== false
+  let root
+  let currentParent
+  let inVPre = false
+  let inPre = false
+  let warned = false
+
+  function warnOnce (msg) {
+    // 省略...
+  }
+
+  function closeElement (element) {
+    // 省略...
+  }
+
+  parseHTML(template, {
+    // 省略...
+  })
+  return root
+}
+```
+
+我们从上至下一点点来看，首先是如下这段代码：
+
+```js
+warn = options.warn || baseWarn
+
+platformIsPreTag = options.isPreTag || no
+platformMustUseProp = options.mustUseProp || no
+platformGetTagNamespace = options.getTagNamespace || no
+
+transforms = pluckModuleFunction(options.modules, 'transformNode')
+preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
+postTransforms = pluckModuleFunction(options.modules, 'postTransformNode')
+```
+
+前面说过，这段代码为 `8` 个平台化的变量初始化了值，并且这些变量的值基本都来自编译器选项参数。我们在编译器初探一节中讲解 [compile 函数的作用](./80vue-compiler-start.md#compile-的作用) 时附带讲解了编译器各个选项参数都是什么，所以接下来不会深入说明，如果大家忘记了那么可以回头查看。
+
+回过头来继续分析这些平台化的变量，首先是 `warn` 变量的值为 `options.warn` 函数，如果 `options.warn` 选项参数不存在，则会降级使用 `baseWarn` 函数，所以 `warn` 函数作用是用来打印警告信息的，另外 `baseWarn` 函数来自于 `src/compiler/helpers.js` 文件，该文件用来存放一些助手工具函数，我们后面分析 `parse` 函数源码时将会经常看到调用来自该文件的函数。其中 `baseWarn` 函数源码如下：
+
+```js
+export function baseWarn (msg: string) {
+  console.error(`[Vue compiler]: ${msg}`)
+}
+```
+
+可以看到 `baseWarn` 函数的作用无非就是通过 `console.error` 函数打印错误信息。
+
+第二个赋值的是 `platformIsPreTag` 变量，如下是它的赋值语句：
+
+```js
+platformIsPreTag = options.isPreTag || no
+```
+
+可知 `platformIsPreTag` 变量的值为 `options.isPreTag` 函数，该函数是一个编译器选项，其作用是通过给定的标签名字判断该标签是否是 `pre` 标签。另外如上代码所示如果编译器选项中不包含 `options.isPreTag` 函数则会降级使用 `no` 函数，该函数是一个空函数，即什么都不做。
+
+第三个赋值的是 `platformMustUseProp` 变量，如下是它的赋值语句：
+
+```js
+platformMustUseProp = options.mustUseProp || no
+```
+
+可知 `platformMustUseProp` 变量的值为 `options.mustUseProp` 函数，该函数也是一个编译器选项，其作用是用来检测一个属性在标签中是否要使用元素对象原生的 `prop` 进行绑定，注意：**这里的 `prop` 指的是元素对象的属性，而非 `Vue` 中的 `props` 概念**。同样的如果选项参数中不包含 `options.mustUseProp` 函数则会降级为 `no` 函数。
+
+第四个赋值的是 `platformGetTagNamespace` 变量，如下是它的赋值语句：
+
+```js
+platformGetTagNamespace = options.getTagNamespace || no
+```
+
+可知 `platformGetTagNamespace` 变量的值为 `options.getTagNamespace` 函数，该函数是一个编译器选项，其作用是用来获取元素(标签)的命名空间。如果选项参数中不包含 `options.getTagNamespace` 函数则会降级为 `no` 函数。
+
+第五个赋值的变量是 `transforms`，如下是它的赋值语句：
+
+```js
+transforms = pluckModuleFunction(options.modules, 'transformNode')
+```
+
+可以看到 `transforms` 变量的值与前面讲解的变量不同，它是值为 `pluckModuleFunction` 函数的返回值，并以 `options.modules` 选项以及一个字符串 `'transformNode'` 作为参数。
+
+通过前面的分析我们知道 `options.modules` 的值，它是一个数组，如下：
+
+```js
+options.modules = [
+  {
+    staticKeys: ['staticClass'],
+    transformNode,
+    genData
+  },
+  {
+    staticKeys: ['staticStyle'],
+    transformNode,
+    genData
+  },
+  {
+    preTransformNode
+  }
+]
+```
+
+为了避免大家遗忘，这里再提一下 `options.modules` 既然是 `web` 平台下的编译器选项参数，它们必然来自 `src/platforms/web/compiler/options.js` 文件，其中 `options.modules` 选项参数的值为来自 `src/platforms/web/compiler/modules/` 目录下几个文件组合而成的。
+
+知道了这些我们就可以具体查看一下 `pluckModuleFunction` 函数的代码，看看它的作用是什么，`pluckModuleFunction` 函数 来自 `src/compiler/helpers.js` 文件，如下是其源码：
+
+```js
+export function pluckModuleFunction<F: Function> (
+  modules: ?Array<Object>,
+  key: string
+): Array<F> {
+  return modules
+    ? modules.map(m => m[key]).filter(_ => _)
+    : []
+}
+```
+
+`pluckModuleFunction` 函数的作用是从第一个参数中"采摘"出函数名字与第二个参数所指定字符串相同的函数，并将它们组成一个数组。拿如下这段代码说明：
+
+```js
+transforms = pluckModuleFunction(options.modules, 'transformNode')
+```
+
+可知传递给 `pluckModuleFunction` 函数的第二个参数的字符串为 `'transformNode'`，同时我们观察 `options.modules` 数组：
+
+```js {4,9}
+options.modules = [
+  {
+    staticKeys: ['staticClass'],
+    transformNode,
+    genData
+  },
+  {
+    staticKeys: ['staticStyle'],
+    transformNode,
+    genData
+  },
+  {
+    preTransformNode
+  }
+]
+```
+
+如上高亮代码所示 `options.modules` 数组的第一个元素与第二个元素都是一个对象，且这两个对象中都包含了 `transformNode` 函数，但是第三个元素对象中没有 `transformNode` 函数。此时按照 `pluckModuleFunction` 函数的逻辑：
+
+```js
+return modules
+  ? modules.map(m => m[key]).filter(_ => _)
+  : []
+```
+
+如上代码等价于：
+
+```js
+return options.modules
+  ? options.modules.map(m => m['transformNode']).filter(_ => _)
+  : []
+```
+
+我们先看这句代码：
+
+```js
+options.modules.map(m => m['transformNode'])
+```
+
+这句代码会创建一个新的数组：
+
+```js
+[
+  transformNode,
+  transformNode,
+  undefined
+]
+```
+
+由于 `options.modules` 数组第三个元素对象不包含 `transformNode` 函数，所以生成的数组中第三个元素的值为 `undefined`。这还没完，可以看到紧接着又在新生成的数组之上调用了 `filter` 函数，即：
+
+```js
+[
+  transformNode,
+  transformNode,
+  undefined
+].filter(_ => _)
+```
+
+这么做的结果就是把值为 `undefined` 的元素过滤掉，所以最终生成的数组如下：
+
+```js
+[
+  transformNode,
+  transformNode
+]
+```
+
+而这个数组就是变量 `transforms` 的值。
+
+第六个赋值的变量是 `preTransforms`，如下是它的赋值语句：
+
+```js
+preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
+```
+
+与 `transforms` 变量的赋值语句如出一辙，同样是使用 `pluckModuleFunction` 函数，第一个参数同样是 `options.modules`，不同的是第二个参数为字符串 `'preTransformNode'`。也就是此时“采摘”的应该是名字为 `preTransformNode` 的函数，并将它们组装成一个数组。由于 `options.modules` 数组中只有第三个元素对象包含 `preTransformNode` 函数，所以最终 `preTransforms` 变量的值为：
+
+```js
+preTransforms = [preTransformNode]
+```
+
+第七个赋值的变量是 `postTransforms`，如下是它的赋值语句：
+
+```js
+postTransforms = pluckModuleFunction(options.modules, 'postTransformNode')
+```
+
+可知此时“采摘”的应该是名字为 `postTransformNode` 的函数，并将它们组装成一个数组。由于 `options.modules` 数组中的三个元素对象都不包含 `postTransformNode` 函数，所以最终 `postTransforms` 变量的值将是一个空数组：
+
+```js
+preTransforms = []
+```
+
+最后一个赋值的变量为 `delimiters`，如下：
+
+```js
+delimiters = options.delimiters
+```
+
+它的值为 `options.delimiters` 属性，它的值就是在创建 `Vue` 实例对象所传递的 `delimiters` 选项，它是一个数组。
 
 ### 增强的 class
 ### 增强的 style
