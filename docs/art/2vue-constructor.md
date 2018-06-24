@@ -484,6 +484,42 @@ export function initUse (Vue: GlobalAPI) {
 
 该方法的作用是在 `Vue` 构造函数上添加 `use` 方法，也就是传说中的 `Vue.use` 这个全局API，这个方法大家应该不会陌生，用来安装 Vue 插件。
 
+为了进一步查看它是如何安装插件的，继续看下面一行代码：
+
+```js
+const installedPlugins = (this._installedPlugins || (this._installedPlugins = []))
+```
+
+这里为什么需要使用`(this._installedPlugins || (this._installedPlugins = []))`做一次判断呢，主要是为了避免重复安装插件使用的，如果安装有相同`cid`的插件，第二次安装`this._installedPlugins`会变成`undefined`，因此加了这一句判断。
+
+继续查看安装插件的核心代码，基本如下：
+
+```js
+if (typeof plugin.install === 'function') {
+  plugin.install.apply(plugin, args)
+} else if (typeof plugin === 'function') {
+  plugin.apply(null, args)
+}
+installedPlugins.push(plugin)
+return this
+```
+
+其实这里就是通过判断`plugin.install`或者`plugin`类型是否是`function`，并最终执行，例如我们在编写自己的组件库时，常常会在入口文件写如下片段代码：
+
+```js
+// 省略
+
+const install = function (Vue, opts = {}) {
+  Object.keys(components).forEach((key) => {
+      Vue.component(key, components[key])
+  })
+}
+
+// 省略
+```
+
+`plugin.install`其实就是调用上面代码中的`install`方法，细心的同学可能会问，为什么这里会把当前插件的上下文`plugin`再传给install方法呢，其实个人认为这里其实还可以传`null`或者`undefined`，在编写的入口文件`install`方法中其实可以获取当前插件的上下文，作者可能是为了方便使用这直接获取当前插件上下文，避免再去写类似保存上下文的冗余代码。
+
 再打开 `global-api/mixin.js` 文件，这个文件更简单，全部代码如下：
 
 ```js
