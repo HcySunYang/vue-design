@@ -483,7 +483,9 @@ el = {
 
 以上就是 `src/compiler/parser/index.js` 文件的整体结构。接下来我们将重新回到该文件的开头部分，来看看都定义了哪些常量或变量。
 
-### 正则常量 onRE
+### 正则常量分析
+
+#### 正则常量 onRE
 
 接下来我们将讲解定义在该文件中的一系列常量，首先要讲解的 `onRE` 正则常量，其源码如下：
 
@@ -493,7 +495,7 @@ export const onRE = /^@|^v-on:/
 
 这个常量用来匹配以字符 `@` 或 `v-on:` 开头的字符串，主要作用是检测标签属性名是否是监听事件的指令。
 
-### 正则常量 dirRE
+#### 正则常量 dirRE
 
 正则常量 `dirRE` 源码如下：
 
@@ -503,7 +505,7 @@ export const dirRE = /^v-|^@|^:/
 
 它用来匹配以字符 `v-` 或 `@` 或 `:` 开头的字符串，主要作用是检测标签属性名是否是指令。所以通过这个正则我们可以知道，在 `vue` 中所以 `v-` 开头的属性都被认为是指令，另外 `@` 字符是 `v-on` 的缩写，`:` 字符是 `v-bind` 的缩写。
 
-### 正则常量 forAliasRE
+#### 正则常量 forAliasRE
 
 其源码如下：
 
@@ -519,7 +521,7 @@ export const forAliasRE = /([^]*?)\s+(?:in|of)\s+([^]*)/
 
 那么正则 `forAliasRE` 用来匹配字符串 `'obj of list'`，并捕获到两个字符串 `'obj'` 和 `'list'`。
 
-### 正则常量 forIteratorRE
+#### 正则常量 forIteratorRE
 
 源码如下：
 
@@ -553,7 +555,7 @@ export const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
 
 以上方式主要用于遍历对象而非数组，此时 `forAliasRE` 正则的第一个捕获组的内容为字符串 `'(value, key, index)'`，如果去掉左右括号则该字符串为 `'value, key, index'`，如果使用 `forIteratorRE` 正则去匹配字符串 `'value, key, index'` 则会匹配成功，并且 `forIteratorRE` 正则的第一个捕获组将捕获到字符串 `'key'`，但第二个捕获组将捕获到字符串 `'index'`。
 
-### 正则常量 stripParensRE
+#### 正则常量 stripParensRE
 
 源码如下：
 
@@ -567,7 +569,7 @@ const stripParensRE = /^\(|\)$/g
 '(obj, index)'.replace(stripParensRE, '')
 ```
 
-### 正则常量 argRE
+#### 正则常量 argRE
 
 源码如下：
 
@@ -583,7 +585,7 @@ const argRE = /:(.*)$/
 
 其中 `v-on` 为指令，`click` 为传递给 `v-on` 指令的参数，`stop` 为修饰符。所以 `argRE` 正则用来匹配指令编写中的参数，并且拥有一个捕获组，用来捕获参数的名字。
 
-### 正则常量 bindRE
+#### 正则常量 bindRE
 
 源码如下：
 
@@ -593,7 +595,7 @@ export const bindRE = /^:|^v-bind:/
 
 该正则用来匹配以字符 `:` 或字符串 `v-bind:` 开头的字符串，主要用来检测一个标签的属性是否是绑定(`v-bind`)。
 
-### 正则常量 modifierRE
+#### 正则常量 modifierRE
 
 源码如下：
 
@@ -830,11 +832,9 @@ element = {
 
 以上就是 `parse` 函数之前定义的所有常量、变量以及函数的讲解，接下来我们将正式进入 `parse` 函数的实现讲解。
 
-## 对元素描述对象的加工
+### parse 函数创建 AST 前的准备工作
 
-本节我们主要讲解 `parse` 函数的内容，正如前面说过的，`parse` 函数的主要作用有两点，除了构建一棵 `AST` 之外还会对 `AST` 中的每个节点做额外的处理。
-
-我们知道 `parse` 函数中主要是通过调用 `parseHTML` 函数来辅助完成 `AST` 构建的，但是在调用 `parseHTML` 函数之前还需要做一些准备工作，比如前面提过的在 `parseHTML` 函数的开头为平台化变量赋了值，如下是 `parseHTML` 函数的整体结构：
+本节我们主要讲解 `parse` 函数的结构以及真正开始解析之前的准备工作，我们知道 `parse` 函数中主要是通过调用 `parseHTML` 函数来辅助完成 `AST` 构建的，但是在调用 `parseHTML` 函数之前还需要做一些准备工作，比如前面提过的在 `parse` 函数的开头为平台化变量赋了值，如下是 `parse` 函数的整体结构：
 
 ```js
 export function parse (
@@ -1079,6 +1079,92 @@ delimiters = options.delimiters
 ```
 
 它的值为 `options.delimiters` 属性，它的值就是在创建 `Vue` 实例对象所传递的 `delimiters` 选项，它是一个数组。
+
+在如上讲解的八个平台化变量的下面，又定义了一些常量和变量，如下：
+
+```js
+const stack = []
+const preserveWhitespace = options.preserveWhitespace !== false
+let root
+let currentParent
+let inVPre = false
+let inPre = false
+let warned = false
+```
+
+首先定义的是 `stack` 常量，它的初始值是一个空数组。我们将讲解创建 `AST` 思路的时候也使用到了 `stack` 数组，当时讲到了它的作用是用来修正当前正在解析元素的父级的。在 `stack` 常量之后定义了 `preserveWhitespace` 常量，它是一个布尔值并且它的值与编译器选项中的 `options.preserveWhitespace` 选项有关，只要 `options.preserveWhitespace` 的值不为 `false`，那么 `preserveWhitespace` 的值就为真。其中 `options.preserveWhitespace` 选项用来告诉编译器在编译 `html` 字符串时是否放弃标签之间的空格，如果为 `true` 则代表放弃。
+
+接着定义了 `root` 变量，我们知道 `parse` 函数的返回值就是 `root` 变量，所以 `root` 变量就是最终的 `AST`。在 `root` 变量之后定义了 `currentParent` 变量，我们在讲解创建 `AST` 思路时也定义了一个 `currentParent`，我们知道元素描述对象之间的父子关系就是靠该变量进行联系的。
+
+接着有定义了三个变量，分别是 `inVPre`、`inPre` 以及 `warned`，并且它们的初始值都为 `false`。其中 `inVPre` 变量用来标识当前解析的标签是否在拥有 `v-pre` 标签之内，`inPre` 变量用来标识当前正在解析的标签是否在 `<pre></pre>` 标签之内。而 `warned` 变量则用于接下来定义的 `warnOnce` 函数：
+
+```js
+function warnOnce (msg) {
+  if (!warned) {
+    warned = true
+    warn(msg)
+  }
+}
+```
+
+`warned` 变量的初始值为 `false`，通过如上代码可以看到 `warnOnce` 函数同样是用来打印警告信息的函数，只不过 `warnOnce` 函数就如它的名字一样，只会打印一次警告信息，并且 `warnOnce` 函数也是通过调用 `warn` 函数来实现的。
+
+在 `warnOnce` 函数的下面定义了 `closeElement` 函数，如下：
+
+```js
+function closeElement (element) {
+  // check pre state
+  if (element.pre) {
+    inVPre = false
+  }
+  if (platformIsPreTag(element.tag)) {
+    inPre = false
+  }
+  // apply post-transforms
+  for (let i = 0; i < postTransforms.length; i++) {
+    postTransforms[i](element, options)
+  }
+}
+```
+
+每当遇到一个标签的结束标签时，或遇到一元标签时都会调用该方法“闭合”标签，具体功能我们在后面的内容中详细讲解。
+
+经过了一些列准备，我们终于到了最关键的异步，即调用 `parseHTML` 函数解析模板字符串并借助它来构建一棵 `AST`，如下是调用 `parseHTML` 函数时所传递的选项参数：
+
+```js
+parseHTML(template, {
+  warn,
+  expectHTML: options.expectHTML,
+  isUnaryTag: options.isUnaryTag,
+  canBeLeftOpenTag: options.canBeLeftOpenTag,
+  shouldDecodeNewlines: options.shouldDecodeNewlines,
+  shouldDecodeNewlinesForHref: options.shouldDecodeNewlinesForHref,
+  shouldKeepComment: options.comments,
+  start (tag, attrs, unary) {
+    // 省略...
+  },
+  end () {
+    // 省略...
+  },
+  chars (text: string) {
+    // 省略...
+  },
+  comment (text: string) {
+    // 省略...
+  }
+})
+```
+
+我们在 [词法分析 - 为生成AST做准备](./81vue-lexical-analysis.md) 一章中讲解 `parseHTML` 函数时已经顺带分析了所有选项的作用。其中对于构建 `AST` 来说最关键的选项就是四个钩子函数选项：
+
+* 1、`start` 钩子函数，在解析 `html` 字符串时每次遇到**开始标签**时就会调用该函数
+* 2、`end` 钩子函数，在解析 `html` 字符串时每次遇到**结束标签**时就会调用该函数
+* 3、`chars` 钩子函数，在解析 `html` 字符串时每次遇到**纯文本**时就会调用该函数
+* 4、`comment` 钩子函数，在解析 `html` 字符串时每次遇到**注释节点**时就会调用该函数
+
+下面我们就从 `start` 钩子函数开始说起，为什么从 `start` 钩子函数开始呢？因为正常情况下，解析一段 `html` 字符串时必然最先遇到的就是开始标签。所以我们从 `start` 钩子函数开始讲解，在讲解的过程中为了说明某些问题我们会逐个举例。
+
+### 解析一个开始标签需要做的事情
 
 ### 增强的 class
 ### 增强的 style
