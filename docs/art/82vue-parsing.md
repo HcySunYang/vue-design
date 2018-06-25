@@ -117,7 +117,7 @@ export const createCompiler = createCompilerCreator(function baseCompile (
 }
 ```
 
-实际上构建抽象语法树的工作就是创建一个类似如上所示的一个能够描述节点关系的对象树，节点与节点之间通过 `parent` 和 `children` 建立联系，每个节点的 `type` 属性用来标识该节点的类别，比如 `type` 为 `1` 代表该节点为元素节点，`type` 为 `2` 代表该节点为文本节点，这只是认为的一个规定，你可以用任何方便的方式加以区分。
+实际上构建抽象语法树的工作就是创建一个类似如上所示的一个能够描述节点关系的对象树，节点与节点之间通过 `parent` 和 `children` 建立联系，每个节点的 `type` 属性用来标识该节点的类别，比如 `type` 为 `1` 代表该节点为元素节点，`type` 为 `2` 代表该节点为文本节点，这只是人为的一个规定，你可以用任何方便的方式加以区分。
 
 明白了我们的目标，下面我们在回到 `parseHTML` 函数，因为目前为止我们所拥有的只有这一个函数，我们需要使用该函数构建出一颗如上所述的描述对象。
 
@@ -215,7 +215,7 @@ root = {
 }
 ```
 
-接着会遇到 `span` 元素的开始标签，会再次调用 `start` 钩子函数，由于此时 `root` 变量已经存在，所以不会再次设置 `root` 变量。为了能够更好的解析 `span` 标签，我们需要多值钱的解析代码做一些改变，如下：
+接着会遇到 `span` 元素的开始标签，会再次调用 `start` 钩子函数，由于此时 `root` 变量已经存在，所以不会再次设置 `root` 变量。为了能够更好的解析 `span` 标签，我们需要对之前的解析代码做一些改变，如下：
 
 ```js {3,10,15-20}
 function parse (html) {
@@ -248,7 +248,7 @@ function parse (html) {
 }
 ```
 
-如上代码所示，首先我们需要定义 `currentParent` 变量，它的作用是没遇到一个非一元标签，都会将该标签的描述对象作为 `currentParent` 的值，这样当解析该非一元标签的子节点时，子节点的父级就是 `currentParent` 变量。另外在 `start` 钩子函数内部我们在创建 `element` 描述对象时我们使用 `currentParent` 的值作为每个元素描述对象的 `parent` 属性的值。
+如上代码所示，首先我们需要定义 `currentParent` 变量，它的作用是每遇到一个非一元标签，都会将该标签的描述对象作为 `currentParent` 的值，这样当解析该非一元标签的子节点时，子节点的父级就是 `currentParent` 变量。另外在 `start` 钩子函数内部我们在创建 `element` 描述对象时我们使用 `currentParent` 的值作为每个元素描述对象的 `parent` 属性的值。
 
 如果用以上代码解析如下 `html` 字符串：
 
@@ -258,7 +258,7 @@ function parse (html) {
 </div>
 ```
 
-那么其过程大概是这样的：手下会遇到 `div` 元素的开始标签，此时由于 `root` 不存在，并且 `currentParent` 也不存在，所以会创建一个用于描述该 `div` 元素的对象，并设置 `root` 的值如下：
+那么其过程大概是这样的：首先会遇到 `div` 元素的开始标签，此时由于 `root` 不存在，并且 `currentParent` 也不存在，所以会创建一个用于描述该 `div` 元素的对象，并设置 `root` 的值如下：
 
 ```js
 root = {
@@ -357,7 +357,7 @@ function parse (html) {
 
 ## 解析前的准备工作
 
-前面说过，整个 `src/compiler/parser/index.js` 文件的所做的工作都是在创建 `AST`，所以我们应该先了解一下这个文件的结构，以方便后续的理解。在改文件的开头定义了一些常量和变量，其中包括一些正则常量，我们后续会详细讲解。
+前面说过，整个 `src/compiler/parser/index.js` 文件的所做的工作都是在创建 `AST`，所以我们应该先了解一下这个文件的结构，以方便后续的理解。在该文件的开头定义了一些常量和变量，其中包括一些正则常量，我们后续会详细讲解。
 
 接着定义了 `createASTElement` 函数，如下：
 
@@ -477,7 +477,7 @@ el = {
 }
 ```
 
-类似的，所有 `process*` 类函数的作用都是为了让一个元素的描述对象更叫充实，使这个对象能更加详情的描述一个元素，并且这些函数都会用在 `parseHTML` 函数的钩子选项函数中。
+类似的，所有 `process*` 类函数的作用都是为了让一个元素的描述对象更加充实，使这个对象能更加详细地描述一个元素，并且这些函数都会用在 `parseHTML` 函数的钩子选项函数中。
 
 另外我们也能看到很多非 `process*` 类的函数，例如 `findPrevElement`、`makeAttrsMap` 等等，这些函数实际上就是工具函数。
 
@@ -604,10 +604,10 @@ const modifierRE = /\.[^.]+/g
 该正则用来匹配修饰符的，但是并没有捕获任何东西，举例如下：
 
 ```js
-const matchs = 'v-on.click.stop'.match(modifierRE)
+const matchs = 'v-on:click.stop'.match(modifierRE)
 ```
 
-那么 `matchs` 数组第一个元素为字符串 `'.stop'`，所以指令名字应该是：
+那么 `matchs` 数组第一个元素为字符串 `'.stop'`，所以指令修饰符应该是：
 
 ```js
 matchs[0].slice(1)  // 'stop'
@@ -698,7 +698,7 @@ export function createASTElement (
 <div v-for="obj of list" class="box"></div>
 ```
 
-当遇 `div` 的开始标签时 `parseHTML` 函数的 `start` 钩子函数的前连个参数分别是：
+当遇 `div` 的开始标签时 `parseHTML` 函数的 `start` 钩子函数的前两个参数分别是：
 
 ```js
 const html = '<div v-for="obj of list" class="box"></div>'
@@ -803,7 +803,7 @@ map = {
 }
 ```
 
-所以 `makeAttrsMap` 函数的作用就是将标签的属性数组转换成名值对一一对象的对象。这么做坑定是有目的的，我们后面遇到了再讲，总之最终生成的元素描述对象如下：
+所以 `makeAttrsMap` 函数的作用就是将标签的属性数组转换成名值对一一对象的对象。这么做肯定是有目的的，我们后面遇到了再讲，总之最终生成的元素描述对象如下：
 
 ```js
 element = {
