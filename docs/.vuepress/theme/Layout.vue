@@ -2,7 +2,7 @@
   <Layout>
     <div slot="sidebar-top">
       <ins class="adsbygoogle"
-        style="display:block;box-sizing:border-box;width:100%;height:120px;margin:0 auto;padding: 10px 10px 0;"
+        style="display:block;box-sizing:border-box;width:100%;height:120px;margin:10px auto 0;"
         data-ad-client="ca-pub-4613560834313397"
         data-ad-slot="2465217753">
       </ins>
@@ -25,11 +25,3 @@ export default {
   }
 }
 </script>
-<style lang="stylus">
-.google-ads
-  width 100%
-  height 120px
-  padding 1.5rem 1.5rem 0
-  margin-bottom -.5rem
-  font-size .75rem
-</style>
