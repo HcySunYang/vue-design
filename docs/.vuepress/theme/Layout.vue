@@ -2,7 +2,7 @@
   <Layout>
     <div slot="sidebar-top">
       <ins class="adsbygoogle"
-        style="display:inline-block;width:100%;height:120px"
+        style="display:block;box-sizing:border-box;width:100%;height:120px;margin:0 auto;padding: 10px 10px 0;"
         data-ad-client="ca-pub-4613560834313397"
         data-ad-slot="2465217753">
       </ins>
@@ -21,7 +21,7 @@ export default {
     setTimeout(() => {
       const adsbygoogle = window.adsbygoogle || []
       adsbygoogle.push({})
-    }, 0)
+    }, 1000)
   }
 }
 </script>
