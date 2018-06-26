@@ -81,6 +81,32 @@ export const inBrowser = typeof window !== 'undefined'
 
 * 源码解析：通过判断 `window` 对象是否存在即可
 
+### UA
+
+源码如下：
+
+```js
+export const UA = inBrowser && window.navigator.userAgent.toLowerCase()
+```
+
+* 描述：获取当浏览器的 `user Agent`，简称 `UA`。
+
+* 源码解析：首先使用 `inBrowser` 检测当前宿主环境是否是浏览器，如果是则通过 `window.navigator.userAgent.toLowerCase()` 获取当前浏览器的 `UA` 字符串，并将该字符串小写化之后赋值给 `UA` 常量。
+
+### isIE
+
+源码如下：
+
+```js
+export const isIE = UA && /msie|trident/.test(UA)
+```
+
+* 描述：判断当前浏览器是否是 `Internet Explorer` 浏览器。
+
+* 源码解析：
+
+大家可以访问这里 [Internet Explorer User Agent Strings](http://useragentstring.com/pages/useragentstring.php?name=Internet+Explorer) 查看 `IE2` 到 `IE11` 所有版本的用户代理字符串，我们能够发现在这些 `UA` 字符串中必然包含 `'trident'` 或者 `'msie'` 这两个字符串。所以只需要使用正则去匹配 `UA` 中是否包含这两个字符串即可判断是否为 `IE` 浏览器。
+
 ### hasProto
 
 源码如下：

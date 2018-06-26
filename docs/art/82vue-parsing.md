@@ -1166,6 +1166,195 @@ parseHTML(template, {
 
 ### 解析一个开始标签需要做的事情
 
+接下来我们就从 `start` 钩子函数开始，研究一下解析一个开始标签都需要做哪些事情，如下是在 `parse` 函数中调用 `parseHTML` 函数时传递的 `start` 钩子函数：
+
+```js
+start (tag, attrs, unary) {
+  // 省略...
+}
+```
+
+我们知道 `start` 钩子函数是接收五个参数的，但是如上代码中只使用到了 `start` 钩子函数的前三个参数，也就是说只需要这个三个参数就足够完成任务了。这三个参数分别是标签名字 `tag`，该标签的属性数组 `attrs`，以及代表着该标签是否是一元标签的标识 `unary`。
+
+在 `start` 钩子函数的内部首先执行的是如下这句代码：
+
+```js
+const ns = (currentParent && currentParent.ns) || platformGetTagNamespace(tag)
+```
+
+为了让大家更好的理解，我们这里规定一些事情，比如既然我们讲解的是 `start` 钩子函数，那么当前的解析必然处于遇到一个开始标签的阶段，我们把当前解析所遇到的开始标签称为：**当前元素**，另外我们把**当前元素**的父标签称为：**父级元素**。
+
+如上这句代码定义了 `ns` 常量，它的值为标签的命名空间，如何获取当前元素的命名空间呢？首先检测 `currentParent` 变量是否存在，我们知道 `currentParent` 变量为当前元素的父级元素描述对象，如果当前元素存在父级并且父级元素存在命名空间，则使用父级的命名空间作为当前元素的命名空间。如果父级元素不存在或父级元素没有命名空间，那么会通过调用 `platformGetTagNamespace(tag)` 函数获取当前元素的命名空间。举个例子，假设我们解析的模板字符串为：
+
+```html
+<svg width="100%" height="100%" version="1.1" xmlns="http://www.w3.org/2000/svg">
+  <rect x="20" y="20" width="250" height="250" style="fill:blue;"/>
+</svg>
+```
+
+如上是用来画一个蓝色矩形的 `svg` 代码，其中我们使用了两个标签：`svg` 标签和 `rect` 标签，当解析如上代码时首先会遇到 `svg` 标签的开始标签，由于 `svg` 标签没有父级元素，所以会通过 `platformGetTagNamespace(tag)` 获取 `svg` 标签的命名空间，最终得到 `svg` 字符串：
+
+```js
+platformGetTagNamespace('svg')  // 'svg'
+```
+
+下一个遇到的开始标签则是 `rect` 标签的开始标签，由于 `rect` 标签存在父级元素(`svg` 标签)，所以此时 `rect` 标签会使用它父级元素的命名空间作为自己的命名空间。
+
+`platformGetTagNamespace` 函数只会获取 `svg` 和 `math` 这两个标签的命名空间，但这两个标签的所有子标签都会继承它们两个的命名空间。对于其他标签则不存在命名空间。
+
+总之在 `start` 钩子函数内部首先会尝获取一个元素的命名空间，并将获取到的命名空间的名字赋值给 `ns` 常量，这个常量在后面会用到。
+
+再获取命名空间之后，执行的是如下这段 `if` 条件语句块：
+
+```js
+if (isIE && ns === 'svg') {
+  attrs = guardIESVGBug(attrs)
+}
+```
+
+[isIE](../appendix/core-util.md#isie) 函数用来判断当前宿主环境是否是 `IE` 浏览器，如果是 `IE` 浏览器并且当前元素的命名空间为 `svg`，则会调用 `guardIESVGBug` 函数处理当前元素的属性数组 `attrs`，并使用处理后的结果重新赋值给 `attrs` 变量。这看上去像是在处理 `IE` 浏览器中关于 `svg` 标签的 `bug`，实际上确实是这样的，大家可以访问 [IE 11 bug](http://osgeo-org.1560.x6.nabble.com/WFS-and-IE-11-td5090636.html) 了解这个问题的详情，该问题是 `svg` 标签中渲染多余的属性，如下 `svg` 标签：
+
+```html
+<svg xmlns:feature="http://www.openplans.org/topp"></svg>
+```
+
+被渲染为：
+
+```html
+<svg xmlns:NS1="" NS1:xmlns:feature="http://www.openplans.org/topp"></svg>
+```
+
+标签中多了 `'xmlns:NS1="" NS1:'` 这段字符串，解决办法也很简单，将整个多余的字符串去掉或将 `NS1:xmlns:feature` 属性修正为 `xmlns:feature` 即可。而 `guardIESVGBug` 函数就是用来修改 `NS1:xmlns:feature` 属性的，如下是 `guardIESVGBug` 函数的源码以及它需要的两个正则：
+
+```js
+const ieNSBug = /^xmlns:NS\d+/
+const ieNSPrefix = /^NS\d+:/
+
+/* istanbul ignore next */
+function guardIESVGBug (attrs) {
+  const res = []
+  for (let i = 0; i < attrs.length; i++) {
+    const attr = attrs[i]
+    if (!ieNSBug.test(attr.name)) {
+      attr.name = attr.name.replace(ieNSPrefix, '')
+      res.push(attr)
+    }
+  }
+  return res
+}
+```
+
+在 `guardIESVGBug` 函数之前定义了两个正则常量，其中 `ieNSBug` 正则用来匹配那些以字符串 `xmlns:NS` 再加一个或多个数字组成的字符串开头的属性名，如：
+
+```html
+<svg xmlns:NS1=""></svg>
+```
+
+如上标签的 `xmlns:NS1` 属性将会被 `ieNSBug` 正则匹配成功。另外一个正则常量是 `ieNSPrefix`，它用来匹配那些以字符串 `NS` 再加一个或多个数字以及字符 `:` 所组成的字符串开头的属性名，如：
+
+```html
+<svg NS1:xmlns:feature="http://www.openplans.org/topp"></svg>
+```
+
+如上标签的 `NS1:xmlns:feature` 属性将被 `ieNSPrefix` 正则匹配成功。
+
+`guardIESVGBug` 函数接收元素的属性数组作为参数，并返回一个新的数组，新数组与原数组结构相同。可以看到 `guardIESVGBug` 函数内部通过 `for` 循环遍历了元素的属性数组，接着使用正则 `ieNSBug` 去匹配属性名字，可以发现只要不满足 `ieNSBug` 正则的属性名，都会尝试使用 `ieNSPrefix` 正则去匹配该属性名并将匹配到的字符替换为空字符串。如下是渲染产生 `bug` 后的代码：
+
+```html
+<svg xmlns:NS1="" NS1:xmlns:feature="http://www.openplans.org/topp"></svg>
+```
+
+在解析如上标签时，传递给 `start` 钩子函数的标签属性数组 `attrs` 为：
+
+```js
+attrs = [
+  {
+    name: 'xmlns:NS1',
+    value: ''
+  },
+  {
+    name: 'NS1:xmlns:feature',
+    value: 'http://www.openplans.org/topp'
+  }
+]
+```
+
+在经过 `guardIESVGBug` 函数处理之后，属性名字 `NS1:xmlns:feature` 将吧变为 `xmlns:feature`，所以 `guardIESVGBug` 返回的属性数组为：
+
+```js
+attrs = [
+  {
+    name: 'xmlns:NS1',
+    value: ''
+  },
+  {
+    name: 'xmlns:feature',
+    value: 'http://www.openplans.org/topp'
+  }
+]
+```
+
+以上就是 `guardIESVGBug` 函数的作用。
+
+处理完 `IE` 的 `SVG` 问题之后，执行的是如下代码：
+
+```js {1}
+let element: ASTElement = createASTElement(tag, attrs, currentParent)
+if (ns) {
+  element.ns = ns
+}
+```
+
+这段代码是很关键的一段代码，如上高亮的那句代码所示，这句代码的执行为当前元素创建了描述对象，并且元素描述对象的创建是通过我们前面讲过的 `createASTElement` 完成的，并将当前标签的元素描述对象赋值类 `element` 变量。紧接着检查当前元素是否存在命名空间 `ns`，如果存在则在元素对象上添加 `ns` 属性，其值为名称空间的值。
+
+通过如上代码可知，如果当前解析的开始标签为 `svg` 标签或者 `math` 标签或者它们两个的子节点标签，都将会比其他 `html` 标签的元素描述对象多出一个 `ns` 属性，且该属性标识了该标签的命名空间。
+
+在往下是这样一段代码：
+
+```js
+if (isForbiddenTag(element) && !isServerRendering()) {
+  element.forbidden = true
+  process.env.NODE_ENV !== 'production' && warn(
+    'Templates should only be responsible for mapping the state to the ' +
+    'UI. Avoid placing tags with side-effects in your templates, such as ' +
+    `<${tag}>` + ', as they will not be parsed.'
+  )
+}
+```
+
+这段代码是一段 `if` 条件语句块，根据判断条件可知，该 `if` 语句用来判断非服务端渲染情况下，当前元素是否是禁止在模板中使用的标签。其中使用 `isForbiddenTag(element)` 函数检查当前元素是否为被禁止的标签，什么是被禁止的标签呢？`<style>` 标签和 `<script>` 都被认为是禁止的标签，因为 `Vue` 认为模板应该只负责做数据状态到 `UI` 的映射，而不应该存在引起副作用的代码，如果你的模板中存在 `<script>` 标签，那么该标签内的代码很容易引起副作用。但有一种情况例外，比如其中一种定义模板的方式为：
+
+```js
+<script type="text/x-template" id="hello-world-template">
+  <p>Hello hello hello</p>
+</script>
+```
+
+把模板放到 `<script>` 元素中，并在 `<script>` 元素上条件 `type="text/x-template"` 属性。可以看到 `Vue` 并非禁止了所有的 `<script>` 元素，这在 `isForbiddenTag` 函数中是有体现的，如下是 `isForbiddenTag` 函数的代码：
+
+```js
+function isForbiddenTag (el): boolean {
+  return (
+    el.tag === 'style' ||
+    (el.tag === 'script' && (
+      !el.attrsMap.type ||
+      el.attrsMap.type === 'text/javascript'
+    ))
+  )
+}
+```
+
+`isForbiddenTag` 函数接收一个元素描述对象作为参数，并返回布尔值，如果返回值为 `true` 则代表该标签是被禁止的，否则为非禁止的。根据源码可知以下标签为被禁止的标签：
+
+* 1、`<style>` 标签为被禁止的标签
+* 2、没有指定 `type` 属性或虽然指定了 `type` 属性但其值为 `text/javascript` 的 `<script>` 标签被认为是被禁止的
+
+如果当前标签是被禁止的，并且在非服务端渲染的情况下，会打印警告信息，同时还会在当前元素的描述对象上添加 `el.forbidden` 属性，并将其值设置为 `true`。
+
+
+
+
+
 ### 增强的 class
 ### 增强的 style
 ### 特殊的 model
