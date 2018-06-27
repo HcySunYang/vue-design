@@ -1351,8 +1351,243 @@ function isForbiddenTag (el): boolean {
 
 如果当前标签是被禁止的，并且在非服务端渲染的情况下，会打印警告信息，同时还会在当前元素的描述对象上添加 `el.forbidden` 属性，并将其值设置为 `true`。
 
+我们继续往下看代码，接下来要执行的是如下这段代码：
 
+```js
+for (let i = 0; i < preTransforms.length; i++) {
+  element = preTransforms[i](element, options) || element
+}
+```
 
+如上代码中使用 `for` 循环遍历了 `preTransforms` 数组，我们知道 `preTransforms` 是通过 `pluckModuleFunction` 函数从 `options.modules` 选项中筛选出名字为 `preTransformNode` 函数所组成的数组。该数组中每个元素都是一个函数，所以如上代的 `for` 循环内部直接调用了 `preTransforms` 数组中的每一个函数并为这些函数传递了两个参数，分别是当前元素描述对象(`element`)以及编译器选项(`options`)。
+
+这里我们简单的说一下 `preTransforms` 数组中的函数的作用，其实本质上这些函数的作用与我们之前见到过的 `process*` 系列的函数没什么区别，都是用来对当前元素描述对象做进一步处理。不仅仅是 `preTransforms` 数组，对于 `transforms` 数组和 `postTransforms` 数组也是一样的，它们之间的却别就像它们的名字一样，根据不同的调用时机为它们定义了相应的名字。那么为什么把这三个数组中的处理函数与当前文件中 `process*` 系列函数区分开呢？这是出于平台化的考虑，通过前面的分析我们知道 `preTransforms` 数组中的那些 `preTransformNode` 函数来由 `src/platforms/web/compiler/modules` 目录下定义的一些文件定义的，根据目录路径可知这些代码应该是用来处理 `web` 平台相关逻辑的，除了 `web` 平台之外我们也可以看到 `weex` 平台下相应的代码，你在源码中是能够找到这个目录的：`src/platforms/weex/compiler/modules`。
+
+总之你只需要知道 `preTransforms` 数组中的那些函数与 `process*` 系列函数唯一的区别就是平台化的区分即可了。
+
+根据我们前面的分析，实际上 `preTransforms` 数组中只有一个函数，这个函数就是由 `src/platforms/web/compiler/modules/model.js` 文件导出的 `preTransformNode` 函数。大家可以打开该文件查看一下 `preTransformNode` 函数，可以发现该函数内部大量使用了 `process*` 系列的函数，并且该函数只用来处理 `input` 标签，正是由于这一点，所以我们决定暂时不对其进行讲解，因为这会让我们脱离主线。在接下来的讲解中我们会逐个击破 `process*` 系列函数的作用，等大家了解了 `process*` 系列函数所做的事情之后再回头来看 `preTransformNode` 函数的代码会更加容易理解。
+
+那么我们回过头来继续看后面的代码，接下来执行的将是如下这段代码：
+
+```js
+if (!inVPre) {
+  processPre(element)
+  if (element.pre) {
+    inVPre = true
+  }
+}
+if (platformIsPreTag(element.tag)) {
+  inPre = true
+}
+if (inVPre) {
+  processRawAttrs(element)
+} else if (!element.processed) {
+  // structural directives
+  processFor(element)
+  processIf(element)
+  processOnce(element)
+  // element-scope stuff
+  processElement(element, options)
+}
+```
+
+可以看到这段代码开始大量调用 `process*` 系列的函数，前面说过了，这其实就是在对当前元素描述对象做额外的处理，使得该元素描述对象能更好的描述一个标签。简单点说就是在元素描述对象上添加各种各样的具有标识作用的属性，就比如之前遇到的 `ns` 属性和 `forbidden` 属性，它们都能够对标签起到描述作用。
+
+不过我们本节主要总结**解析一个开始标签需要做的事情**，所以暂时不具体去看上面这些代码的实现。我们继续往下走，接下来定义了一个叫做 `checkRootConstraints` 的函数：
+
+```js
+function checkRootConstraints (el) {
+  if (process.env.NODE_ENV !== 'production') {
+    if (el.tag === 'slot' || el.tag === 'template') {
+      warnOnce(
+        `Cannot use <${el.tag}> as component root element because it may ` +
+        'contain multiple nodes.'
+      )
+    }
+    if (el.attrsMap.hasOwnProperty('v-for')) {
+      warnOnce(
+        'Cannot use v-for on stateful component root element because ' +
+        'it renders multiple elements.'
+      )
+    }
+  }
+}
+```
+
+该函数的作用是什么呢？它的作用是用来检测模板根元素是否符合要求，我们知道在编写 `Vue` 模板的时候会受到两种约束，首先模板必须有且仅有一个被渲染的根元素，第二不能使用 `slot` 标签和 `template` 标签作为模板的根元素，对于第一点为什么模板必须有且仅有一个被渲染的根元素，我们会在代码生成的部分为大家讲解，对于第二点为什么不能使用 `slot` 和 `template` 标签作为模板根元素，这是因为 `slot` 作为插槽，它的内容是由外界决定的，而插槽的内容很有可能渲染多个节点，`template` 元素的内容虽然不是由外界决定的，但它本身作为抽象组件是不会渲染任何内容到页面的，而其又可能包含多个子节点，所以也不允许使用 `template` 标签作为根节点。总之这些限制都是出于**必须有且仅有一个根元素**考虑的。
+
+可以看到在 `checkRootConstraints` 函数内部首先通过判断 `el.tag === 'slot' || el.tag === 'template'` 来判断根元素是否是 `slot` 标签或 `template` 标签，如果是则打印警告信息。接着又判断当前元素是否是使用了 `v-for` 标签，因为 `v-for` 标签会渲染多个节点所以根元素是不允许使用 `v-for` 标签的。另外大家注意在 `checkRootConstraints` 函数内部打印警告信息时使用的是 `warnOnce` 函数而非 `warn` 函数，也就是说如果第一个 `warnOnce` 函数执行并打印了警告信息那么第二个 `warnOnce` 函数就不会再次打印警告信息，这么做的目的是每次只提示一个编译错误给用户，避免多次打印不同错误给用户造成迷惑，这是出于对开发者解决问题友好的考虑。
+
+在 `checkRootConstraints` 函数的下面是一段 `if...elseif` 语句块，我们首先查看 `if` 语句块：
+
+```js
+if (!root) {
+  root = element
+  checkRootConstraints(root)
+} else if (!stack.length) {
+  // 省略...
+}
+```
+
+`if` 语句块的判断条件是如果 `root` 不存在则执行语句块内的代码，我们知道 `root` 变量在一开始是不存在的，如果 `root` 不存在那说明当前元素应该就是根元素，所以在 `if` 语句块内直接将当前元素的描述对象 `element` 赋值给 `root` 变量，同时会调用上面刚刚讲过的 `checkRootConstraints` 函数检查根元素是否符合要求。
+
+我们再来看 `elseif` 语句的条件，它检测了 `stack.length` 是否不为 `0`，也就是说 `stack` 数组不为空的情况下会执行 `elseif` 语句块内的代码。我们想一下当前元素 `stack` 数组不为空并且当前正在解析开始标签，这说明什么问题？要想知道这个问题我们首先要知道 `stack` 数组的作用，前面已经多次提到每当遇到一个非一元标签时就会将该标签的描述对象条件到数组，并且每当遇到一个结束标签时都会将该标签的描述对象从 `stack` 数组中拿掉，那也就是说在只有一个根元素的情况下，正常解析完成一段 `html` 代码后 `stack` 数组应该为空。但此时不为空，那只能说明一件事情，即有多个根元素。
+
+如果有多个根元素，则会执行 `elseif` 语句块内的代码，如下：
+
+```js
+if (root.if && (element.elseif || element.else)) {
+  checkRootConstraints(element)
+  addIfCondition(root, {
+    exp: element.elseif,
+    block: element
+  })
+} else if (process.env.NODE_ENV !== 'production') {
+  warnOnce(
+    `Component template should contain exactly one root element. ` +
+    `If you are using v-if on multiple elements, ` +
+    `use v-else-if to chain them instead.`
+  )
+}
+```
+
+上面这段代码的作用是什么呢？我们知道在编写 `Vue` 模板时的约束是必须有且仅有一个被渲染的根元素，但你可以定义多个根元素，只要能够保证最终只渲染其中一个元素即可，能够达到这个目的的方式只有一种，那就是在多个根元素之间使用 `v-if` 或 `v-else-if` 或 `v-else`。我们来看如上代码的实现，首先观察如上代码中 `if` 条件语句的判断条件：
+
+```js
+if (root.if && (element.elseif || element.else))
+```
+
+这里解释一下元素对象中的 `.if` 属性、`.elseif` 属性以及 `.else` 属性都是哪里来的，它们是在通过 `processIf` 函数处理元素描述对象时，如果发现元素的属性中有 `v-if` 或 `v-else-if` 或 `v-else`，则会在元素描述对象上添加相应的属性作为标识。
+
+回到上面的 `if` 判断条件，首先 `root.if` 必须为真，要知道一点，即无论定义多少个根元素，`root` 变量始终存储的是第一个根元素的描述对象，所以 `root.if` 为真就保证了第一个定义的根元素是使用了 `v-if` 指令的。同时条件 `(element.elseif || element.else)` 也必须为真，注意这里是 `element.elseif` 或 `element.else`，而不是 `root.elseif` 或 `root.else`。`root` 为第一个根元素的描述对象，`element` 为当前元素描述对象，即非第一个根元素的描述对象。如果以上条件成立就能够保证所有根元素都是由 `v-if`、`v-else-if`、`v-else` 等指令控制的，这就间接保证了被渲染的根元素只有一个，此时 `if` 语句块内的代码将被执行，如下：
+
+```js
+if (root.if && (element.elseif || element.else)) {
+  checkRootConstraints(element)
+  addIfCondition(root, {
+    exp: element.elseif,
+    block: element
+  })
+} else if (process.env.NODE_ENV !== 'production') {
+  // 省略...
+}
+```
+
+在 `if` 语句块内首先使用 `checkRootConstraints` 函数检查当前元素是否符合作为根元素的要求，接着调用了 `addIfCondition` 函数，该函数源码如下：
+
+```js
+export function addIfCondition (el: ASTElement, condition: ASTIfCondition) {
+  if (!el.ifConditions) {
+    el.ifConditions = []
+  }
+  el.ifConditions.push(condition)
+}
+```
+
+`addIfCondition` 函数接收两个参数，第一个参数为元素的描述对象，第二个参数的类型为 `ASTIfCondition`，说白了也是一个对象，该对象包含两个属性：
+
+```js
+declare type ASTIfCondition = { exp: ?string; block: ASTElement };
+```
+
+分别是 `exp` 属性和 `block` 属性，我们根据调用 `addIfCondition` 函数时传递的参数：
+
+```js {4-5}
+if (root.if && (element.elseif || element.else)) {
+  checkRootConstraints(element)
+  addIfCondition(root, {
+    exp: element.elseif,
+    block: element
+  })
+} else if (process.env.NODE_ENV !== 'production') {
+  // 省略...
+}
+```
+
+可知 `exp` 为当前元素描述对象的 `element.elseif` 的值，而 `block` 就是当前元素描述对象。并且第一个参数为 `root`，就是第一个根元素描述对象。此时再看 `addIfCondition` 函数的代码：
+
+```js
+export function addIfCondition (el: ASTElement, condition: ASTIfCondition) {
+  if (!el.ifConditions) {
+    el.ifConditions = []
+  }
+  el.ifConditions.push(condition)
+}
+```
+
+在 `addIfCondition` 函数内首先检查根元素描述对象是否有 `el.ifConditions` 属性，如果没有则创建该属性同时初始化为空数组，接着将 `ASTIfCondition` 类型的对象条件到该数组中，实际上该函数是一个通用的函数，不仅仅用在根元素中，它用在任何由 `v-if`、`v-else-if` 以及 `v-else` 组成的条件渲染的模板中。
+
+通过如上分析我们可以发现，具有 `v-else-if` 或 `v-else` 属性的元素的描述对象会被添加到具有 `v-if` 属性的元素描述对象的 `.ifConnditions` 数组中。
+
+举个例子，如下模板：
+
+```html
+<div v-if="a"></div>
+<p v-else-if="b"></p>
+<span v-else></span>
+```
+
+解析后生成的 `AST` 如下(简化版)：
+
+```js
+{
+  type: 1,
+  tag: 'div',
+  ifConditions: [
+    {
+      exp: 'b',
+      block: { type: 1, tag: 'p' /* 省略其他属性 */ }
+    },
+    {
+      exp: undefined,
+      block: { type: 1, tag: 'span' /* 省略其他属性 */ }
+    }
+  ]
+  // 省略其他属性...
+}
+```
+
+可以看到代码 `v-else-if` 和 `v-else` 属性的元素描述对象都被条件到了带有 `v-if` 属性的元素描述对象的 `.ifConditions` 数组中，其实如上描述是不准确的，后面我们会发现带有 `v-if` 属性的元素也会将自身的元素描述对象条件到自身的 `.ifConditions` 数组中，即：
+
+```js {5-8}
+{
+  type: 1,
+  tag: 'div',
+  ifConditions: [
+    {
+      exp: 'a',
+      block: { type: 1, tag: 'div' /* 省略其他属性 */ }
+    },
+    {
+      exp: 'b',
+      block: { type: 1, tag: 'p' /* 省略其他属性 */ }
+    },
+    {
+      exp: undefined,
+      block: { type: 1, tag: 'span' /* 省略其他属性 */ }
+    }
+  ]
+  // 省略其他属性...
+}
+```
+
+以上就是实现允许使用 `v-if`、`v-else-if` 和 `v-else` 定义多个根元素的方式，我们顺带着讲解了一个重要的函数 `addIfCondition` 的实现和使用。
+
+话说回来，假如当前元素不满足条件：`root.if && (element.elseif || element.else)`，那么在非生产环境下 `elseif` 语句块的代码将会被执行：
+
+```js {3}
+if (root.if && (element.elseif || element.else)) {
+  // 省略...
+} else if (process.env.NODE_ENV !== 'production') {
+  warnOnce(
+    `Component template should contain exactly one root element. ` +
+    `If you are using v-if on multiple elements, ` +
+    `use v-else-if to chain them instead.`
+  )
+}
+```
+
+可以看到，在 `elseif` 语句块内通过 `warnOnce` 函数打印了警告信息给开发者友好的提示。
 
 
 ### 增强的 class
