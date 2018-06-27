@@ -35,15 +35,9 @@ data = vm._data = typeof data === 'function'
   : data || {}
 ```
 
-首先定义 `data` 变量，它是 `vm.$options.data` 的引用。在 [Vue选项的合并](./5vue-merge.md) 一节中我们知道 `vm.$options.data` 其实最终被处理成了一个函数，且该函数的执行结果才是真正的数据。在上面的代码中我们发现其中依然存在一个使用 `typeof` 语句判断 `data` 数据类型的操作，实际上这个判断是完全没有必要的，原因是当 `data` 选项存在的时候，那么经过 `mergeOptions` 函数处理后，`data` 选项必然是一个函数，只有当 `data` 选项不存在的时候它的值是 `undefined`，而在 `initState` 函数中如果 `opts.data` 不存在则根本不会执行 `initData` 函数，所以既然执行了 `initData` 函数那么 `vm.$options.data` 必然是一个函数，所以这里的判断是没有必要的。可以直接写成：
+首先定义 `data` 变量，它是 `vm.$options.data` 的引用。在 [Vue选项的合并](./5vue-merge.md) 一节中我们知道 `vm.$options.data` 其实最终被处理成了一个函数，且该函数的执行结果才是真正的数据。在上面的代码中我们发现其中依然存在一个使用 `typeof` 语句判断 `data` 数据类型的操作，我们知道经过 `mergeOptions` 函数处理后 `data` 选项必然是一个函数，那么这里的判断还有必要吗？答案是有，这是因为 `beforeCreate` 生命周期钩子函数是在 `mergeOptions` 函数之后 `initData` 之前被调用的，如果在 `beforeCreate` 生命周期钩子函数中修改了 `vm.$options.data` 的值，那么在 `initData` 函数中对于 `vm.$options.data` 类型的判断就是必要的了。
 
-```js
-data = vm._data = getData(data, vm)
-```
-
-关于这个问题，我提交了一个 `PR`，详情可以查看这里：[https://github.com/vuejs/vue/pull/7875](https://github.com/vuejs/vue/pull/7875)
-
-回到上面那句代码，这句话调用了 `getData` 函数，`getData` 函数就定义在 `initData` 函数的下面，我们看看其作用是什么：
+回到上面那段代码，如果 `vm.$options.data` 的类型为函数，则调用 `getData` 函数获取真正的数据，`getData` 函数就定义在 `initData` 函数的下面，我们看看其作用是什么：
 
 ```js
 export function getData (data: Function, vm: Component): any {
