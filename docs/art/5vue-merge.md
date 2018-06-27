@@ -626,7 +626,7 @@ function mergeData (to: Object, from: ?Object): Object {
 }
 ```
 
-`mergeData` 函数接收两个参数 `to` 和 `from`，根据 `mergeData` 函数被调用时参数的传递顺序我们知道，`to` 对应的是 `childVla` 产生的纯对象，`from` 对应 `parentVal` 产生的纯对象，我们看 `mergeData` 第一句代码：
+`mergeData` 函数接收两个参数 `to` 和 `from`，根据 `mergeData` 函数被调用时参数的传递顺序我们知道，`to` 对应的是 `childVal` 产生的纯对象，`from` 对应 `parentVal` 产生的纯对象，我们看 `mergeData` 第一句代码：
 
 ```js
 if (!from) return to
