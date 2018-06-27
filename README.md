@@ -1,20 +1,4 @@
-# 前言
-
-## 前言之前
-
-有的同学可能会有疑问，比如：*你又不是作者本人，你怎么知道人家的代码为什么那么写*、*Vue.js又不是你写的，谁知道你分析的对不对* 等等。
-
-对于第一个问题我想说的是，你们的怀疑是对的，毕竟最有权威分析 `Vue` 源码的人必然是作者本身，但同学们要知道**作者(小右)才没有时间来给大家写一套源码分析的文章**。对于第二个问题，`Vue` 确实不是我写的，但为了证明这套文章还是稍微有点质量的，在这里我把看源码过程中提过的一些 `PR` 贴在下面，也证明我确实对 `Vue` 有些粗浅的理解。
-
-* [https://github.com/vuejs/vue/pull/7981](https://github.com/vuejs/vue/pull/7981)
-* [https://github.com/vuejs/vue/pull/6795](https://github.com/vuejs/vue/pull/6795)
-* [https://github.com/vuejs/vue/pull/7875](https://github.com/vuejs/vue/pull/7875)
-* [https://github.com/vuejs/vue/pull/6833](https://github.com/vuejs/vue/pull/6833)
-* [https://github.com/vuejs/vue/pull/7308](https://github.com/vuejs/vue/pull/7308)
-* [https://github.com/vuejs/vue/pull/7762](https://github.com/vuejs/vue/pull/7762)
-* [https://github.com/vuejs/vue/pull/7510](https://github.com/vuejs/vue/pull/7510)
-
-说实话，上面的 `PR` 都是些微不足道的，因为写文章需要大量的时间，随着这些文章的完成，我很希望抽出时间做一些实质性的贡献。
+# 写在前面
 
 ## 文章特点
 
@@ -53,3 +37,18 @@
 
 既然是阅读源码，没有源码怎么读？所以你要使用你喜欢的方式拿到源码才行，最简单的方式是，clone 一份源码到你的本地。如果你不想这么做，你可以安装一个 `chrome` 的扩展程序，使得你能够以在线以资源管理器的方式阅读GitHub仓库的代码，我常用的 `chrome` 扩展是：[octotree](https://github.com/buunguyen/octotree)，类似的扩展还有很多，你喜欢就好。
 
+## 一点补充
+
+有的同学可能会有疑问，比如：*你又不是作者本人，你怎么知道人家的代码为什么那么写*、*Vue.js又不是你写的，谁知道你分析的对不对* 等等。
+
+对于第一个问题我想说的是，你们的怀疑是对的，毕竟最有权威分析 `Vue` 源码的人必然是作者本身，但同学们要知道**作者(小右)才没有时间来给大家写一套源码分析的文章**。对于第二个问题，`Vue` 确实不是我写的，但为了证明这套文章还是稍微有点质量的，在这里我把看源码过程中提过的一些 `PR` 贴在下面，也证明我确实对 `Vue` 有些粗浅的理解。
+
+* [https://github.com/vuejs/vue/pull/7981](https://github.com/vuejs/vue/pull/7981)
+* [https://github.com/vuejs/vue/pull/6795](https://github.com/vuejs/vue/pull/6795)
+* [https://github.com/vuejs/vue/pull/7875](https://github.com/vuejs/vue/pull/7875)
+* [https://github.com/vuejs/vue/pull/6833](https://github.com/vuejs/vue/pull/6833)
+* [https://github.com/vuejs/vue/pull/7308](https://github.com/vuejs/vue/pull/7308)
+* [https://github.com/vuejs/vue/pull/7762](https://github.com/vuejs/vue/pull/7762)
+* [https://github.com/vuejs/vue/pull/7510](https://github.com/vuejs/vue/pull/7510)
+
+说实话，上面的 `PR` 都是些微不足道的，因为写文章需要大量的时间，随着这些文章的完成，我很希望抽出时间做一些实质性的贡献。
