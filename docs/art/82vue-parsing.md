@@ -302,7 +302,7 @@ root = {
 }
 ```
 
-到现在为了，我们解析逻辑看上去可以用了，但实际上还是存在问题的，假设我们要解析 `html` 字符串再稍微复杂一点，如下：
+到现在为止，我们解析逻辑看上去可以用了，但实际上还是存在问题的，假设我们要解析 `html` 字符串再稍微复杂一点，如下：
 
 ```html
 <div>
@@ -700,7 +700,7 @@ export function createASTElement (
 <div v-for="obj of list" class="box"></div>
 ```
 
-当遇 `div` 的开始标签时 `parseHTML` 函数的 `start` 钩子函数的前两个参数分别是：
+当遇到 `div` 的开始标签时 `parseHTML` 函数的 `start` 钩子函数的前两个参数分别是：
 
 ```js
 const html = '<div v-for="obj of list" class="box"></div>'
@@ -1092,11 +1092,11 @@ let inPre = false
 let warned = false
 ```
 
-首先定义的是 `stack` 常量，它的初始值是一个空数组。我们将讲解创建 `AST` 思路的时候也使用到了 `stack` 数组，当时讲到了它的作用是用来修正当前正在解析元素的父级的。在 `stack` 常量之后定义了 `preserveWhitespace` 常量，它是一个布尔值并且它的值与编译器选项中的 `options.preserveWhitespace` 选项有关，只要 `options.preserveWhitespace` 的值不为 `false`，那么 `preserveWhitespace` 的值就为真。其中 `options.preserveWhitespace` 选项用来告诉编译器在编译 `html` 字符串时是否放弃标签之间的空格，如果为 `true` 则代表放弃。
+首先定义的是 `stack` 常量，它的初始值是一个空数组。我们在讲解创建 `AST` 思路的时候也使用到了 `stack` 数组，当时讲到了它的作用是用来修正当前正在解析元素的父级的。在 `stack` 常量之后定义了 `preserveWhitespace` 常量，它是一个布尔值并且它的值与编译器选项中的 `options.preserveWhitespace` 选项有关，只要 `options.preserveWhitespace` 的值不为 `false`，那么 `preserveWhitespace` 的值就为真。其中 `options.preserveWhitespace` 选项用来告诉编译器在编译 `html` 字符串时是否放弃标签之间的空格，如果为 `true` 则代表放弃。
 
 接着定义了 `root` 变量，我们知道 `parse` 函数的返回值就是 `root` 变量，所以 `root` 变量就是最终的 `AST`。在 `root` 变量之后定义了 `currentParent` 变量，我们在讲解创建 `AST` 思路时也定义了一个 `currentParent`，我们知道元素描述对象之间的父子关系就是靠该变量进行联系的。
 
-接着有定义了三个变量，分别是 `inVPre`、`inPre` 以及 `warned`，并且它们的初始值都为 `false`。其中 `inVPre` 变量用来标识当前解析的标签是否在拥有 `v-pre` 标签之内，`inPre` 变量用来标识当前正在解析的标签是否在 `<pre></pre>` 标签之内。而 `warned` 变量则用于接下来定义的 `warnOnce` 函数：
+接着又定义了三个变量，分别是 `inVPre`、`inPre` 以及 `warned`，并且它们的初始值都为 `false`。其中 `inVPre` 变量用来标识当前解析的标签是否在拥有 `v-pre` 标签之内，`inPre` 变量用来标识当前正在解析的标签是否在 `<pre></pre>` 标签之内。而 `warned` 变量则用于接下来定义的 `warnOnce` 函数：
 
 ```js
 function warnOnce (msg) {
@@ -1129,7 +1129,7 @@ function closeElement (element) {
 
 每当遇到一个标签的结束标签时，或遇到一元标签时都会调用该方法“闭合”标签，具体功能我们在后面的内容中详细讲解。
 
-经过了一些列准备，我们终于到了最关键的异步，即调用 `parseHTML` 函数解析模板字符串并借助它来构建一棵 `AST`，如下是调用 `parseHTML` 函数时所传递的选项参数：
+经过了一些列准备，我们终于到了最关键的一步，即调用 `parseHTML` 函数解析模板字符串并借助它来构建一棵 `AST`，如下是调用 `parseHTML` 函数时所传递的选项参数：
 
 ```js
 parseHTML(template, {
