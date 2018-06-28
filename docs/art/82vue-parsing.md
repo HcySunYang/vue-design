@@ -1589,6 +1589,141 @@ if (root.if && (element.elseif || element.else)) {
 
 可以看到，在 `elseif` 语句块内通过 `warnOnce` 函数打印了警告信息给开发者友好的提示。
 
+再往下是如下这段 `if` 条件语句块：
+
+```js
+if (currentParent && !element.forbidden) {
+  // 省略...
+}
+```
+
+不过我们暂时跳过它，我们优先看一下 `start` 钩子函数的最后的一段代码，如下：
+
+```js
+if (!unary) {
+  currentParent = element
+  stack.push(element)
+} else {
+  closeElement(element)
+}
+```
+
+如上这段代码是一个 `if...else` 条件分支语句块，我们首先看 `if` 语句的条件，它检测了当前元素是否是非一元标签，前面我们说过了如果一个元素是非一元的，那么应该将该元素的描述对象添加到 `stack` 栈中，并且将 `currentParent` 变量的值更新为当前元素的描述对象，如上代码中 `if` 语句块内的代码说明了一切。
+
+反之，如果一个元素是一元标签，那么应该调用 `closeElement` 函数闭合该元素。对于 `closeElement` 函数我们后面再详细说，现在我们需要重点关注 `if` 语句块内的两句代码，通过这两句代码我们至少能得到一个总结：**每当遇到一个非一元标签都会将该元素的描述对象添加到 `stack` 数组，并且 `currentParent` 始终存储的是 `stack` 栈顶的元素，即当前解析元素的父级**。
+
+知道了这些我们在回头来看如下代码：
+
+```js
+if (currentParent && !element.forbidden) {
+  // 省略...
+}
+```
+
+首先观察该 `if` 条件语句的判断条件：
+
+```js
+currentParent && !element.forbidden
+```
+
+如果这个条件成立，则说明当前元素存在父级(`currentParent`)，并且当前元素不是被禁止的元素。只有在这种情况下才会执行该 `if` 条件语句块内的代码。在 `if` 语句块内是如下代码：
+
+```js
+if (element.elseif || element.else) {
+  processIfConditions(element, currentParent)
+} else if (element.slotScope) { // scoped slot
+  currentParent.plain = false
+  const name = element.slotTarget || '"default"'
+  ;(currentParent.scopedSlots || (currentParent.scopedSlots = {}))[name] = element
+} else {
+  currentParent.children.push(element)
+  element.parent = currentParent
+}
+```
+
+在如上这段代码中，最关键的代码应该是 `else` 语句块内的代码：
+
+```js {6-7}
+if (element.elseif || element.else) {
+  // 省略...
+} else if (element.slotScope) { // scoped slot
+  // 省略...
+} else {
+  currentParent.children.push(element)
+  element.parent = currentParent
+}
+```
+
+在 `else` 语句块内，会把当前元素描述对象添加到父级元素描述对象(`currentParent`)的 `children` 数组中，同时将当前元素对象的 `parent` 属性指向父级元素对象，这样就建立了元素描述对象间的父子级关系。
+
+但是就像我们前面讲过的，如果一个标签使用 `v-else-if` 或 `v-else` 指令，那么该元素的描述对象实际上会被添加到对应的 `v-if` 元素描述对象的 `ifConditions` 数组中，而非作为一个独立的子节点，这个工作就是由如上代码中 `if` 语句块的代码完成的：
+
+```js {2}
+if (element.elseif || element.else) {
+  processIfConditions(element, currentParent)
+} else if (element.slotScope) { // scoped slot
+  // 省略...
+} else {
+  // 省略...
+}
+```
+
+如上代码所示的 `if` 语句的条件可知，如果当前元素使用了 `v-else-if` 或 `v-else` 指令，则会调用 `processIfConditions` 函数，同时将当前元素描述对象 `element` 和父级元素的描述对象 `currentParent` 作为参数传递，我们来看看 `processIfConditions` 函数做了什么，如下是 `processIfConditions` 函数的源码：
+
+```js
+function processIfConditions (el, parent) {
+  const prev = findPrevElement(parent.children)
+  if (prev && prev.if) {
+    addIfCondition(prev, {
+      exp: el.elseif,
+      block: el
+    })
+  } else if (process.env.NODE_ENV !== 'production') {
+    warn(
+      `v-${el.elseif ? ('else-if="' + el.elseif + '"') : 'else'} ` +
+      `used on element <${el.tag}> without corresponding v-if.`
+    )
+  }
+}
+```
+
+在 `processIfConditions` 函数内部，首先通过 `findPrevElement` 函数找到当前元素的前一个元素描述对象，并将其赋值给 `prev` 常量，接着进入 `if` 条件语句，判断当前元素的前一个元素是否使用了 `v-if` 指令，我们知道对于使用了 `v-else-if` 或 `v-else` 指令的元素来讲，他们的前一个元素必然需要使用相符的 `v-if` 指令才行。如果前一个元素确实使用 `v-if` 指令，那么则会调用 `addIfCondition` 函数将当前元素描述对象添加到前一个元素的的 `ifConditions` 数组中。如果前一个元素没有使用 `v-if` 指令，那么此时将会进入 `else...if` 条件语句的判断，即如果是非生产环境下，会打印警告信息提示开发者没有相符的使用了 `v-if` 指令的元素。
+
+以上是当前元素使用了 `v-else-if` 或 `v-else` 指令时的特殊处理，由此可知**当一个元素使用了 `v-else-if` 或 `v-else` 指令时，它们是不会作为父级元素字节点的**，而是会被添加到相符的使用了 `v-if` 指令的元素描述对象的 `ifConditions` 数组中。
+
+如果当前元素没有使用 `v-else-if` 或 `v-else` 指令，那么还会判断当前元素是否使用了 `slot-scope` 特性，如下：
+
+```js {6}
+if (element.elseif || element.else) {
+  // 省略...
+} else if (element.slotScope) { // scoped slot
+  currentParent.plain = false
+  const name = element.slotTarget || '"default"'
+  ;(currentParent.scopedSlots || (currentParent.scopedSlots = {}))[name] = element
+} else {
+  // 省略...
+}
+```
+
+如上代码高亮代码所示，如果一个元素使用了 `slot-scope` 特性，那么该元素的描述对象会被添加到父级元素的 `scopedSlots` 对象下，也就是说使用了 `slot-scope` 特性的元素与使用了 `v-else-if` 或 `v-else` 指令的元素一样，他们都不会作为父级元素的子节点，对于使用了 `slot-scope` 特性的元素来讲它们将被添加到父级元素描述的 `scopedSlots` 对象下。另外由于如上代码中 `elseif` 语句块涉及 `slot-scope` 相关的处理，我们打算放到后面统一讲解。
+
+到目前为止，我们大概粗略的过了一遍 `start` 钩子函数的内容，接下来我们做一些总结，以使得我们的思路更加清晰：
+
+* 1、`start` 钩子函数是当解析 `html` 字符串遇到开始标签时被调用的。
+* 2、模板中禁止使用 `<style>` 标签和那些没有指定 `type` 属性或 `type` 属性值为 `text/javascript` 的 `<script>` 标签。
+* 3、在 `start` 钩子函数中会调用前置处理函数，这些前置处理函数都放在 `preTransforms` 数组中，这么做的目的是为不同平台提供对应平台下的解析工作。
+* 4、前置处理函数执行完后会调用一些列 `process*` 类函数继续对元素描述对象进行加工。
+* 5、通过判断 `root` 是否存在来判断当前解析的元素是否为根元素。
+* 6、`slot` 标签和 `template` 标签不能作为根元素，并且根元素不能使用 `v-for` 指令。
+* 7、可以定义多个根元素，但必须使用 `v-if`、`v-else-if` 以及 `v-else` 保证有且仅有一个根元素被渲染。
+* 8、构建 `AST` 并建立父子级关系是在 `start` 钩子函数中完成的，每当遇到非一元标签，会把它存到 `currentParent` 变量中，当解析该标签的子节点时通过访问 `currentParent` 变量获取父级元素。
+* 9、如果一个元素使用了 `v-else-if` 或 `v-else` 指令，则该元素不会作为子节点，而是会被添加到相符的使用了 `v-if` 指令的元素描述对象的 `ifConditions` 数组中。
+* 10、如果以元素使用了 `slot-scope` 特性，则该元素也不会作为子节点，它会被添加到父级元素描述对象的 `scopedSlots` 属性中。
+* 11、对于没有使用条件指令或 `slot-scope` 特性的元素，会正常建立父子级关系。
+
+以上的总结就是 `start` 钩子函数在处理开始标签时所做的事情，实际上由于开始标签中包含了大量指令信息(如 `v-if` 等)或特性信息(如 `slot-scope` 等)，所以在生产 `AST` 过程中，大部分工作都是由 `start` 函数来完成的，接下来我们将更加细致的去讲解解析过程中的每一个细节。
+
+
 
 ### 增强的 class
 ### 增强的 style
