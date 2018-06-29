@@ -220,12 +220,12 @@ options.render && options.render._withStripped
 
 如果上面的条件为真，则使用 `getHandler`，否则使用 `hasHandler`，判断条件要求 `options.render` 和 `options.render._withStripped` 必须都为真才行，我现在明确告诉大家 `options.render._withStripped` 这个属性只在测试代码中出现过，所以一般情况下这个条件都会为假，也就是使用 `hasHandler` 作为代理配置。
 
-`hasHandler` 这个变量就定义在当前文件，如下：
+`hasHandler` 常量就定义在当前文件，如下：
 
 ```js
 const hasHandler = {
     has (target, key) {
-        // has 变量是真实经过 in 运算符得来的结果
+        // has 常量是真实经过 in 运算符得来的结果
         const has = key in target
         // 如果 key 在 allowedGlobals 之内，或者 key 以下划线 _ 开头的字符串，则为真
         const isAllowed = allowedGlobals(key) || (typeof key === 'string' && key.charAt(0) === '_')
@@ -363,7 +363,7 @@ var vm = new Vue({
 })
 ```
 
-上面的代码由于 `render` 函数时我们手动书写的，所以 `render` 函数并不会被包裹在 `with` 语句块内，当然也就触发不了 `has` 拦截，但是由于 `render._withStripped` 也未定义，所以也不会被 `get` 拦截，那这个时候我们虽然访问了不存在的 `this.a`，但是却得不到警告，想要得到警告我们需要手动设置 `render._withStripped` 为 `true`：
+上面的代码由于 `render` 函数是我们手动书写的，所以 `render` 函数并不会被包裹在 `with` 语句块内，当然也就触发不了 `has` 拦截，但是由于 `render._withStripped` 也未定义，所以也不会被 `get` 拦截，那这个时候我们虽然访问了不存在的 `this.a`，但是却得不到警告，想要得到警告我们需要手动设置 `render._withStripped` 为 `true`：
 
 ```js
 const render = function (h) {
@@ -1063,7 +1063,7 @@ callHook(vm, 'created')
 
 作为对立面，`created` 生命周期钩子则恰恰是等待 `initInjections`、`initState` 以及 `initProvide` 执行完毕之后才被调用，所以在 `created` 钩子中，是完全能够使用以上提到的内容的。但由于此时还没有任何挂载的操作，所以在 `created` 中是不能访问DOM的，即不能访问 `$el`。
 
-最后我们注意到 `callHook` 函数的最后有这段一段代码：
+最后我们注意到 `callHook` 函数的最后有这样一段代码：
 
 ```js
 if (vm._hasHookEvent) {
