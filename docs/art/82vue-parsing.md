@@ -1224,7 +1224,7 @@ if (isIE && ns === 'svg') {
 <svg xmlns:NS1="" NS1:xmlns:feature="http://www.openplans.org/topp"></svg>
 ```
 
-标签中多了 `'xmlns:NS1="" NS1:'` 这段字符串，解决办法也很简单，将整个多余的字符串去掉或将 `NS1:xmlns:feature` 属性修正为 `xmlns:feature` 即可。而 `guardIESVGBug` 函数就是用来修改 `NS1:xmlns:feature` 属性的，如下是 `guardIESVGBug` 函数的源码以及它需要的两个正则：
+标签中多了 `'xmlns:NS1="" NS1:'` 这段字符串，解决办法也很简单，将整个多余的字符串去掉即可。而 `guardIESVGBug` 函数就是用来修改 `NS1:xmlns:feature` 属性并移除 `xmlns:NS1=""` 属性的，如下是 `guardIESVGBug` 函数的源码以及它需要的两个正则：
 
 ```js
 const ieNSBug = /^xmlns:NS\d+/
