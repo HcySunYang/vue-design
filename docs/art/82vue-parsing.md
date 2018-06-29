@@ -1713,6 +1713,194 @@ if (element.elseif || element.else) {
 
 以上的总结就是 `start` 钩子函数在处理开始标签时所做的事情，实际上由于开始标签中包含了大量指令信息(如 `v-if` 等)或特性信息(如 `slot-scope` 等)，所以在生产 `AST` 过程中，大部分工作都是由 `start` 函数来完成的，接下来我们将更加细致的去讲解解析过程中的每一个细节。
 
+### 处理使用了 v-pre 指令的元素及其子元素
+
+回到 `start` 钩子函数中，我们开始对 `start` 钩子函数内的代码做细致的分析，首先找到如下这段代码：
+
+```js
+if (!inVPre) {
+  processPre(element)
+  if (element.pre) {
+    inVPre = true
+  }
+}
+```
+
+为了讲解的流畅性，同时也为了大家更容易理解，想要看明白如上代码的作用，我们首先需要了解一下 `processPre` 函数的作用，如下是 `processPre` 函数的源码：
+
+```js
+function processPre (el) {
+  if (getAndRemoveAttr(el, 'v-pre') != null) {
+    el.pre = true
+  }
+}
+```
+
+`processPre` 函数接收元素描述对象作为参数，在 `processPre` 函数内部首先通过 `getAndRemoveAttr` 函数并使用其返回值与 `null` 做比较，如果 `getAndRemoveAttr` 函数的返回值不等于 `null` 则执行 `if` 语句块内的代码，即在元素描述对象上添加 `.pre` 属性并将其值设置为 `true`。
+
+大家猜测一下 `getAndRemoveAttr` 函数的作用是什么？根据传递给该函数的两个参数：第一个参数是元素描述对象，第二个参数是一个字符串 `'v-pre'`。我们大概可以猜测到 `getAndRemoveAttr` 函数应该能够获取给定元素的某个属性的值，那么如上代码就应该是获取给定元素的 `v-pre` 属性的值。实际上我们的猜测是正确的，不过只正确了一部分，实际 `getAndRemoveAttr` 函数还会做更多事情，`getAndRemoveAttr` 函数来自于 `src/compiler/helpers.js` 文件，如下是 其代码：
+
+```js
+export function getAndRemoveAttr (
+  el: ASTElement,
+  name: string,
+  removeFromMap?: boolean
+): ?string {
+  let val
+  if ((val = el.attrsMap[name]) != null) {
+    const list = el.attrsList
+    for (let i = 0, l = list.length; i < l; i++) {
+      if (list[i].name === name) {
+        list.splice(i, 1)
+        break
+      }
+    }
+  }
+  if (removeFromMap) {
+    delete el.attrsMap[name]
+  }
+  return val
+}
+```
+
+`getAndRemoveAttr` 接收三个参数，其中第三个参数 `removeFromMap` 是一个可选参数，并且它应该是一个布尔值，第一个参数 `el` 为元素描述对象，第二个参数为要获取属性的名字。在 `getAndRemoveAttr` 函数内部首先定义了 `val` 变量，紧接着是一个 `if` 条件语句块，其判断条件为：
+
+```js
+if ((val = el.attrsMap[name]) != null)
+```
+
+由此可知变量 `val` 保存的是要获取属性的值，并且获取属性的值的方式是通过读取元素描述对象的 `.attrsMap` 属性对象中与给定属性名字(`name`)同名的属性值来实现的，我们知道元素描述对象的 `.attrsMap` 对象是该元素所有属性的名值对应表。获取到属性值并赋值给 `val` 变量后，会使用该属性值与 `null` 做比较，如果不相等则说明属性值存在，此时会执行 `if` 语句块的代码，如下：
+
+```js
+const list = el.attrsList
+for (let i = 0, l = list.length; i < l; i++) {
+  if (list[i].name === name) {
+    list.splice(i, 1)
+    break
+  }
+}
+```
+
+在 `if` 语句块内遍历了元素描述对象的 `el.attrsList` 数组，并通过属性名(`name`)找到相应的数组元素，目的是使用数组的 `splice` 方法将该数组元素从元素描述对象的 `attrsList` 数组中移除。
+
+接着 `getAndRemoveAttr` 函数还会做一件事情，如下：
+
+```js
+if (removeFromMap) {
+  delete el.attrsMap[name]
+}
+```
+
+如果第三个参数为真，那么还会将该属性从属性名值表(`attrsMap`)中移除。最后 `getAndRemoveAttr` 函数会将属性值 `val` 返回，当然啦如果属性不存在的话，则 `val` 变量的值为 `undefined`。
+
+举个例子直观感受一下 `getAndRemoveAttr` 的作用，假设我们有如下模板：
+
+```html
+<div v-if="display" ></div>
+```
+
+如上 `div` 标签对象的元素描述对象为：
+
+```js
+element = {
+  // 省略其他属性
+  type: 1,
+  tag: 'div',
+  attrsList: [
+    {
+      name: 'v-if',
+      value: 'display'
+    }
+  ],
+  attrsMap: {
+    'v-if': 'display'
+  }
+}
+```
+
+假设我们现在使用 `getAndRemoveAttr` 函数获取该元素的 `v-if` 属性的值：
+
+```js
+getAndRemoveAttr(element, 'v-if')
+```
+
+则该函数的返回值为字符串 `'display'`，同时会将 `v-if` 属性从 `attrsList` 数组中移除，所以经过 `getAndRemoveAttr` 函数处理之后元素的描述对象将变为：
+
+```js {5}
+element = {
+  // 省略其他属性
+  type: 1,
+  tag: 'div',
+  attrsList: [],
+  attrsMap: {
+    'v-if': 'display'
+  }
+}
+```
+
+可以看到 `attrsList` 属性变为一个空数组，如果传递给 `getAndRemoveAttr` 函数的第三个参数为真：
+
+```js
+getAndRemoveAttr(element, 'v-if', true)
+```
+
+那么除了将 `v-if` 属性从 `attrsList` 数组中移除之外，也会将其从 `attrsMap` 中移除，此时元素描述对象将变为：
+
+```js {6}
+element = {
+  // 省略其他属性
+  type: 1,
+  tag: 'div',
+  attrsList: [],
+  attrsMap: {}
+}
+```
+
+以上就是 `getAndRemoveAttr` 函数的作用，除了获取给定属性的值之外，还会将该属性从 `attrsList` 数组中移除，并可以选择性将该属性从 `attrsMap` 对象中移除。
+
+我们回到 `processPre` 函数中：
+
+```js
+function processPre (el) {
+  if (getAndRemoveAttr(el, 'v-pre') != null) {
+    el.pre = true
+  }
+}
+```
+
+现在来看 `processPre` 函数的逻辑就很容易理解了，可知 `processPre` 函数或去取给定元素 `v-pre` 属性的值，如果 `v-pre` 属性的值不等于 `null` 则会在元素描述对象上添加 `.pre` 属性，并将其值设置为 `true`。这里简单提一下，由于使用 `v-pre` 指令时不需要指定属性值，所以使用 `getAndRemoveAttr` 函数获取到的属性值为空字符串，由于 `'' != null` 成立，所以以上判断条件成立。
+
+了解了 `precessPre` 函数的作用之后，我们再回到 `start` 钩子函数中，如下高亮的代码：
+
+```js {3-5}
+if (!inVPre) {
+  processPre(element)
+  if (element.pre) {
+    inVPre = true
+  }
+}
+```
+
+高亮的代码判断了元素对象的 `.pre` 属性是否为真，我们知道假如一个标签使用 `v-pre` 指令，那么经过 `processPre` 函数处理之后，则该元素描述对象的 `.pre` 属性值为 `true`，这时会将 `inVPre` 变量的值也设置为 `true`。当 `inVPre` 变量为真时，意味着**后续的所有解析工作都处于 `v-pre` 环境下**，编译器会跳过拥有 `v-pre` 指令元素以及其子元素的编译过程，所以后续的编译逻辑需要 `inVPre` 变量作为标识才行。
+
+另外如上代码中我们要注意判断条件：`if (!inVPre)`，该条件保证了如果当前解析工作已经处于 `v-pre` 环境下了，则不需要再次执行该 `if` 语句块内的代码。
+
+再往下我们要将的是 `start` 钩子函数中的如下这段代码：
+
+```js
+if (platformIsPreTag(element.tag)) {
+  inPre = true
+}
+```
+
+这段代码相对来说要简单一些，使用 `platformIsPreTag` 函数判断当前元素是否是 `<pre>` 标签，如果是 `<pre>` 标签则将 `inPre` 变量设置为 `true`。实际上 `inPre` 变量与 `inVPre` 变量的作用相同，都是用来作为一个标识，只不过 `inPre` 变量标识着当前解析环境是否在 `<pre>` 标签内，因为 `<pre>` 标签内的解析行为与其他 `html` 标签是不同。具体不同体现在：
+
+* 1、`<pre>` 标签会对其所包含的 `html` 字符实体进行解码
+* 2、`<pre>` 标签会保留 `html` 字符串编写时的空白
+
+更具体的实现我们会在后面的分析中讲到。
+
+
 
 
 ### 增强的 class
