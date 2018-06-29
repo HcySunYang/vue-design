@@ -1279,14 +1279,10 @@ attrs = [
 ]
 ```
 
-在经过 `guardIESVGBug` 函数处理之后，属性名字 `NS1:xmlns:feature` 将吧变为 `xmlns:feature`，所以 `guardIESVGBug` 返回的属性数组为：
+在经过 `guardIESVGBug` 函数处理之后，属性数组中的第一项因为属性名满足 `ieNSBug` 正则被剔除，第二项属性名字 `NS1:xmlns:feature` 将被变为 `xmlns:feature`，所以 `guardIESVGBug` 返回的属性数组为：
 
 ```js
 attrs = [
-  {
-    name: 'xmlns:NS1',
-    value: ''
-  },
   {
     name: 'xmlns:feature',
     value: 'http://www.openplans.org/topp'
