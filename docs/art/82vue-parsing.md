@@ -1431,17 +1431,11 @@ if (!root) {
 
 `if` 语句块的判断条件是如果 `root` 不存在则执行语句块内的代码，我们知道 `root` 变量在一开始是不存在的，如果 `root` 不存在那说明当前元素应该就是根元素，所以在 `if` 语句块内直接将当前元素的描述对象 `element` 赋值给 `root` 变量，同时会调用上面刚刚讲过的 `checkRootConstraints` 函数检查根元素是否符合要求。
 
-我们再来看 `elseif` 语句的条件，它检测了 `stack.length` 是否不为 `0`，也就是说 `stack` 数组不为空的情况下会执行 `elseif` 语句块内的代码。我们想一下当前元素 `stack` 数组不为空并且当前正在解析开始标签，这说明什么问题？要想知道这个问题我们首先要知道 `stack` 数组的作用，前面已经多次提到每当遇到一个非一元标签时就会将该标签的描述对象条件到数组，并且每当遇到一个结束标签时都会将该标签的描述对象从 `stack` 数组中拿掉，那也就是说在只有一个根元素的情况下，正常解析完成一段 `html` 代码后 `stack` 数组应该为空。但此时不为空，那只能说明一件事情，即有多个根元素。
-
-如果有多个根元素，则会执行 `elseif` 语句块内的代码，如下：
+我们再来看 `elseif` 语句的条件，它检测了 `stack.length` 是否为 `0`，也就是说 `stack` 数组为空的情况下会执行 `elseif` 语句块内的代码。我们想一下如果 `stack` 数组为空并且当前正在解析开始标签，这说明什么问题？要想知道这个问题我们首先要知道 `stack` 数组的作用，前面已经多次提到每当遇到一个非一元标签时就会将该标签的描述对象放进数组，并且每当遇到一个结束标签时都会将该标签的描述对象从 `stack` 数组中拿掉，那也就是说在只有一个根元素的情况下，正常解析完成一段 `html` 代码后 `stack` 数组应该为空，或者换个说法，即当 `stack` 数组被清空后则说明整个模板字符串已经解析完毕了，但此时 `start` 钩子函数仍然被调用了，这说明模板中存在多个根元素，这时 `elseif` 语句块内的代码将被执行，如下：
 
 ```js
 if (root.if && (element.elseif || element.else)) {
-  checkRootConstraints(element)
-  addIfCondition(root, {
-    exp: element.elseif,
-    block: element
-  })
+  // 省略...
 } else if (process.env.NODE_ENV !== 'production') {
   warnOnce(
     `Component template should contain exactly one root element. ` +
