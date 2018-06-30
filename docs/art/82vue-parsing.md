@@ -2110,6 +2110,287 @@ function processRawAttrs (el) {
 
 ### 处理使用了v-for指令的元素
 
+接下来我们回到如下这段代码：
+
+```js
+if (inVPre) {
+  // 省略...
+} else if (!element.processed) {
+  // 省略...
+}
+```
+
+如果一个标签使用了 `v-pre` 指令，那么该标签及其子标签的解析都会有 `if` 语句块内的 `processRawAttrs` 函数来完成。反之将会执行 `eelse...if` 条件语句的判断，可以看到其判断条件为 `!element.processed`，这里要补充一下元素描述对象的 `element.processed` 属性是一个布尔值，它标识着当前元素是否已经被解析过了，或许大家会对 `element.processed` 属性有疑问，实际上 `element.processed` 属性是在元素描述对象应用 `preTransforms` 数组中的处理函数时被添加的，我们可以打开 `src/platforms/web/compiler/modules/model.js` 文件找到 `preTransformNode` 函数，该函数中有这样一段代码，如下：
+
+```js {4}
+processFor(branch0)
+addRawAttr(branch0, 'type', 'checkbox')
+processElement(branch0, options)
+branch0.processed = true // prevent it from double-processed
+```
+
+由于我们还没有对 `preTransforms` 前置处理函数进行讲解，所以大家看不明白如上代码没关系，你只需知道经过如上代码的处理之后由于元素已经被处理过了，所以这里会通过 `.processed` 做一个标识，以防止被重复处理。再回到如下这段代码：
+
+```js {5}
+if (inVPre) {
+  // 省略...
+} else if (!element.processed) {
+  // structural directives
+  processFor(element)
+  // 省略...
+}
+```
+
+如果元素没有被处理过，那么 `else...if` 语句块内的代码将被执行，可以看到对元素描述对象应用的第一个处理函数是 `processFor` 函数，接下来我们的目标就是研究 `processFor` 函数对元素描述对象做了怎样的处理。
+
+找到 `processFor` 函数，如下是其源码：
+
+```js
+export function processFor (el: ASTElement) {
+  let exp
+  if ((exp = getAndRemoveAttr(el, 'v-for'))) {
+    const res = parseFor(exp)
+    if (res) {
+      extend(el, res)
+    } else if (process.env.NODE_ENV !== 'production') {
+      warn(
+        `Invalid v-for expression: ${exp}`
+      )
+    }
+  }
+}
+```
+
+`processFor` 函数接收元素描述对象作为参数，在 `processFor` 函数内部首先定义了 `exp` 变量，接着是一个 `if` 条件语句块。在判断条件中首先通过 `getAndRemoveAttr` 函数从元素描述对象中获取 `v-for` 属性对应的属性值，并将值赋值给 `exp` 变量，如果标签的 `v-for` 属性值存在则会执行 `if` 语句块内的代码，否则什么都不会做。
+
+对于 `getAndRemoveAttr` 函数前面我们已经讲过了这里就不做补充了。现在假如我们当前元素是一个使用了 `v-for` 指令的 `div` 标签，如下：
+
+```js
+<div v-for="obj in list"></div>
+```
+
+那么 `exp` 变量的值将是字符串 `'obj in list'`，此时 `if` 语句块内的代码将会执行，在 `if` 语句块内一上来就通过 `parseFor` 函数对 `v-for` 属性的值做解析，我们把目光转移到 `parseFor` 函数上，看一看 `parseFor` 函数是如何解析字符串 `'obj in list'` 的。
+
+`parseFor` 函数的源码如下：
+
+```js
+export function parseFor (exp: string): ?ForParseResult {
+  const inMatch = exp.match(forAliasRE)
+  if (!inMatch) return
+  const res = {}
+  res.for = inMatch[2].trim()
+  const alias = inMatch[1].trim().replace(stripParensRE, '')
+  const iteratorMatch = alias.match(forIteratorRE)
+  if (iteratorMatch) {
+    res.alias = alias.replace(forIteratorRE, '')
+    res.iterator1 = iteratorMatch[1].trim()
+    if (iteratorMatch[2]) {
+      res.iterator2 = iteratorMatch[2].trim()
+    }
+  } else {
+    res.alias = alias
+  }
+  return res
+}
+```
+
+`parseFor` 函数接收 `v-for` 指令的值作为参数，现在我们假设参数 `exp` 的值为字符串 `'obj in list'`。在 `parseFor` 函数开头首先使用字符串 `exp` 去匹配正则 `forAliasRE`，并将匹配的结果保存在 `inMatch` 常量中，该正则的作用我们在本章的开头讲过，所以这里不做过多说明，如果 `exp` 字符串为 `'obj in list'`，那么最终 `inMatch` 常量则是一个数组，如下：
+
+```js
+const inMatch = [
+  'obj in list',
+  'obj',
+  'list'
+]
+```
+
+如果匹配失败则 `inMatch` 常量的值将为 `null`。可以看到在 `parseFor` 函数内部如果匹配失败则函数直接返回 `undefined`：
+
+```js {3}
+export function parseFor (exp: string): ?ForParseResult {
+  const inMatch = exp.match(forAliasRE)
+  if (!inMatch) return
+  // 省略...
+}
+```
+
+我们可以回到 `processFor` 函数，注意如下高亮的代码：
+
+```js {4,5,8-10}
+export function processFor (el: ASTElement) {
+  let exp
+  if ((exp = getAndRemoveAttr(el, 'v-for'))) {
+    const res = parseFor(exp)
+    if (res) {
+      extend(el, res)
+    } else if (process.env.NODE_ENV !== 'production') {
+      warn(
+        `Invalid v-for expression: ${exp}`
+      )
+    }
+  }
+}
+```
+
+可以看到在 `processFor` 函数内部定义了 `res` 常量接收 `parseFor` 函数对 `exp` 字符串的解析结果，如果解析失败则 `res` 常量的值将为 `undefined`，所以在非生产环境下会打印警告信息提示开发者所编写的 `v-for` 指令的值为无效的。
+
+再回到 `parseFor` 函数中，如果对 `exp` 字符串解析成功，则如下高亮的两句代码将被执行：
+
+```js {4,5}
+export function parseFor (exp: string): ?ForParseResult {
+  const inMatch = exp.match(forAliasRE)
+  if (!inMatch) return
+  const res = {}
+  res.for = inMatch[2].trim()
+  // 省略...
+  return res
+}
+```
+
+定义了 `res` 常量，它的初始值为一个空对象，可以看到最后 `parseFor` 函数会将 `res` 对象作为返回值返回。接着在 `res` 对象上添加 `res.for` 属性，它的值为 `inMatch` 数组的第三个元素，假如 `exp` 字符串的值为 `'obj in list'`，则 `res.for` 属性的值将是字符串 `'list'`，所以大家应该能够猜测到了 `res.for` 属性所存储的值应该是被遍历的目标变量的名字。
+
+再往下将会执行如下高亮的这两句代码：
+
+```js {4,5}
+export function parseFor (exp: string): ?ForParseResult {
+  // 省略...
+  res.for = inMatch[2].trim()
+  const alias = inMatch[1].trim().replace(stripParensRE, '')
+  const iteratorMatch = alias.match(forIteratorRE)
+  // 省略...
+  return res
+}
+```
+
+定义了 `alias` 常量，它的值比较复杂，我们一点点来看，假设字符串 `exp` 的值为 `'obj in list'`，则 `inMatch[1]` 的值应该是字符串 `'obj'`，如果 `exp` 字符串的值是 `'(obj, inde) in list'`，那么 `inMatch[1]` 的值应该是字符串 `'(obj, index)'`，当然啦如果你在编写 `v-for` 指令时存在多余的空格，比如：
+
+```html
+<div v-for="  obj in list"></div>
+```
+
+则 `exp` 字符串也会有多余的空格：`'  obj in list'`，这是就会导致 `inMatch[1]` 的值中也会包含多余的空格：`'  obj'`。理想的做法是此时我们将多余的空格去掉，然后再做下一步处理，这就是为什么 `parseFor` 函数中要对 `inMatch[1]` 字符串使用 `trim()` 函数的原因。去掉空格之后，可以看到紧接着使用该字符串的 `replace` 方法匹配正则 `stripParensRE`，并将匹配的内容替换为空字符串，最终的结果是将 `inMatch[1]` 中的左右圆括号移除，本章的开头讲解了正则 `stripParensRE` 的作用，它用来匹配字符串中的左右圆括号。
+
+如下是 `v-for` 指令的值与 `alias` 常量值的对应关系：
+
+* 1、如果 `v-for` 指令的值为 `'obj in list'`，则 `alias` 的值为字符串 `'obj'`
+* 2、如果 `v-for` 指令的值为 `'(obj, index) in list'`，则 `alias` 的值为字符串 `'obj, index'`
+* 3、如果 `v-for` 指令的值为 `'(obj, key, index) in list'`，则 `alias` 的值为字符串 `'obj, key, index'`
+
+了解了 `alias` 常量的值之后，我们再来看如下这句代码：
+
+```js
+const iteratorMatch = alias.match(forIteratorRE)
+```
+
+这里定义了 `iteratorMatch` 常量，它的值使用使用 `alias` 字符串的 `match` 方法匹配正则 `forIteratorRE` 得到的，其中正则 `forIteratorRE` 我们也以及在前面的章节中讲过了，这里总结一下对于不同的 `alias` 字符串其对应的匹配结果：
+
+* 1、如果 `alias` 字符串的值为 `'obj'`，则匹配结果 `iteratorMatch` 常量的值为 `null`
+* 2、如果 `alias` 字符串的值为 `'obj, index'`，则匹配结果 `iteratorMatch` 常量的值是一个包含两个元素的数组：`[', index', 'index']`
+* 3、如果 `alias` 字符串的值为 `'obj, key, index'`，则匹配结果 `iteratorMatch` 常量的值是一个包含三个元素的数组：`[', key, index', 'key'， 'index']`
+
+明白了这些我们继续看 `parseFor` 函数的代码，接下来要看的是如下这段代码：
+
+```js {4, 11}
+export function parseFor (exp: string): ?ForParseResult {
+  // 省略...
+  const iteratorMatch = alias.match(forIteratorRE)
+  if (iteratorMatch) {
+    res.alias = alias.replace(forIteratorRE, '')
+    res.iterator1 = iteratorMatch[1].trim()
+    if (iteratorMatch[2]) {
+      res.iterator2 = iteratorMatch[2].trim()
+    }
+  } else {
+    res.alias = alias
+  }
+  return res
+}
+```
+
+如上高亮的代码所示，我们知道如果 `alias` 常量的值为字符串 `'obj'` 时，则匹配结果 `iteratorMatch` 常量的会是 `null`，所以此时 `if` 条件语句判断失败，`else` 语句块的代码将被执行，即在 `res` 对象上添加 `res.alias` 属性，其值就是 `alias` 常量的值，也就是字符串 `'obj'`。
+
+如果 `alias` 常量的值为字符串 `'obj, index'`，则匹配结果 `iteratorMatch` 常量将会是一个拥有两个元素的数组，此时 `if` 语句块内的代码将被执行，在 `if` 语句块内首先执行的是如下这句代码：
+
+```js
+res.alias = alias.replace(forIteratorRE, '')
+```
+
+使用 `alias` 字符串的 `replace` 方法去匹配正则 `forIteratorRE`，并将匹配到的内容替换为空字符串，最后将结果赋值给 `res.alias` 属性。如果字符串 `alias` 的值为 `'obj, index'`，则替换后的结果应该为字符串 `'obj'`。所以 `res.alias` 属性的值就是字符串 `'obj'`。
+
+接着执行的将是如下这句代码：
+
+```js
+res.iterator1 = iteratorMatch[1].trim()
+```
+
+在 `res` 对象上定义 `res.iterator1` 属性，它的值是匹配结果 `iteratorMatch` 数组第二个元素去前后空白之后的值。假设 `alias` 字符串为 `'obj, index'`，则 `res.iterator1` 的值应该为字符串 `'index'`。
+
+再往下会进入另外一个 `if` 条件语句：
+
+```js
+if (iteratorMatch[2]) {
+  res.iterator2 = iteratorMatch[2].trim()
+}
+```
+
+由于 `alias` 字符串的值为 `'obj, index'`，对应的匹配结果 `iteratorMatch` 数组只有两个元素，所以 `iteratorMatch[2]` 的值为 `undefined`，此时如上 `if` 语句块内的代码不会被执行。但是如果 `alias` 字符串的值为 `'obj, key, index'`，则匹配结果 `iteratorMatch[2]` 的值将会是字符串 `'index'`，此时 `if` 语句块内的代码将被执行，可以看到在 `res` 对象上定义了 `res.iterator2` 属性，其值就是字符串 `iteratorMatch[2]` 去掉前后空白后的结果。
+
+以上就是 `parseFor` 函数的全部实现，它的作用是解析 `v-for` 指令的值，并创建一个包含解析结果的对象，最后将该对象返回。我们来做一个简短的总结：
+
+* 1、如果 `v-for` 指令的值为字符串 `'obj in list'`，则 `parseFor` 函数的返回值为：
+
+```js
+{
+  for: 'list',
+  alias: 'obj'
+}
+```
+
+* 2、如果 `v-for` 指令的值为字符串 `'(obj, index) in list'`，则 `parseFor` 函数的返回值为：
+
+```js
+{
+  for: 'list',
+  alias: 'obj',
+  iterator1: 'index'
+}
+```
+
+* 2、如果 `v-for` 指令的值为字符串 `'(obj, key, index) in list'`，则 `parseFor` 函数的返回值为：
+
+```js
+{
+  for: 'list',
+  alias: 'obj',
+  iterator1: 'key',
+  iterator2: 'index'
+}
+```
+
+最后我们再回到 `processFor` 函数，来看如下高亮的代码：
+
+```js {6}
+export function processFor (el: ASTElement) {
+  let exp
+  if ((exp = getAndRemoveAttr(el, 'v-for'))) {
+    const res = parseFor(exp)
+    if (res) {
+      extend(el, res)
+    } else if (process.env.NODE_ENV !== 'production') {
+      warn(
+        `Invalid v-for expression: ${exp}`
+      )
+    }
+  }
+}
+```
+
+可以看到如果 `parseFor` 函数对 `v-for` 指令的值解析成功，则会将解析结果保存在 `res` 常量中，并使用 `extend` 函数将 `res` 常量中的属性混入当前元素的描述对象中。
+
+以上就是解析器对于使用 `v-for` 指令标签的解析过程，以及对该元素描述对象的补充。
+
+### 处理使用了v-if和v-once指令的元素
+
 ### 增强的 class
 ### 增强的 style
 ### 特殊的 model
