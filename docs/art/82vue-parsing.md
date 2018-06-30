@@ -1679,7 +1679,7 @@ function processIfConditions (el, parent) {
 
 在 `processIfConditions` 函数内部，首先通过 `findPrevElement` 函数找到当前元素的前一个元素描述对象，并将其赋值给 `prev` 常量，接着进入 `if` 条件语句，判断当前元素的前一个元素是否使用了 `v-if` 指令，我们知道对于使用了 `v-else-if` 或 `v-else` 指令的元素来讲，他们的前一个元素必然需要使用相符的 `v-if` 指令才行。如果前一个元素确实使用 `v-if` 指令，那么则会调用 `addIfCondition` 函数将当前元素描述对象添加到前一个元素的的 `ifConditions` 数组中。如果前一个元素没有使用 `v-if` 指令，那么此时将会进入 `else...if` 条件语句的判断，即如果是非生产环境下，会打印警告信息提示开发者没有相符的使用了 `v-if` 指令的元素。
 
-以上是当前元素使用了 `v-else-if` 或 `v-else` 指令时的特殊处理，由此可知**当一个元素使用了 `v-else-if` 或 `v-else` 指令时，它们是不会作为父级元素字节点的**，而是会被添加到相符的使用了 `v-if` 指令的元素描述对象的 `ifConditions` 数组中。
+以上是当前元素使用了 `v-else-if` 或 `v-else` 指令时的特殊处理，由此可知**当一个元素使用了 `v-else-if` 或 `v-else` 指令时，它们是不会作为父级元素子节点的**，而是会被添加到相符的使用了 `v-if` 指令的元素描述对象的 `ifConditions` 数组中。
 
 如果当前元素没有使用 `v-else-if` 或 `v-else` 指令，那么还会判断当前元素是否使用了 `slot-scope` 特性，如下：
 
@@ -1697,6 +1697,92 @@ if (element.elseif || element.else) {
 
 如上代码高亮代码所示，如果一个元素使用了 `slot-scope` 特性，那么该元素的描述对象会被添加到父级元素的 `scopedSlots` 对象下，也就是说使用了 `slot-scope` 特性的元素与使用了 `v-else-if` 或 `v-else` 指令的元素一样，他们都不会作为父级元素的子节点，对于使用了 `slot-scope` 特性的元素来讲它们将被添加到父级元素描述的 `scopedSlots` 对象下。另外由于如上代码中 `elseif` 语句块涉及 `slot-scope` 相关的处理，我们打算放到后面统一讲解。
 
+接着我们对象 `findPrevElement` 函数做一个补充讲解，`findPrevElement` 函数的作用是寻找当前元素的前一个元素节点，如下是其源码：
+
+```js
+function findPrevElement (children: Array<any>): ASTElement | void {
+  let i = children.length
+  while (i--) {
+    if (children[i].type === 1) {
+      return children[i]
+    } else {
+      if (process.env.NODE_ENV !== 'production' && children[i].text !== ' ') {
+        warn(
+          `text "${children[i].text.trim()}" between v-if and v-else(-if) ` +
+          `will be ignored.`
+        )
+      }
+      children.pop()
+    }
+  }
+}
+```
+
+首先 `findPrevElement` 函数只用在了 `processIfConditions` 函数中，它的作用就是当解析遇到一个带有 `v-else-if` 或 `v-if` 指令的元素时，找到该元素的前一个元素节点，假设我们解析如下 `html` 字符串：
+
+```html
+<div>
+  <div v-if="a"></div>
+  <p v-else-if="b"></p>
+  <span v-else="c"></span>
+</div>
+```
+
+当解析遇到带有 `v-else-if` 指令的 `p` 标签时，那么此时它的前一个元素节点应该是带有 `v-if` 指令的 `div` 标签，如何找到该 `div` 标签呢？由于当前正在解析的标签为 `p`，此时 `p` 标签的元素描述对象还没有被添加到父级元素描述对象的 `children` 数组中，所以此时父级元素描述对象的 `children` 数组中最后一个元素节点就应该是 `div` 元素。注意我们说的是**最后一个元素节点**，而不是**最后一个节点**。所以要想得到 `div` 标签，我们只要找到父级元素描述对象的 `children` 数组最后一个元素节点即可。
+
+当解析器遇到带有 `v-else` 指令的 `span` 标签时，大家思考一下此时 `span` 标签的前一个**元素节点**是什么？答案还是 `div` 标签，而不是 `p` 标签，这是因为 `p` 标签的元素描述对象没有被添加到父级元素描述对象的 `children` 数组中，而是被添加到 `div` 标签元素描述对象的 `ifConditions` 数组中了。所以对于 `span` 标签来讲，它的前一个元素节点仍然是 `div` 标签。
+
+总之我们发现 `findPrevElement` 函数只需要找到父级元素描述对象的最后一个元素节点即可，如下：
+
+```js
+function findPrevElement (children: Array<any>): ASTElement | void {
+  let i = children.length
+  while (i--) {
+    if (children[i].type === 1) {
+      return children[i]
+    } else {
+      if (process.env.NODE_ENV !== 'production' && children[i].text !== ' ') {
+        warn(
+          `text "${children[i].text.trim()}" between v-if and v-else(-if) ` +
+          `will be ignored.`
+        )
+      }
+      children.pop()
+    }
+  }
+}
+```
+
+`findPrevElement` 函数通过 `while` 循环从后向前遍历父级的子节点，并找到最后一个元素节点。理论上该节点就应该是带有 `v-if` 指令的元素，如果该元素节点没有 `v-if` 指令，会在 `processIfConditions` 函数中打印警告信息。大家注意 `while` 循环内的代码，使用 `if` 语句检测了子节点的类型是否为 `1`，即是否为元素节点，只有是元素节点时才会将该节点的描述对象作为返回值返回。如果在找到元素节点之前遇到了非元素节点，那么 `else` 分支的代码将会被执行：
+
+```js {10}
+if (children[i].type === 1) {
+  // 省略...
+} else {
+  if (process.env.NODE_ENV !== 'production' && children[i].text !== ' ') {
+    warn(
+      `text "${children[i].text.trim()}" between v-if and v-else(-if) ` +
+      `will be ignored.`
+    )
+  }
+  children.pop()
+}
+```
+
+如上高亮的那句代码所示，可以看到非元素节点被从 `children` 数组中 `pop` 出去，所以在非生产环境下如果该非元素节点的 `.text` 属性如果不为空，则打印警告信息提示开发者这部分存在于 `v-if` 指令和 `v-else(-if)` 指令之间的内容将被忽略。什么意思呢？举个例子：
+
+```html
+<div>
+  <div v-if="a"></div>
+  aaaaa
+  <p v-else-if="b"></p>
+  bbbbb
+  <span v-else="c"></span>
+</div>
+```
+
+如上代码中的文本 `aaaaa` 和 `bbbbb` 都将被忽略。
+
 到目前为止，我们大概粗略的过了一遍 `start` 钩子函数的内容，接下来我们做一些总结，以使得我们的思路更加清晰：
 
 * 1、`start` 钩子函数是当解析 `html` 字符串遇到开始标签时被调用的。
@@ -1713,7 +1799,7 @@ if (element.elseif || element.else) {
 
 以上的总结就是 `start` 钩子函数在处理开始标签时所做的事情，实际上由于开始标签中包含了大量指令信息(如 `v-if` 等)或特性信息(如 `slot-scope` 等)，所以在生产 `AST` 过程中，大部分工作都是由 `start` 函数来完成的，接下来我们将更加细致的去讲解解析过程中的每一个细节。
 
-### 处理使用了 v-pre 指令的元素及其子元素
+### 处理使用了v-pre指令的元素及其子元素
 
 回到 `start` 钩子函数中，我们开始对 `start` 钩子函数内的代码做细致的分析，首先找到如下这段代码：
 
@@ -1898,10 +1984,131 @@ if (platformIsPreTag(element.tag)) {
 * 1、`<pre>` 标签会对其所包含的 `html` 字符实体进行解码
 * 2、`<pre>` 标签会保留 `html` 字符串编写时的空白
 
-更具体的实现我们会在后面的分析中讲到。
+更具体的实现我们会在后面的分析中讲到。再往下我们要看的是如下这段代码：
 
+```js
+if (inVPre) {
+  processRawAttrs(element)
+} else if (!element.processed) {
+  // structural directives
+  processFor(element)
+  processIf(element)
+  processOnce(element)
+  // element-scope stuff
+  processElement(element, options)
+}
+```
 
+这段代码是一个 `if...elseif` 语句块，其中 `if` 语句块内的代码会在判断条件 `inVPre` 为真的情况下执行，`inVPre` 为真说明当前解析环境是在 `v-pre` 环境下。我们知道使用 `v-pre` 指令的标签及其子标签的解析行为是不一致的，编译器会跳过使用了 `v-pre` 指令元素及其子元素的编译工作。具体是如何跳过的呢？通过如上代码可知如果当前元素的解析处于 `v-pre` 环境，则直接使用 `processRawAttrs` 函数对元素描述对象进行加工。同时我们注意 `elseif` 分支内的代码，可以看到如果当前元素的解析没有处于 `v-pre` 环境，那么会调用一系列 `process*` 函数来处理该元素的描述对象。
 
+现在假设我们要解析的标签使用了 `v-pre` 指令，如下：
+
+```html
+<div v-pre v-on:click="handleClick"></div>
+```
+
+当解析如上 `html` 字符串时首先会遇到 `div` 开始标签，由于该 `div` 开始标签使用了 `v-pre` 指令，所以此时 `inVPre` 的值为真，所以 `processRawAttrs` 函数将被执行，如下是 `processRawAttrs` 函数的源码：
+
+```js
+function processRawAttrs (el) {
+  const l = el.attrsList.length
+  if (l) {
+    const attrs = el.attrs = new Array(l)
+    for (let i = 0; i < l; i++) {
+      attrs[i] = {
+        name: el.attrsList[i].name,
+        value: JSON.stringify(el.attrsList[i].value)
+      }
+    }
+  } else if (!el.pre) {
+    // non root node in pre blocks with no attributes
+    el.plain = true
+  }
+}
+```
+
+`processRawAttrs` 函数接收元素描述对象作为参数，其作用是将该元素所有属性全部作为原生的属性(`arrt`)处理。在 `processRawAttrs` 函数内部首先定义了 `l` 常量，它是元素描述对象属性数组 `el.attrsList` 的长度，接着使用一个 `if` 语句判断 `l` 是否为真，如果为真说明该元素的开始标签上有属性，此时会执行 `if` 语句块内的代码，在 `if` 语句块内首先定义了 `attrs` 常量，它与 `el.attrs` 属性语句相同的引用，初始值是长度为 `l` 的数组。接着使用 `for` 循环遍历 `el.attrsList` 数组中的每一个属性，并将这些属性挪移到 `attrs` 数组中：
+
+```js {3,4}
+for (let i = 0; i < l; i++) {
+  attrs[i] = {
+    name: el.attrsList[i].name,
+    value: JSON.stringify(el.attrsList[i].value)
+  }
+}
+```
+
+可以看到 `attrs` 数组的每个元素与 `el.attrsList` 数组中的元素相同，都是一个带有 `name` 属性和 `value` 属性的对象，其中 `name` 属性存储着属性的名字，`value` 属性存储着属性的值，这里大家注意 `value` 的值：
+
+```js
+JSON.stringify(el.attrsList[i].value)
+```
+
+这里的 `JSON.stringify` 函数很重要，实际上 `el.attrsList[i].value` 本身就已经是一个字符串了，在字符串的基础上继续 `JSON.stringify`，为什么这么做呢？举个例子大家就明白了，如下是两个使用了 `new Function()` 创建函数的例子：
+
+```js
+const fn1 = new Function('console.log(1)')
+const fn2 = new Function(JSON.stringify('console.log(1)'))
+```
+
+上面代码中定义了两个函数 `fn1` 和 `fn2`，它们的区别在于 `fn2` 的参数使用 `JSON.stringify`，实际上上面的代码等价于：
+
+```js
+const fn1 = function () {
+  console.log(1)
+}
+const fn2 = function () {
+  'console.log(1)'
+}
+```
+
+可以看到 `fn1` 函数的执行能够通过 `console.log` 语句打印数字 `1`，而 `fn2` 函数体内的 `console.log` 语句是一个字符串。
+
+我们回到这段代码：
+
+```js {3}
+attrs[i] = {
+  name: el.attrsList[i].name,
+  value: JSON.stringify(el.attrsList[i].value)
+}
+```
+
+同样的，这里使用 `JSON.stringify` 实际上就是保证最终生成的代码中 `el.attrsList[i].value` 属性始终被作为普通的字符串处理。通过以上代码的讲解我们知道了，如果一个标签的解析处于 `v-pre` 环境，则会将该标签的属性全部添加到元素描述对象的 `.attrs` 数中，并且 `.attrs` 数组与 `.attrsList` 数组几乎相同，唯一不同的是在 `.attrs` 数组中每个对象的 `value` 属性值都是通过 `JSON.stringify` 处理过的。
+
+注意 `processRawAttrs` 函数还没完，如下：
+
+```js {7}
+function processRawAttrs (el) {
+  const l = el.attrsList.length
+  if (l) {
+    // 省略...
+  } else if (!el.pre) {
+    // non root node in pre blocks with no attributes
+    el.plain = true
+  }
+}
+```
+
+假如 `el.attrsList` 数组的长度为 `0`，则会进入 `else...if` 分支的判断，检查该元素是否使用了 `v-pre` 指令，如果没有使用 `v-pre` 指令才会执行 `else...if` 语句块的代码。思考一下，首先我们有一个大前提，即 `processRawAttrs` 函数的执行说明当前解析必然处于 `v-pre` 环境，要么是使用 `v-pre` 指令的标签自身，要么就是其子节点。同时 `el.attrsList` 数组的长度为 `0` 说明该元素没有任何属性，而且 `else...if` 条件的成立说明该也元素没有使用 `v-pre` 指令，这说明该元素一定是使用了 `v-pre` 指令的标签的子标签，如下：
+
+```html
+<div v-pre>
+  <span></span>
+</div>
+```
+
+如上 `html` 字符串所示，当解析 `span` 标签时，由于 `span` 标签没有任何属性，并且 `span` 标签也没有使用 `v-pre` 指令，所以此时会在 `span` 标签的元素描述对象上添加 `.plain` 属性并将其设置为 `true`，用来标识该元素是纯的，在代码生成的部分我们将看到一个被标识为 `plain` 的元素将由哪些不同。
+
+最后我们对使用了 `v-pre` 指令的标签所生成的元素描述对象做一个总结：
+
+* 1、如果标签使用了 `v-pre` 指令，则该标签的元素描述对象的 `element.pre` 属性将为 `true`。
+* 2、对于使用了 `v-pre` 指令的标签及其子代标签，它们的任何属性都将会被作为原始属性处理，即使用 `processRawAttrs` 函数处理之。
+* 3、经过 `processRawAttrs` 函数的处理，会在元素的描述对象上添加 `element.attrs` 属性，它与 `element.attrsList` 数组结构相同，不同的是 `element.attrs` 数组中每个对象的 `value` 值会经过 `JSON.stringify` 函数处理。
+* 4、如果一个标签没有任何属性，并且该标签是使用了 `v-pre` 指令标签的子代标签，那么该标签的元素描述对象将被添加 `element.plain` 属性，并且其值为 `true`。
+
+以上就是在生成 `AST` 过程中对于使用了 `v-pre` 指令标签的元素描述对象的处理。
+
+### 处理使用了v-for指令的元素
 
 ### 增强的 class
 ### 增强的 style
