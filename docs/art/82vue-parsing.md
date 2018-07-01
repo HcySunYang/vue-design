@@ -2389,7 +2389,182 @@ export function processFor (el: ASTElement) {
 
 以上就是解析器对于使用 `v-for` 指令标签的解析过程，以及对该元素描述对象的补充。
 
-### 处理使用了v-if和v-once指令的元素
+### 处理使用条件指令和v-once指令的元素
+
+在使用 `processFor` 函数处理完元素描述对象之后，紧接着使用了 `processIf` 函数继续对元素的描述对象进行处理，如下高亮代码所示：
+
+```js {6}
+if (inVPre) {
+  processRawAttrs(element)
+} else if (!element.processed) {
+  // structural directives
+  processFor(element)
+  processIf(element)
+  // 省略...
+}
+```
+
+`processIf` 函数用来处理那些使用了条件指令的标签的元素描述对象，所谓条件指令指的是 `v-if`、`v-else-if` 以及 `v-else` 这三个指令。我们找到 `processIf` 函数，看一下它对元素描述对象都做了哪些处理，如下是其源码：
+
+```js
+function processIf (el) {
+  const exp = getAndRemoveAttr(el, 'v-if')
+  if (exp) {
+    el.if = exp
+    addIfCondition(el, {
+      exp: exp,
+      block: el
+    })
+  } else {
+    if (getAndRemoveAttr(el, 'v-else') != null) {
+      el.else = true
+    }
+    const elseif = getAndRemoveAttr(el, 'v-else-if')
+    if (elseif) {
+      el.elseif = elseif
+    }
+  }
+}
+```
+
+`processIf` 函数接收元素描述对象作为参数，在 `processIf` 函数内部首先通过 `getAndRemoveAttr` 函数从该元素描述对象的 `attrsList` 属性中获取并移除 `v-if` 指令的值，并将属性值赋值给 `exp` 常量，这里大家要注意的是如何判断是否使用了 `v-if` 指令，如上代码中是这样判断的：
+
+```js {2，3}
+function processIf (el) {
+  const exp = getAndRemoveAttr(el, 'v-if')
+  if (exp) {
+    // 省略...
+  } else {
+    // 省略...
+  }
+}
+```
+
+我们能不能把它改成如下这种判断方式呢？实际上下面这种判断方式我们已经见过很多次了：
+
+```js
+function processIf (el) {
+  if (getAndRemoveAttr(el, 'v-if') != null) {
+    // 省略...
+  } else {
+    // 省略...
+  }
+}
+```
+
+如上这种比较方式实际上是吧 `v-if` 指令的值与 `null` 做对比，只要值不等于 `null` 则该条件就会成立，所以如果你在编写 `v-if` 指令时为没有写属性值，则通过 `getAndRemoveAttr` 函数获取到的 `v-if` 属性值将是一个空字符串，由于空字符串不等于 `null`，所以如上条件会成立。但是源码中的比较方式不会这样，如果你在编写 `v-if` 指令时没有写属性值，则 `exp` 常量就是空字符串，所以 `if` 条件语句不会被执行。哪一种更合理呢？实际上是源码的实现方式更合理，源码的逻辑是只要你没有写 `v-if` 指令的属性值，那么就当做你根本没有使用 `v-if` 指令，不然的话该元素将永远不会被渲染。
+
+假设我们读取到了 `v-if` 指令的值，此时 `if` 语句块内的代码将被执行，如下：
+
+```js {4-8}
+function processIf (el) {
+  const exp = getAndRemoveAttr(el, 'v-if')
+  if (exp) {
+    el.if = exp
+    addIfCondition(el, {
+      exp: exp,
+      block: el
+    })
+  } else {
+    // 省略...
+  }
+}
+```
+
+在 `if` 语句块内首先在元素描述对象上定义了 `el.if` 属性，并且该属性的值就是 `v-if` 指令的属性值，注意目前我们所说的属性值都指的是字符串，比如如果你的 `html` 字符串如下：
+
+```html
+<div v-if="a && b"></div>
+```
+
+则该元素描述对象的 `el.if` 的值为字符串 `'a && b'`。在设置完 `el.if` 属性之后，紧接着调用了 `addIfCondition` 函数，可以看到第一个参数就是当前元素描述对象本身，所以如果一个元素使用了 `v-if` 指令，那么它会把自身作为一个**条件对象**添加到自身元素描述对象的 `ifConditions` 数组中，补充一下这里所说的**条件对象**指的是形如 `addIfCondition` 函数第二个参数的对象结构：
+
+```js
+{
+  exp: exp,
+  block: el
+}
+```
+
+这一点我们在前面分析 `processIfConditions` 函数时有提到过。
+
+我们再回到 `processIf` 函数中，如下：
+
+```js
+function processIf (el) {
+  const exp = getAndRemoveAttr(el, 'v-if')
+  if (exp) {
+    // 省略...
+  } else {
+    if (getAndRemoveAttr(el, 'v-else') != null) {
+      el.else = true
+    }
+    const elseif = getAndRemoveAttr(el, 'v-else-if')
+    if (elseif) {
+      el.elseif = elseif
+    }
+  }
+}
+```
+
+如果没有获取到 `v-if` 指令的属性值，则 `else` 语句块的代码将被执行，可以看到在 `else` 语句块内分别处理了 `v-else` 指令以及 `v-else-if` 指令。我们首先来看对于 `v-else` 指令的处理，如下：
+
+```js
+if (getAndRemoveAttr(el, 'v-else') != null) {
+  el.else = true
+}
+```
+
+通过 `getAndRemoveAttr` 函数获取并移除元素描述对象的 `attrsList` 数组中名字为 `v-else` 的属性值，可以看到与 `v-if` 指令的判断条件不同，这里是将属性值与 `null` 作比较，这说明使用 `v-else` 指令时即使不写属性值那么也会当做使用了 `v-else` 指令，很显然 `v-else` 指令根本就不需要属性值。如果该元素使用了 `v-else` 指令则会在该元素的描述对象上添加 `el.else` 属性，并将其值设置为 `true`。
+
+接着还要处理使用了 `v-else-if` 指令的标签，如下：
+
+```js
+const elseif = getAndRemoveAttr(el, 'v-else-if')
+if (elseif) {
+  el.elseif = elseif
+}
+```
+
+很简单，与处理 `v-if` 指令的方式相同，唯一不同的就是此时会在元素描述对象上添加 `el.elseif` 属性，并且它的值为 `v-else-if` 的属性值。
+
+最后大家注意一件事情，就是对于使用了 `v-else` 和 `v-else-if` 这两个条件指令的标签，经过 `processIf` 函数的处理之后仅仅是在元素描述对象上添加了 `el.else` 属性和 `el.elseif` 属性，并没有做额外的工作。但是我们在前面分析 `processIfConditions` 函数时能够知道，当一个元素描述对象存在 `el.else` 属性或 `el.elseif` 属性时，该元素描述对象不会作为 `AST` 中的一个普通节点，而是会被添加到与之相符的带有 `v-if` 指令的元素描述对象的 `ifConditions` 数组中。
+
+按照惯例我们做一个简短的总结：
+
+* 1、如果标签使用了 `v-if` 指令，则该标签的元素描述对象的 `el.if` 属性存储着 `v-if` 指令的属性值
+* 2、如果标签使用了 `v-else` 指令，则该标签的元素描述对象的 `el.else` 属性值为 `true`
+* 3、如果标签使用了 `v-else-if` 指令，则该标签的元素描述对象的 `el.elseif` 属性存储着 `v-else-if` 指令的属性值
+* 4、如果标签使用了 `v-if` 指令，则该标签的元素描述对象的 `ifConditions` 数组中包含“自己”
+* 5、如果标签使用了 `v-else` 或 `v-else-if` 指令，则该标签的元素描述对象会被添加到与之相符的带有 `v-if` 指令的元素描述对象的 `ifConditions` 数组中。
+
+讲解完 `processIf` 函数之后，我们再来看一下在 `processIf` 函数之后执行的 `processOnce` 函数：
+
+```js {7}
+if (inVPre) {
+  processRawAttrs(element)
+} else if (!element.processed) {
+  // structural directives
+  processFor(element)
+  processIf(element)
+  processOnce(element)
+  // element-scope stuff
+  processElement(element, options)
+}
+```
+
+`processOnce` 函数用来处理使用了 `v-once` 指令的标签，处理方式很简单，如下：
+
+```js
+function processOnce (el) {
+  const once = getAndRemoveAttr(el, 'v-once')
+  if (once != null) {
+    el.once = true
+  }
+}
+```
+
+首先通过 `getAndRemoveAttr` 函数获取并移除元素描述对象的 `attrsList` 数组中名字为 `v-once` 的属性值，并将获取到的属性值赋值给 `once` 常量，接着使用 `if` 条件语句，如果 `once` 常量不等于 `null`，则说明使用了 `v-once` 指令，此时会在元素描述对象上添加 `el.once` 属性并将其值设置为 `true`。
 
 ### 增强的 class
 ### 增强的 style
