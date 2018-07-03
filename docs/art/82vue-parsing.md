@@ -2566,6 +2566,74 @@ function processOnce (el) {
 
 首先通过 `getAndRemoveAttr` 函数获取并移除元素描述对象的 `attrsList` 数组中名字为 `v-once` 的属性值，并将获取到的属性值赋值给 `once` 常量，接着使用 `if` 条件语句，如果 `once` 常量不等于 `null`，则说明使用了 `v-once` 指令，此时会在元素描述对象上添加 `el.once` 属性并将其值设置为 `true`。
 
+### 处理使用了key属性的元素
+
+再往下我们要讲解的就应该是 `processElement` 函数了，如下：
+
+```js {9}
+if (inVPre) {
+  processRawAttrs(element)
+} else if (!element.processed) {
+  // structural directives
+  processFor(element)
+  processIf(element)
+  processOnce(element)
+  // element-scope stuff
+  processElement(element, options)
+}
+```
+
+实际上 `processElement` 函数是其他一些列 `process*` 函数的集合，如下：
+
+```js
+export function processElement (element: ASTElement, options: CompilerOptions) {
+  processKey(element)
+
+  // determine whether this is a plain element after
+  // removing structural attributes
+  element.plain = !element.key && !element.attrsList.length
+
+  processRef(element)
+  processSlot(element)
+  processComponent(element)
+  for (let i = 0; i < transforms.length; i++) {
+    element = transforms[i](element, options) || element
+  }
+  processAttrs(element)
+}
+```
+
+如上是 `processElement` 函数的全部代码，可以看到在 `processElement` 函数内确实调用了很多其他的 `process*` 函数，除此之外在 `processComponent` 函数与 `processAttrs` 函数之间应用了 `transforms` 数组中的转换函数，我们不着急一点点来分析，首先来看 `processElement` 函数内执行的第一个函数，即 `processKey` 函数，如下是 `processKey` 函数的源码：
+
+```js
+function processKey (el) {
+  const exp = getBindingAttr(el, 'key')
+  if (exp) {
+    if (process.env.NODE_ENV !== 'production' && el.tag === 'template') {
+      warn(`<template> cannot be keyed. Place the key on real elements instead.`)
+    }
+    el.key = exp
+  }
+}
+```
+
+`processKey` 函数接收元素的描述对象作为参数，在 `processKey` 函数内部首先调用了 `getBindingAttr` 函数，这个函数目前我们还是第一次遇到，大家尽管将它当做与 `getAndRemoveAttr` 函数的作用相同即可，后面我们会仔细讲解。`getBindingAttr` 函数与 `getAndRemoveAttr` 函数接收的前两个参数是一样的并且也会返回第二个参数指定的属性的值，所以如上代码中通过 `getBindingAttr` 函数从元素描述对象的 `attrsList` 数组中获取到属性名字为 `key` 的属性值，并将值赋值给 `exp` 常量。接着用一个 `if` 条件语句检查 `exp` 是否存在，如果不存在则说明没有为该标签的 `key` 属性指定属性值，如果属性值存在则会为元素描述对象添加 `el.key` 属性，且它的值就是 `key` 属性的值。另外我们能够看到在为 `el.key` 属性赋值之前还有一个 `if` 条件语句，如下：
+
+```js
+if (process.env.NODE_ENV !== 'production' && el.tag === 'template') {
+  warn(`<template> cannot be keyed. Place the key on real elements instead.`)
+}
+```
+
+在非生产环境下会检测该标签是否是 `<template>` 标签，如果是 `<template>` 标签则会提示开发者不要在 `<template>` 标签上使用 `key` 属性。
+
+以下是对使用了 `key` 属性的标签的解析总结：
+
+* 1、`key` 属性不能被应用到 `<template>` 标签。
+* 2、使用了 `key` 属性的标签，其元素描述对象的 `el.key` 属性保存在 `key` 属性的值。
+
+### 获取绑定的属性值以及过滤器的解析
+
 ### 增强的 class
 ### 增强的 style
 ### 特殊的 model
@@ -2574,3 +2642,4 @@ function processOnce (el) {
 
 ## 静态优化
 
+ 
