@@ -2634,6 +2634,98 @@ if (process.env.NODE_ENV !== 'production' && el.tag === 'template') {
 
 ### 获取绑定的属性值以及过滤器的解析
 
+在讲解 `processKey` 函数时我们遇到了 `getBindingAttr` 函数，当时我们没有仔细讲解，并且让大家理解为它的作用与 `getAndRemoveAttr` 函数的作用相同。接下来我们就仔细研究一下 `getBindingAttr` 函数，如下是其源码：
+
+```js
+export function getBindingAttr (
+  el: ASTElement,
+  name: string,
+  getStatic?: boolean
+): ?string {
+  const dynamicValue =
+    getAndRemoveAttr(el, ':' + name) ||
+    getAndRemoveAttr(el, 'v-bind:' + name)
+  if (dynamicValue != null) {
+    return parseFilters(dynamicValue)
+  } else if (getStatic !== false) {
+    const staticValue = getAndRemoveAttr(el, name)
+    if (staticValue != null) {
+      return JSON.stringify(staticValue)
+    }
+  }
+}
+```
+
+大家观察一下如上代码，可以发现在 `getBindingAttr` 函数内部多次调用了 `getAndRemoveAttr` 函数。实际上 `getBindingAttr` 函数的作用就像它的名字一样，用来获取绑定属性的值。什么是绑定属性呢？绑定属性就是通过 `v-bind` 执行或其缩写 `:` 所定义的属性。`getBindingAttr` 函数接收三个参数，前两个参数与 `getAndRemoveAttr` 函数的参数前两个参数相同，分别是元素的描述对象和要获取的属性的名字。在 `getBindingAttr` 函数内部首先执行的是如下这段代码：
+
+```js
+const dynamicValue =
+  getAndRemoveAttr(el, ':' + name) ||
+  getAndRemoveAttr(el, 'v-bind:' + name)
+```
+
+可以看到这段代码首先通过 `getAndRemoveAttr` 函数获取名字为 `':' + name` 的属性值，如果传递给 `getBindingAttr` 函数的第二个参数为字符串 `'key'`，则表达式 `':' + name` 的值就是 `':key'`，如果获取不到属性名为 `:key` 的属性的值，则会继续使用 `getAndRemoveAttr` 获取 `v-bind:key` 属性的值，这是因为你没法保证开发者到底通过 `v-bind` 还是通过其缩写 `:` 来绑定属性，所以两种方式都要尝试。最后将获取到的属性值赋值给 `dynamicValue` 常量。
+
+获取到了绑定的属性值之后，将会执行如下代码：
+
+```js
+if (dynamicValue != null) {
+  return parseFilters(dynamicValue)
+} else if (getStatic !== false) {
+  const staticValue = getAndRemoveAttr(el, name)
+  if (staticValue != null) {
+    return JSON.stringify(staticValue)
+  }
+}
+```
+
+这段代码是一段 `if...elseif` 添加语句块，这里再次强调 `if` 语句的条件是在判断绑定的属性是否存在，而非判断属性值 `dynamicValue` 是否存在，因为即使获取到的属性值为空字符串，但由于空字符串不与 `null` 相等，所以 `if` 条件语句成立。只有当绑定属性本身就不存在时，此时获取到的属性值为 `undefined`，与 `null` 相等，这时才会执行了 `elseif` 分支的判断。
+
+假设成功的到了获取绑定的属性值，那么 `if` 语句块内的代码将被执行，可以看到在 `if` 语句块内直接调用了 `parseFilters` 函数并将该函数的返回值作为 `getBindingAttr` 函数的返回值。其中 `parseFilters` 函数使我们接下来将要重点讲解的函数，不过现在我们扔需要将目光聚焦在 `getBindingAttr` 函数上。
+
+如果获取绑定的值失败，则会执行 `elseif` 分支的判断，可以看到 `elseif` 分支检测了 `getBindingAttr` 函数的第三个参数 `getStatic` 是否与 `false` 全等，这里的关键是一定要全等才行，也就是说如果调用 `getBindingAttr` 函数是不传递第三个参数，则参数 `getStatic` 的值为 `undefined`，它不全等于 `false`，所以可以理解为当不传递第三个参数时 `elseif` 分支的条件默认成立。`elseif` 语句块内代码的作用是用来获取非绑定的属性值，因为代码既然执行到了 `elseif` 分支，则说明此时获取绑定的属性值失败，我们知道当我们为元素或组件添加属性时，这个属性可以是绑定的也可以是非绑定的，所以当获取绑定的属性失败时我们不能够武断的认为开发者没有编写该属性，而是应该继续尝试获取非绑定的属性值，如下高亮的代码所示：
+
+```js {4}
+if (dynamicValue != null) {
+  return parseFilters(dynamicValue)
+} else if (getStatic !== false) {
+  const staticValue = getAndRemoveAttr(el, name)
+  if (staticValue != null) {
+    return JSON.stringify(staticValue)
+  }
+}
+```
+
+非绑定属性值的获取方式同时是使用 `getAndRemoveAttr` 函数，只不过此时传递给该函数的第二个参数是原始的属性名字，不带有 `v-bind` 或 `:`。同时将获取结果保存在 `staticValue` 常量中，接着进入一个条件判断，如果开发者属性存在则使用 `JSON.stringify` 函数对属性值进行处理后将其返回。
+
+大家注意 `JSON.stringify` 函数对属性值的处理至关重要，这么做能够保证对于非绑定的属性来讲，总是会将该属性的值作为字符串处理。为了让大家更好的理解，我们举个例子。我们知道编译器所生成的渲染函数其实是字符串形式的渲染函数，该字符串要通过 `new Function(str)` 之后才能变成真正的函数，对比如下代码：
+
+```js
+// 代码一
+const fn1 = new Function('console.log(1)')
+
+// 代码二
+const fn2 = new Function(JSON.stringify('console.log(1)'))
+```
+
+当你执行 `f1()` 函数时，在控制台会得到输出数字 `1`，而当你执行 `fn2` 函数是则不会得到任何输出，实际上下面的代码与如上代码等价：
+
+```js
+// 代码一
+const fn1 = function () {
+  console.log(1)
+}
+
+// 代码二
+const fn2 = function () {
+  'console.log(1)'
+}
+```
+
+实际上 `JSON.stringify('console.log(1)')` 的结果等价于 `"'console.log(1)'"`。
+
+现在你应该明白了为什么对于非绑定的属性，要使用 `JSON.stringify` 函数处理其属性值的原因，目的就是确保将非绑定的属性值作为字符串处理，而不是变量或表达式。
+
 ### 增强的 class
 ### 增强的 style
 ### 特殊的 model
