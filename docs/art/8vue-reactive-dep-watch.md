@@ -2575,7 +2575,7 @@ if (process.env.NODE_ENV !== 'production' &&
 }
 ```
 
-这是一段 `if` 条件语句块，在非生产环境下如果发现 `sharedPropertyDefinition.set` 的值是一个空函数，那么说明开发者并没有为计算属性定义相应的 `set` 拦截器函数，这是会重写 `sharedPropertyDefinition.set` 函数，这样当你在代码中尝试修改一个没有指定 `set` 拦截器函数的计算属性的值时，就会得到一个警告信息。
+这是一段 `if` 条件语句块，在非生产环境下如果发现 `sharedPropertyDefinition.set` 的值是一个空函数，那么说明开发者并没有为计算属性定义相应的 `set` 拦截器函数，这时会重写 `sharedPropertyDefinition.set` 函数，这样当你在代码中尝试修改一个没有指定 `set` 拦截器函数的计算属性的值时，就会得到一个警告信息。
 
 ### 计算属性的实现
 
