@@ -1025,7 +1025,7 @@ const handlers = vm.$options[hook]
 const handlers = vm.$options.created
 ```
 
-在 [Vue选项的合并](./vue-merge.md) 一节中我们讲过，对于生命周期钩子选项最终会被合并处理成一个数组，所以得到的 `handlers` 就是对应生命周期钩子的数组。接着执行的是这段代码：
+在 [Vue选项的合并](./5vue-merge.md) 一节中我们讲过，对于生命周期钩子选项最终会被合并处理成一个数组，所以得到的 `handlers` 就是对应生命周期钩子的数组。接着执行的是这段代码：
 
 ```js
 if (handlers) {
