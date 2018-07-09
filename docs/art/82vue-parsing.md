@@ -3123,6 +3123,306 @@ if (c === 0x2f) { // /
 
 实际上在表达式 `a + /a/.test('abc')` 中出现的斜杠(`/`)的确是定义了正则，但 `Vue` 却不认为它是正则，因为第一个斜杠之前的第一个不为空的字符为加号 `+`。加号存在于正则 `validDivisionCharRE` 中，所以 `Vue` 不认为这里的斜杠是正则的定义。但实际上如上代码简直就是没有任何意义的，假如你非得这么写，那你也完全可以使用计算属性替代。
 
+了解了这些，我们发现 `else` 语句块内的代码就是用来检查环境的，这里的环境指的是字符串环境或正则环境，或圆括号、方括号以及花括号等环境，这些环境信息将会用到其他判断分支的条件语句。
+
+接下来我们来看一下之前没有讲解的一段 `elseif` 条件语句块，如下：
+
+```js
+else if (
+  c === 0x7C && // pipe
+  exp.charCodeAt(i + 1) !== 0x7C &&
+  exp.charCodeAt(i - 1) !== 0x7C &&
+  !curly && !square && !paren
+) {
+  if (expression === undefined) {
+    // first filter, end of expression
+    lastFilterIndex = i + 1
+    expression = exp.slice(0, i).trim()
+  } else {
+    pushFilter()
+  }
+}
+```
+
+在本节的前面，我们已经讲解过了该条件语句块的判断条件，如上以上条件成立，则说明当前字符为管道符，并且该管道符就是过滤器的分界线。接着来看 `elseif` 语句块内的代码，首先判断了 `expression` 变量是否存在，我们知道 `expression` 变量的初始值为 `undefined`，所以当程序在解析字符串时第一次遇到作为过滤器分界线的管道符时，将会执行如下：
+
+```js {3-4}
+if (expression === undefined) {
+  // first filter, end of expression
+  lastFilterIndex = i + 1
+  expression = exp.slice(0, i).trim()
+} else {
+  // 省略...
+}
+```
+
+如上高亮的两句代码所示，首先将变量 `lastFilterIndex` 的值设置为 `i + 1`，变量 `i` 就是当前遇到的管道符的位置索引，所以 `i + 1` 就应该是管道符下一个字符的位置索引，所以我们可以把 `lastFilterIndex` 变量理解为过滤器的开始。接着对字符串 `exp` 进行截取，其截取的位置恰好是索引为 `i` 的字符，也就是管道符，当然了截取后生成的新字符串是不包含管道符的，同时对截取后生成的新字符串使用 `trim` 方法去除前后空格，最后将处理后的结果赋值给 `expression` 表达式。
+
+为了更直观的理解 `lastFilterIndex` 变量和 `expression` 变量，我们举个例子。假设我们有如下代码：
+
+```html
+<div :key="id | featId"></div>
+```
+
+对于字符串 `'id | featId'` 来讲，其中的管道符是过滤器的分界线，其位置索引为 `3`，所以 `lastFilterIndex` 的值应该是管道符后一个字符的位置索引 `4`。此时 `expression` 变量的值就应该是 `exp.slice(0, 3).trim()`，所以 `expression` 的值就应该是字符串 `'id'`，这样就把表达式提取了出来，并使用 `expression` 变量保存。
+
+此时对于管道符的解析工作就结束了，`for` 循环开始解析下一个字符，直到所有字符解析完毕。当 `for` 循环结束时，变量 `i` 的值应该是字符串的长度。同时 `expression` 变量中保存着过滤器分界线之前的字符串，也就是表达式。但是过滤器怎么办呢？接着来看 `for` 循环之后的这段代码，如下：
+
+```js
+if (expression === undefined) {
+  expression = exp.slice(0, i).trim()
+} else if (lastFilterIndex !== 0) {
+  pushFilter()
+}
+```
+
+在 `for` 循环结束之后将会执行如上代码，这段代码由 `if...elseif` 条件语句块组成，首先检查 `expression` 是否存在，还是拿如下这个例子来说：
+
+```html
+<div :key="id | featId"></div>
+```
+
+我们知道在解析字符串 `'id | featId'` 之后，`expression` 的值应该是字符串 `'id'`，所以 `if` 条件语句块的内容不会被执行，此时会进入 `elseif` 条件语句的判断，即：`lastFilterIndex !== 0`，还是拿上例来说，此时 `lastFilterIndex` 变量的值应该是作为过滤器分界线的管道符后一个字符的位置索引，所以 `lastFilterIndex` 变量的值为 `4`，由于它不等于 `0`，所以 `elseif` 语句块内的代码将被执行，可以看到在 `elseif` 语句块内直接调用了 `pushFilter` 函数。该函数的源码如下：
+
+```js
+function pushFilter () {
+  (filters || (filters = [])).push(exp.slice(lastFilterIndex, i).trim())
+  lastFilterIndex = i + 1
+}
+```
+
+首先检查变量 `filters` 是否存在，如果不存在则将其初始化为空数组，接着使用 `slice` 方法对字符串 `exp` 进行截取，截取的开始和结束位置恰好是 `lastFilterIndex` 和 `i`。还是拿之前的例子来说，下图展示了此时变量 `lastFilterIndex` 和 变量 `i` 所指向的字符：
+
+![](http://7xlolm.com1.z0.glb.clouddn.com/2018-07-08-153103.png)
+
+其中 `lastFilterIndex` 指向的是管道符后面的控制，这里大家需要注意的是变量 `i` 指向的即不是字符 `d` 也不是引号 `"`，而是字符 `d` 后面的字符，这个字符是不存在的。知道了这些，我们就可以知道如下表达式的值：
+
+```js
+exp.slice(lastFilterIndex, i).trim()
+```
+
+该表达式的值就应该是字符串 `'featId'`，而这个字符串就代表着过滤器函数的名字，它将被添加到数组 `filters` 中。不过我们可以看到 `pushFilter` 函数的第二句代码：`lastFilterIndex = i + 1`，这里又将 `lastFilterIndex` 变量的值设置为 `i + 1`，为什么要这么做呢？实际上我们之前所举的例子不足以体现出这句代码的作用，我们来看接下来的例子：
+
+```html
+<div :key="id | featId | featId2"></div>
+```
+
+如上代码所示，我们不仅仅拥有一个过滤器，而是有两个过滤器，分别是 `featId` 和 `featId2`。当 `parseFilters` 函数在解析字符串 `'id | featId | featId2'` 时，会遇到两个被作为过滤器分界线的管道符，再来看如下代码：
+
+```js
+else if (
+  c === 0x7C && // pipe
+  exp.charCodeAt(i + 1) !== 0x7C &&
+  exp.charCodeAt(i - 1) !== 0x7C &&
+  !curly && !square && !paren
+) {
+  if (expression === undefined) {
+    // first filter, end of expression
+    lastFilterIndex = i + 1
+    expression = exp.slice(0, i).trim()
+  } else {
+    pushFilter()
+  }
+}
+```
+
+当遇到第一个管道符时 `lastFilterIndex` 变量是第一个管道符后一个字符的索引。当遇到第二个管道符时由于此时变量 `expression` 已经保存了表达式字符串 `'id'`，所以将会执行 `else` 分支的代码，即调用 `pushFilter` 函数，要知道此时变量 `i` 已经是第二个管道符的位置索引了。我们再来看 `pushFilter` 函数：
+
+```js
+function pushFilter () {
+  (filters || (filters = [])).push(exp.slice(lastFilterIndex, i).trim())
+  lastFilterIndex = i + 1
+}
+```
+
+在 `pushFilter` 函数内会先将字符串 `'featId'` 添加到数组，接着设置 `lastFilterIndex` 变量的值为 `i + 1`，由于此时变量 `i` 已经是第二个管道符的位置索引，所以 `i + 1` 就应该是第二个管道符后一个字符串你的位置所以，如下是此时的 `lastFilterIndex` 变量的索引指向：
+
+![](http://7xlolm.com1.z0.glb.clouddn.com/2018-07-08-155227.png)
+
+接着，解析工作会继续进行，直到解析结束，当解析结束时变量 `i` 的值就应该是字符串的长度。此时 `for` 循环也将结束，会继续执行 `for` 循环之后的代码，如下：
+
+```js {4}
+if (expression === undefined) {
+  expression = exp.slice(0, i).trim()
+} else if (lastFilterIndex !== 0) {
+  pushFilter()
+}
+```
+
+此时代码依然会执行 `elseif` 分支，再次调用 `pushFilter` 函数，我们知道到目前为止我们只将字符串 `'featId'` 添加到了 `filters` 数组中，但我们有两个过滤器，所以还需要将字符串 `'featId2'` 也添加到 `filters` 数组才行，所以这里需要再次执行 `pushFilter` 函数，不过不同的是，此时在 `pushFilter` 函数中，`lastFilterIndex` 变量已经指向了第二个管道符的后一个字符，而变量 `i` 的值也变成了字符串的长度，所以此时被添加到 `filters` 数组的字符串将会是 `'featId2'`。这样两个过滤器的名字就都被添加到 `filters` 数组了。
+
+经过以上代码的处理，对我们来讲最终要的两个变量分别是 `expression` 和 `filters`，前者保存着表达式，后者则保存着所有过滤器的名字，假设我们有如下代码：
+
+```html
+<div :key="id | a | b | c"></div>
+```
+
+那么经过解析，变量 `expression` 的值将是字符串 `'id'`，且 `filters` 数组中将包含三个元素：`['a', 'b', 'c']`。
+
+有了这些基础，代码将来到最关键的一步，即如下代码：
+
+```js
+if (filters) {
+  for (i = 0; i < filters.length; i++) {
+    expression = wrapFilter(expression, filters[i])
+  }
+}
+```
+
+这段代码检查了 `filters` 是否存在，实际上如果绑定的值没有过滤器，则整个字符串都会被作为表达式的值，此时变量 `filters` 将为 `undefined`，代表着没有过滤器。当有过滤器时，该 `if` 语句块内的代码将被执行，在 `if` 语句块内使用 `for` 循环对 `filters` 数组进行了遍历，在循环内部调用了 `wrapFilter` 函数，如下是该函数的源码：
+
+```js
+function wrapFilter (exp: string, filter: string): string {
+  const i = filter.indexOf('(')
+  if (i < 0) {
+    // _f: resolveFilter
+    return `_f("${filter}")(${exp})`
+  } else {
+    const name = filter.slice(0, i)
+    const args = filter.slice(i + 1)
+    return `_f("${name}")(${exp}${args !== ')' ? ',' + args : args}`
+  }
+}
+```
+
+`wrapFilter` 函数接收两个参数，第一个参数是表达式字符串，第二个参数过滤器名字，假设我们有如下代码：
+
+```html
+<div :key="id | a | b"></div>
+```
+
+此时表达式字符串应该是 `'id'`，并且 `wrapFilter` 应该会被调用两次，第一次被调用时过滤器的名字为 `'a'`，来看 `wrapFilter` 函数内的第一段代码：
+
+```js {2}
+function wrapFilter (exp: string, filter: string): string {
+  const i = filter.indexOf('(')
+  // 省略...
+}
+```
+
+使用 `indexOf` 方法检查过滤器的名字中是否包含左圆括号，我们知道过滤器函数是可以以函数调用的方式编写的，并且可以为其传递参数，但上例中我们的两个过滤器 `a` 和 `b` 都不是函数调用，所以此时变量 `i` 等于 `-1`，这时 `if` 语句块内的代码将被执行，如下高亮代码所示：
+
+```js {5}
+function wrapFilter (exp: string, filter: string): string {
+  const i = filter.indexOf('(')
+  if (i < 0) {
+    // _f: resolveFilter
+    return `_f("${filter}")(${exp})`
+  } else {
+    // 省略...
+  }
+}
+```
+
+可知 `wrapFilter` 函数返回了字符串：`'_f("a")(id)'`。接着会进行第二次对 `wrapFilter` 函数的调用，此时传递给 `wrapFilter` 函数的参数都会有变化，其中表达式字符串 `exp` 已经变成了 `'_f("a")(id)'`，为什么会变成该字符串呢？注意如下高亮的代码：
+
+```js {3}
+if (filters) {
+  for (i = 0; i < filters.length; i++) {
+    expression = wrapFilter(expression, filters[i])
+  }
+}
+```
+
+可以看到表达式字符串 `expression` 每次都会被 `wrapFilter` 函数的返回值重写，所以当第二次调用 `wrapFilter` 函数时，第一个参数已经变成了 `'_f("a")(id)'`，并且第二个应该是 `'b'`，由于字符 `'b'` 依然不是函数调用，所以会继续执行 `wrapFilter` 函数内的 `if` 条件语句块，这时 `wrapFilter` 将会返回字符串 `'_f('b')(_f("a")(id))'`，以此类推如果还有第三个过滤器 `c`，则最终生成的表达式应该是 `'_f('c')(_f('b')(_f("a")(id)))`。
+
+实际上 `_f` 函数来自于 `src/core/instance/render-helpers/resolve-filter.js` 文件，这个函数的作用就是接收一个过滤器的名字作为参数，然后找到相应的过滤器函数，这些内容我们放到后面会仔细讲解。当找到相应的过滤器函数之后会将表达式的值作为参数传递给该过滤器函数，同时该过滤器会返回经过处理之后的值，这个处理之后的值将作为下一个过滤器函数的参数。
+
+最终表达式字符串 `expression` 的值就应该是一个类似 `'_f('c')(_f('b')(_f("a")(id)))` 的一个字符串。当然啦这是在存在过滤器的情况，假如没有过滤器的话，则 `expression` 变量的值就是表达式字符串本身，如下：
+
+```html
+<div :key="id"></div>
+```
+
+如上代码中没有使用过滤器，所以此时 `expression` 变量的值就是字符串 `'id'`。最后 `parseFilters` 函数会将 `expression` 变量最为返回值返回：
+
+```js {3}
+export function parseFilters (exp: string): string {
+  // 省略...
+  return expression
+}
+```
+
+以上就是对 `parseFilters` 函数的讲解，它的作用是用来解析模板中出现的表达式与过滤器，并将它们处理成合适的表达式字符串。
+
+现在我们再回到 `getBindingAttr` 函数，看如下高亮的代码：
+
+```js {10}
+export function getBindingAttr (
+  el: ASTElement,
+  name: string,
+  getStatic?: boolean
+): ?string {
+  const dynamicValue =
+    getAndRemoveAttr(el, ':' + name) ||
+    getAndRemoveAttr(el, 'v-bind:' + name)
+  if (dynamicValue != null) {
+    return parseFilters(dynamicValue)
+  } else if (getStatic !== false) {
+    const staticValue = getAndRemoveAttr(el, name)
+    if (staticValue != null) {
+      return JSON.stringify(staticValue)
+    }
+  }
+}
+```
+
+可知 `getBindingAttr` 函数会先获取绑定属性的属性值，如果获取成功，则会使用 `parseFilters` 函数解析该属性值，并将 `parseFilters` 函数处理后的结果作为整个函数的返回值。
+
+接着我们再回到 `processKey` 函数，如下：
+
+```js {2,7}
+function processKey (el) {
+  const exp = getBindingAttr(el, 'key')
+  if (exp) {
+    if (process.env.NODE_ENV !== 'production' && el.tag === 'template') {
+      warn(`<template> cannot be keyed. Place the key on real elements instead.`)
+    }
+    el.key = exp
+  }
+}
+```
+
+如上高亮代码所示，如果一个标签使用了 `key` 属性，则该标签的元素描述对象上将被条件 `el.key` 属性，为了让大家更直观的理解 `el.key` 属性的值，我们来做一些总结：
+
+* 例子一：
+
+```html
+<div key="id"></div>
+```
+
+上例中 `div` 标签的属性 `key` 是非绑定属性，所以会将它的值作为普通字符串处理，这时 `el.key` 属性的值为：
+
+```js
+el.key = JSON.stringify('id')
+```
+
+* 例子二：
+
+```html
+<div :key="id"></div>
+```
+
+上例中 `div` 标签的属性 `key` 是绑定属性，所以会将它的值作为表达式处理，而非普通字符串，这时 `el.key` 属性的值为：
+
+```js
+el.key = 'id'
+```
+
+* 例子三：
+
+```html
+<div :key="id | featId"></div>
+```
+
+上例中 `div` 标签的属性 `key` 是绑定属性，并且应用了过滤器，所以会将它的值与过滤器整合在一起产生一个新的表达式，这时 `el.key` 属性的值为：
+
+```js
+el.key = '_f("featId")(id)'
+```
+
+以上就是 `el.key` 属性的所有可能值，注意此时还仅仅是字符串而已。
+
 ### 增强的 class
 ### 增强的 style
 ### 特殊的 model
