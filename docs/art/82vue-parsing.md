@@ -3421,7 +3421,132 @@ el.key = 'id'
 el.key = '_f("featId")(id)'
 ```
 
-以上就是 `el.key` 属性的所有可能值，注意此时还仅仅是字符串而已。
+以上就是 `el.key` 属性的所有可能值。
+
+### 处理使用了ref属性的元素
+
+接下来我们讲解对于使用 `ref` 属性的标签是如何处理的，即 `processRef` 函数，如下高亮的代码所示：
+
+```js {8}
+export function processElement (element: ASTElement, options: CompilerOptions) {
+  processKey(element)
+
+  // determine whether this is a plain element after
+  // removing structural attributes
+  element.plain = !element.key && !element.attrsList.length
+
+  processRef(element)
+  processSlot(element)
+  processComponent(element)
+  for (let i = 0; i < transforms.length; i++) {
+    element = transforms[i](element, options) || element
+  }
+  processAttrs(element)
+}
+```
+
+不过在讲解 `processRef` 函数之前，我们注意到在该函数的上面，有这样一句代码：
+
+```js
+// determine whether this is a plain element after
+// removing structural attributes
+element.plain = !element.key && !element.attrsList.length
+```
+
+根据注释可知，这句代码的作用是：**当结构化的属性(`structural attributes`)被移除之后，检查该元素是否是“纯”的**。什么是结构化的属性呢？我们来看一下 `parseHTML` 函数中 `start` 钩子函数内的一段代码：
+
+```js {4}
+if (inVPre) {
+  processRawAttrs(element)
+} else if (!element.processed) {
+  // structural directives
+  processFor(element)
+  processIf(element)
+  processOnce(element)
+  // element-scope stuff
+  processElement(element, options)
+}
+```
+
+注意如上代码中高亮的那句注释，可知对于 `v-for`、`v-if/v-else-if/v-else`、`v-once` 等指令会被认为是结构化的指令(`structural directives`)。这些指令在经过 `processFor`、`processIf` 以及 `processOnce` 等函数处理之后，会把这些指令从元素描述对象的 `attrsList` 数组中移除。
+
+再来看如下代码：
+
+```js
+// determine whether this is a plain element after
+// removing structural attributes
+element.plain = !element.key && !element.attrsList.length
+```
+
+这段代码判断了元素描述对象的 `key` 属性是否存在，同时检查了元素描述对象的 `attrsList` 数组是否为空。通过如上条件可知，**只有当标签没有使用 `key` 属性，并且标签只使用了结构化指令的情况下才被认为是“纯”的**，此时会将元素描述对象的 `plain` 属性设置为 `true`。我们暂且记住这一点，当后面讲解静态优化和代码生成时我们会看到 `plain` 属性的作用。
+
+接着我们回到 `processRef` 函数，如下是 `processRef` 函数的源码：
+
+```js
+function processRef (el) {
+  const ref = getBindingAttr(el, 'ref')
+  if (ref) {
+    el.ref = ref
+    el.refInFor = checkInFor(el)
+  }
+}
+```
+
+`processRef` 函数接收元素描述对象作为参数，在 `processRef` 函数内部首先通过 `getBindingAttr` 函数解析并获取元素 `ref` 属性的值，则将结果赋值给 `ref` 常量，如果解析并获取成功则会执行 `if` 语句块内的代码，在 `if` 语句块内为元素的描述对象添加了 `el.ref` 属性，它的值就是通过 `getBindingAttr` 函数解析后最终生成的表达式。由于在讲解 `el.key` 属性时我们已经详细将结果 `getBindingAttr` 函数可能产生的返回值，这里就不做过多解释了。
+
+除了在元素描述对象上添加 `el.ref` 属性，还会在元素描述对象上添加 `el.refInFor` 属性，该属性是一个布尔值，标识着这个使用了 `ref` 属性的标签是否存在于 `v-for` 指令之内。检查方式是通过调用 `checkInFor` 函数，如下是 `checkInFor` 的代码：
+
+```js
+function checkInFor (el: ASTElement): boolean {
+  let parent = el
+  while (parent) {
+    if (parent.for !== undefined) {
+      return true
+    }
+    parent = parent.parent
+  }
+  return false
+}
+```
+
+`checkInFor` 函数接收元素的描述对象作为参数，在具体讲解 `checkInFor` 函数的实现之前，我们需要确定的是：什么情况下应该认为 `ref` 属性的使用是在 `v-for` 指令之内？如下两段代码中的 `ref` 属性都被认为是在 `v-for` 指令之内的：
+
+```html
+<!-- 代码段一 -->
+<div v-for="obj of list" :ref="obj.id"></div>
+
+<!-- 代码段二 -->
+<div v-for="obj of list">
+  <div :ref="obj.id"></div>
+</div>
+```
+
+可以发现，如果一个标签使用了 `ref` 属性，并且该标签或该标签的父代标签使用 `v-for` 指令，则认为 `ref` 属性是在 `v-for` 指令之内的。所以要想判断 `ref` 属性是在 `v-for` 指令之内，就需要从当前元素的描述对象开始一直遍历到根节点元素的描述对象，一旦发现存某个标签，其元素描述对象的 `for` 属性存在，则说明该标签使用 `v-for` 指令。明白了这些再来看如下代码：
+
+```js
+function checkInFor (el: ASTElement): boolean {
+  let parent = el
+  while (parent) {
+    if (parent.for !== undefined) {
+      return true
+    }
+    parent = parent.parent
+  }
+  return false
+}
+```
+
+可以看到，如上代码通过 `while` 循环，从当前元素的描述对象开始，逐层向父级节点遍历，直到根节点为止，如果发现某标签的元素描述对象的 `for` 属性不为 `undefined`，则函数返回 `true`，意味着当前元素所使用的 `ref` 属性存在于 `v-for` 指令之内。否则 `checkInFor` 函数会返回 `false`，代表当前元素所使用的 `ref` 属性不在 `v-for` 指令之内。最终会在当前元素描述对象上添加 `el.refInFor` 属性来保存该标识。
+
+由上分析可知，如果一个标签使用了 `ref` 属性，则：
+
+* 1、该标签的元素描述对象会被添加 `el.ref` 属性，该属性为解析后生成的表达式字符串，与 `el.key` 类似。
+* 2、该标签的元素描述对象会被添加 `el.refInFor` 属性，它是一个布尔值，用来标识当前元素的 `ref` 属性是否在 `v-for` 指令之内使用。
+
+大家也许会有一个疑问，即为什么要检查 `ref` 属性是否在 `v-for` 指令之内使用呢？很简单，如果 `ref` 属性存在于 `v-for` 指令之内，我们需要创建一个组件实例或DOM节点的引用数组，而不是单一引用，这个时候就需要 `el.refInFor` 属性来区分了。这些内容会在讲解 `$ref` 属性的实现时详细阐述。
+
+
+
 
 ### 增强的 class
 ### 增强的 style
