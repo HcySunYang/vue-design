@@ -1518,7 +1518,7 @@ export function renderMixin (Vue: Class<Component>) {
 }
 ```
 
-`$nextTick` 方法只接收一个回调函数作为参数，但在内部调用 `nextTick` 函数时，除了把回调函数 `fn` 透传之外，第二个参数是硬编码为当前组件实例对象 `this`。我们知道在使用 `$nextTick` 方法时是可以省略回调函数这个参数的，这时 `$nextTick` 方法会返回一个 `promise` 实例对象。这些功能实际上都是有 `nextTick` 函数提供的，如下是 `nextTick` 函数的签名：
+`$nextTick` 方法只接收一个回调函数作为参数，但在内部调用 `nextTick` 函数时，除了把回调函数 `fn` 透传之外，第二个参数是硬编码为当前组件实例对象 `this`。我们知道在使用 `$nextTick` 方法时是可以省略回调函数这个参数的，这时 `$nextTick` 方法会返回一个 `promise` 实例对象。这些功能实际上都是由 `nextTick` 函数提供的，如下是 `nextTick` 函数的签名：
 
 ```js
 export function nextTick (cb?: Function, ctx?: Object) {
