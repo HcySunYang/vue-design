@@ -1565,7 +1565,7 @@ export function nextTick (cb?: Function, ctx?: Object) {
 }
 ```
 
-在将回调函数添加到 `callbacks` 数组之后，会进行一个 `if` 条件判断，判断变量 `pending` 的真假，`pending` 变量也定义在文件头部：`let pending = false`，它是一个标识，它的真假代表回调队列是否处于等待刷新的状态，初始值是 `false` 代表回调队列为空不需要等待刷新。假如此时在某个地方调用了 `$nextTick` 方法，那么 `if` 语句块内的代码将会被执行，在 `if` 语句块内优先将将变量 `pending` 的值设置为 `true`，代表着此时回调队列不为空，正在等待刷新。既然等待刷新，那么当然要刷新回调队列啊，怎么刷新呢？这时就用到了我们前面讲过的 `microTimerFunc` 或者 `macroTimerFunc` 函数，我们知道这两个函数的作用是将 `flushCallbacks` 函数分别注册为 `microtask` 和 `(macro)task`。但是无论哪种任务类型，它们都将会等待调用栈清空之后才执行。如下：
+在将回调函数添加到 `callbacks` 数组之后，会进行一个 `if` 条件判断，判断变量 `pending` 的真假，`pending` 变量也定义在文件头部：`let pending = false`，它是一个标识，它的真假代表回调队列是否处于等待刷新的状态，初始值是 `false` 代表回调队列为空不需要等待刷新。假如此时在某个地方调用了 `$nextTick` 方法，那么 `if` 语句块内的代码将会被执行，在 `if` 语句块内优先将变量 `pending` 的值设置为 `true`，代表着此时回调队列不为空，正在等待刷新。既然等待刷新，那么当然要刷新回调队列啊，怎么刷新呢？这时就用到了我们前面讲过的 `microTimerFunc` 或者 `macroTimerFunc` 函数，我们知道这两个函数的作用是将 `flushCallbacks` 函数分别注册为 `microtask` 和 `(macro)task`。但是无论哪种任务类型，它们都将会等待调用栈清空之后才执行。如下：
 
 ```js
 created () {
