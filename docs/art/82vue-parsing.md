@@ -3545,6 +3545,291 @@ function checkInFor (el: ASTElement): boolean {
 
 大家也许会有一个疑问，即为什么要检查 `ref` 属性是否在 `v-for` 指令之内使用呢？很简单，如果 `ref` 属性存在于 `v-for` 指令之内，我们需要创建一个组件实例或DOM节点的引用数组，而不是单一引用，这个时候就需要 `el.refInFor` 属性来区分了。这些内容会在讲解 `$ref` 属性的实现时详细阐述。
 
+### 处理(作用域)插槽
+
+我们下一个要讲解的将是 `processSlot` 函数，如下：
+
+```js {9}
+export function processElement (element: ASTElement, options: CompilerOptions) {
+  processKey(element)
+
+  // determine whether this is a plain element after
+  // removing structural attributes
+  element.plain = !element.key && !element.attrsList.length
+
+  processRef(element)
+  processSlot(element)
+  processComponent(element)
+  for (let i = 0; i < transforms.length; i++) {
+    element = transforms[i](element, options) || element
+  }
+  processAttrs(element)
+}
+```
+
+`processSlot` 函数用来处理插槽或作用域插槽相关的内容，关于插槽的使用，`Vue` 文档讲的已经很明白了，这里不做赘述。但这里还是强调用下与插槽相关的使用形式：
+
+* 1、默认插槽：
+
+```html
+<slot></slot>
+```
+
+* 2、具名插槽
+
+```html
+<slot name="header"></slot>
+```
+
+* 3、插槽内容
+
+```html
+<h1 slot="header">title</h1>
+```
+
+* 4、作用域插槽 - slot-scope
+
+```html
+<h1 slot="header" slot-scope="slotProps">{{slotProps}}</h1>
+```
+
+* 5、作用域插槽 - scope
+
+```html
+<template slot="header" scope="slotProps">
+  <h1>{{slotProps}}</h1>
+</template>
+```
+
+`scope` 只能使用在 `template` 标签上，并且在 `2.5.0+` 版本中已经被 `slot-scope` 特性替代。
+
+实际上 `processSlot` 函数就用来解析以上标签并为这些标签的描述对象添加相应属性的，`processSlot` 函数有一个 `if...else` 语句块组成，我们先来看 `if` 条件语句块内的代码，如下：
+
+```js
+function processSlot (el) {
+  if (el.tag === 'slot') {
+    el.slotName = getBindingAttr(el, 'name')
+    if (process.env.NODE_ENV !== 'production' && el.key) {
+      warn(
+        `\`key\` does not work on <slot> because slots are abstract outlets ` +
+        `and can possibly expand into multiple elements. ` +
+        `Use the key on a wrapping element instead.`
+      )
+    }
+  } else {
+    // 省略...
+  }
+}
+```
+
+通过 `if` 语句的条件：`el.tag === 'slot'`，可知 `if` 语句块内的代码用来处理 `<slot>` 插槽标签的，所以如果当前标签是 `<slot>` 标签，则 `if` 语句块内的代码将会被执行，在 `if` 语句块内，首先通过 `getBindingAttr` 函数获取标签的 `name` 属性值，并将获取到的值赋值给元素描述对象的 `el.slotName` 属性。举个例子，如果我们的 `<slot>` 标签如下：
+
+```html
+<slot name="header"></slot>
+```
+
+则 `el.slotName` 属性的值为 `JSON.stringify('header')`。
+
+如果我们的 `<slot>` 标签如下：
+
+```html
+<slot></slot>
+```
+
+则 `el.slotName` 属性的值为 `undefined`。
+
+获取插槽的名字之后，会执行如下代码：
+
+```js
+if (process.env.NODE_ENV !== 'production' && el.key) {
+  warn(
+    `\`key\` does not work on <slot> because slots are abstract outlets ` +
+    `and can possibly expand into multiple elements. ` +
+    `Use the key on a wrapping element instead.`
+  )
+}
+```
+
+在非生产环境下，如果发现在 `<slot>` 标签中使用 `key` 属性，则会打印警告信息，提示开发者 `key` 属性不能使用在 `slot` 标签上，另外大家应该还记得，在前面的分析中我们也知道 `key` 属性也不能使用在 `<template>` 标签上。大家可以发现 `<slot>` 标签和 `<template>` 标签的共同点就是他们都是抽象组件，抽象组件的特点是要么不渲染真实DOM，要么会被不可预知的DOM元素替代。这就是在这些标签上不能使用 `key` 属性的原因。对于 `<slot>` 标签的处理就是如上这些内容，接着我们再来看 `processSlot` 函数内 `else` 分支的代码：
+
+```js {5-18}
+function processSlot (el) {
+  if (el.tag === 'slot') {
+    // 省略...
+  } else {
+    let slotScope
+    if (el.tag === 'template') {
+      slotScope = getAndRemoveAttr(el, 'scope')
+      /* istanbul ignore if */
+      if (process.env.NODE_ENV !== 'production' && slotScope) {
+        warn(
+          `the "scope" attribute for scoped slots have been deprecated and ` +
+          `replaced by "slot-scope" since 2.5. The new "slot-scope" attribute ` +
+          `can also be used on plain elements in addition to <template> to ` +
+          `denote scoped slots.`,
+          true
+        )
+      }
+      el.slotScope = slotScope || getAndRemoveAttr(el, 'slot-scope')
+    } else if ((slotScope = getAndRemoveAttr(el, 'slot-scope'))) {
+      // 省略...
+    }
+    // 省略...
+  }
+}
+```
+
+如果代码走到了 `else` 分支，则说明当前解析的标签不是 `<slot>` 标签。如上高亮的代码所示，首先定义了 `slotScope` 变量，接着是一段 `if` 条件语句块，该 `if` 条件判断了当前解析的标签是否是 `<template>` 标签，如果是则通过 `getAndRemoveAttr` 函数获取标签 `scope` 属性的值，并将获取到的值赋值给 `slotScope` 变量。接着我们再来看 `if` 条件语句块的最后一句代码：
+
+```js
+el.slotScope = slotScope || getAndRemoveAttr(el, 'slot-scope')
+```
+
+这句代码在元素描述对象上添加了 `el.slotScope` 属性，如果 `slotScope` 变量的值存在，则使用 `slotScope` 变量的值，否则通过 `getAndRemoveAttr` 函数获取当前标签 `slot-scope` 属性的值作为 `el.slotScope` 属性的值。
+
+通过以上逻辑，我们能够发现，如果一个标签是 `<template>` 标签，则会为该标签的元素描述对象添加 `el.slotScope` 属性，并且该属性的值取自标签的 `scope` 属性，但是如果该 `<template>` 标签没有使用 `scope` 属性则会导致取不到值，此时会尝试获取标签 `slot-scope` 属性的值作为 `el.slotScope` 的值。另外大家注意如上代码中，无论是获取 `scope` 属性的值还是获取 `slot-scope` 属性的值，都是通过 `getAndRemoveAttr` 函数完成的，这意味着 `scope` 属性和 `slot-scope` 属性是不能写成绑定的属性的，如下是错误的代码：
+
+```html
+<div :slot-scope="slotProps" ></div>
+```
+
+另外我们注意到，在 `if` 语句块内存在如下这段代码：
+
+```js
+slotScope = getAndRemoveAttr(el, 'scope')
+/* istanbul ignore if */
+if (process.env.NODE_ENV !== 'production' && slotScope) {
+  warn(
+    `the "scope" attribute for scoped slots have been deprecated and ` +
+    `replaced by "slot-scope" since 2.5. The new "slot-scope" attribute ` +
+    `can also be used on plain elements in addition to <template> to ` +
+    `denote scoped slots.`,
+    true
+  )
+}
+```
+
+在非生产环境下，如果 `slotScope` 变量存在，则说明 `<template>` 标签中使用 `scope` 属性，但是这个属性已经在 `2.5.0+` 的版本中被 `slot-scope` 属性替代了，所以现在更推荐使用 `slot-scope` 属性，好处是 `slot-scope` 属性不受限于 `<template>` 标签。
+
+接着我们再来看如下这段代码：
+
+```js {8-19}
+function processSlot (el) {
+  if (el.tag === 'slot') {
+    // 省略...
+  } else {
+    let slotScope
+    if (el.tag === 'template') {
+      // 省略...
+    } else if ((slotScope = getAndRemoveAttr(el, 'slot-scope'))) {
+      /* istanbul ignore if */
+      if (process.env.NODE_ENV !== 'production' && el.attrsMap['v-for']) {
+        warn(
+          `Ambiguous combined usage of slot-scope and v-for on <${el.tag}> ` +
+          `(v-for takes higher priority). Use a wrapper <template> for the ` +
+          `scoped slot to make it clearer.`,
+          true
+        )
+      }
+      el.slotScope = slotScope
+    }
+    // 省略...
+  }
+}
+```
+
+如上高亮代码所示，这是一个 `elseif` 条件语句块，该语句块的内容基本与 `if` 语句块内的代码相同，区别就在于此时不需要去尝试获取标签的 `scope` 属性值了，而是直接获取 `slot-scope` 属性的值，并将值赋值给 `slotScope` 变量，如果成功取到值，则 `elseif` 语句内的代码将被执行，注意该语句块的最后一句代码，直接将 `slotScope` 变量的值赋值给元素描述对象的 `el.slotScope` 属性。
+
+另外我们发现 `elseif` 语句块内同样存在一个 `if` 判断语句：
+
+```js
+if (process.env.NODE_ENV !== 'production' && el.attrsMap['v-for']) {
+  warn(
+    `Ambiguous combined usage of slot-scope and v-for on <${el.tag}> ` +
+    `(v-for takes higher priority). Use a wrapper <template> for the ` +
+    `scoped slot to make it clearer.`,
+    true
+  )
+}
+```
+
+在非生产环境下，会检查当前元素是否使用了 `v-for` 属性，如下代码所示：
+
+```html
+<div slot-scope="slotProps" v-for="item of slotProps.list"></div>
+```
+
+如上这句代码中，`slot-scope` 属性与 `v-for` 指令共存，这回造成什么影响呢？由于 `v-for` 具有更高的优先级，所以 `v-for` 绑定的状态将会是父组件作用域的状态，而不是子组件通过作用域插槽传递的状态。并且这么使用很容易让人感到困惑。更好的方式是像如下代码这样：
+
+```html
+<template slot-scope="slotProps">
+  <div v-for="item of slotProps.list"></div>
+</template>
+```
+
+这样就不会有任何歧义，`v-for` 指令绑定的状态就是作用域插槽传递的状态。而上面代码的警告信息，大概就是这个意思。
+
+到目前为止，我们发现无论是 `<template>` 标签，还是其他元素标签，只要该标签使用了 `slot-scope` 属性，则该标签的元素描述对象将被添加 `el.slotScope` 属性。
+
+接着我们再来看最后一段代码，如下高亮代码所示：
+
+```js {6-14}
+function processSlot (el) {
+  if (el.tag === 'slot') {
+    // 省略...
+  } else {
+    // 省略...
+    const slotTarget = getBindingAttr(el, 'slot')
+    if (slotTarget) {
+      el.slotTarget = slotTarget === '""' ? '"default"' : slotTarget
+      // preserve slot as an attribute for native shadow DOM compat
+      // only for non-scoped slots.
+      if (el.tag !== 'template' && !el.slotScope) {
+        addAttr(el, 'slot', slotTarget)
+      }
+    }
+  }
+}
+```
+
+如上这段代码是 `processSlot` 函数的最后一段代码，这段代码主要用来处理标签的 `slot` 属性，首先使用 `getBindingAttr` 函数获取元素 `slot` 属性的值，并将获取到的值赋值给 `slotTarget` 常量，注意这里使用的是 `getBindingAttr` 函数，这意味着 `slot` 属性可以绑定的。接着进入一个 `if` 条件语句的判断，如果 `slotTarget` 存在，则会执行如下这句代码：
+
+```js
+el.slotTarget = slotTarget === '""' ? '"default"' : slotTarget
+```
+
+这句代码检测了 `slotTarget` 变量是否为字符串 `'""'`，这种情况出现在标签虽然使用了 `slot` 属性，但却没有为 `slot` 属性指定相应的值，如下：
+
+```html
+<div slot></div>
+```
+
+这时通过 `getBindingAttr` 函数获取 `slot` 属性的值时，会得到字符串 `""`，此时会将 `el.slotTarget` 属性的值设置为字符串 `'"default"'`，否则直接将 `slotTarget` 变量的值赋值给 `el.slotTarget` 属性。
+
+再往下，是如下这段代码：
+
+```js
+// preserve slot as an attribute for native shadow DOM compat
+// only for non-scoped slots.
+if (el.tag !== 'template' && !el.slotScope) {
+  addAttr(el, 'slot', slotTarget)
+}
+```
+
+注释已经写的很清楚了，实际上这段代码的作用就是用来保存原生影子DOM(`shadow DOM`)的 `slot` 属性，当然啦既然是原生影子DOM的 `slot` 属性，那么首先该元素必然应该是原生DOM，所以 `el.tag !== 'template'` 必须成立，同时对于作用域插槽是不会保留原生 `slot` 属性的。关于原生影子DOM的 `slot` 属性，更详细的内容大家可以阅读 [Element.slot](https://developer.mozilla.org/en-US/docs/Web/API/Element/slot)。你会发现 `Vue` 的实现是在一定程度上参考了标准的。
+
+回到如上代码，保留原生 `slot` 属性的方式，就是调用 `addAttr` 函数，我们知道该函数会将属性的名字和值以对象的形式添加到元素描述对象的 `el.attrs` 数组中。
+
+最后我们按照惯例，来做一个总结：
+
+* 1、对于 `<slot>` 标签，会为其元素描述对象添加 `el.slotName` 属性，属性值为该标签 `name` 属性的值，并且 `name` 属性可以是绑定的。
+* 2、对于 `<template>` 标签，会优先获取并使用该标签 `scope` 属性的值，如果获取不到则会获取 `slot-scope` 属性的值，并将获取到的值赋值给元素描述对象的 `el.slotScope` 属性，注意 `scope` 属性和 `slot-scope` 属性不能是绑定的。
+* 3、对于其他标签，会尝试获取 `slot-scope` 属性的值，并将获取到的值赋值给元素描述对象的 `el.slotScope` 属性。
+* 4、对于非 `<slot>` 标签，会尝试获取该标签的 `slot` 属性，并将获取到的值赋值给元素描述对象的 `el.slotTarget` 属性。如果一个标签使用了 `slot` 属性但却没有给定相应的值，则该标签元素描述对象的 `el.slotTarget` 属性值为字符串 `'"default"'`。
+
+
+
+
 
 
 
