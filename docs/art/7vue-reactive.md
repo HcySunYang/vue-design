@@ -445,7 +445,7 @@ $watch('a.b', () => {
 ```js
 function $watch (exp, fn) {
   Target = fn
-  // 读取字段值，触发 set 函数
+  // 读取字段值，触发 get 函数
   data[exp]
 }
 ```
