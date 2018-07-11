@@ -121,7 +121,7 @@ while (i--) {
 }
 ```
 
-上面的代码中首先使用 `Object.keys` 函数获取 `data` 对象的所有键，并将由 `data` 对象的键所组成的数组赋值给 `keys` 常量。接着分别用 `props` 常量和 `methods` 常量引用 `vm.$options.props` 和 `vm.$options.methods`。然后开启一个 `while` 循环，该循环的用来遍历 `keys` 数组，那么遍历 `keys` 数组的目的是什么呢？我们来看循环体内的第一段 `if` 语句：
+上面的代码中首先使用 `Object.keys` 函数获取 `data` 对象的所有键，并将由 `data` 对象的键所组成的数组赋值给 `keys` 常量。接着分别用 `props` 常量和 `methods` 常量引用 `vm.$options.props` 和 `vm.$options.methods`。然后开启一个 `while` 循环，该循环用来遍历 `keys` 数组，那么遍历 `keys` 数组的目的是什么呢？我们来看循环体内的第一段 `if` 语句：
 
 ```js
 const key = keys[i]
