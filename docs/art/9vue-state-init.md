@@ -401,7 +401,7 @@ defineReactive(props, key, value, () => {
 })
 ```
 
-可以看到与生产环境不同的是，在调用 `defineReactive` 函数时多传递了第四个参数，我们知道 `defineReactive` 函数的第三个参数是 `customSetter`，即自定义的 `setter`，这个 `setter` 会在你尝试修改 `props` 数据时触发，并打印警告信息提示你不要直接修改 `props` 数据。
+可以看到与生产环境不同的是，在调用 `defineReactive` 函数时多传递了第四个参数，我们知道 `defineReactive` 函数的第四个参数是 `customSetter`，即自定义的 `setter`，这个 `setter` 会在你尝试修改 `props` 数据时触发，并打印警告信息提示你不要直接修改 `props` 数据。
 
 ### props 的校验
 
@@ -411,7 +411,7 @@ defineReactive(props, key, value, () => {
 const value = validateProp(key, propsOptions, propsData, vm)
 ```
 
-也就是 `props` 的校验，和一些其他工作，比如获取默认值等。如上这句代码是在 `initProps` 函数体内的 `for...in` 循环语句，传递给 `validateProp` 函数的四个参数分别是：
+也就是 `props` 的校验，和一些其他工作，比如获取默认值等。如上这句代码是在 `initProps` 函数体内的 `for...in` 循环语句中，传递给 `validateProp` 函数的四个参数分别是：
 
 * `key`：`prop` 的名字
 * `propsOptions`：整个 `props` 选项对象
@@ -636,7 +636,7 @@ value === '' || value === hyphenate(key)
 <some-comp someProp="some-prop" />
 ```
 
-如果你像如上代码那样为组件传递 `props`，并且这些指定了这些 `props` 的类型包括 `Boolean` 类型。那么此时 `else...if` 语句块的代码将被执行，如下：
+如果你像如上代码那样为组件传递 `props`，并且指定了这些 `props` 的类型包括 `Boolean` 类型。那么此时 `else...if` 语句块的代码将被执行，如下：
 
 ```js
 // only cast empty string / same name to boolean if
@@ -730,7 +730,7 @@ if (booleanIndex > -1) {
 }
 ```
 
-现在我们知道了这段代码的作用实际上对 `prop` 的类型为布尔值时的特殊处理。接下来我们继续查看 `validateProp` 函数的后续代码，如下：
+现在我们知道了这段代码的作用实际上是对 `prop` 的类型为布尔值时的特殊处理。接下来我们继续查看 `validateProp` 函数的后续代码，如下：
 
 ```js
 // check default value
@@ -754,7 +754,7 @@ observe(value)
 toggleObserving(prevShouldObserve)
 ```
 
-有这段代码首先使用 `prevShouldObserve` 常量保存了之前的 `shouldObserve` 状态，紧接着将开关开启，是的 `observe` 函数能够将 `value` 定义为响应式数据，最后又还原了 `shouldObserve` 的状态。之所以这么做是因为取到的默认值是非响应式的，我们需要将其重新定义为响应式数据。
+这段代码首先使用 `prevShouldObserve` 常量保存了之前的 `shouldObserve` 状态，紧接着将开关开启，使得 `observe` 函数能够将 `value` 定义为响应式数据，最后又还原了 `shouldObserve` 的状态。之所以这么做是因为取到的默认值是非响应式的，我们需要将其重新定义为响应式数据。
 
 接着我们再回头看一下 `getPropDefaultValue` 函数是如何获取默认值的，`getPropDefaultValue` 函数定义在 `validateProp` 函数的下方，如下是 `getPropDefaultValue` 函数的签名：
 
@@ -803,7 +803,7 @@ props: {
 }
 ```
 
-如上代码定义了两个 `prop`，其中 `prop1` 的默认值是一个对象，`prop2` 的默认值是一个数组，这两个 `prop` 都是不合法的，你需要用工程函数将默认值返回，如下：
+如上代码定义了两个 `prop`，其中 `prop1` 的默认值是一个对象，`prop2` 的默认值是一个数组，这两个 `prop` 都是不合法的，你需要用工厂函数将默认值返回，如下：
 
 ```js
 props: {
@@ -928,7 +928,7 @@ return typeof def === 'function' && getType(prop.type) !== 'Function'
   : def
 ```
 
-我们知道 `def` 常量为该 `prop` 的 `default` 属性的值，它代表了默认值，但是由于默认值可能是由工厂函数执行产生的，所以如果 `def` 的类型是函数值通过执行 `def.call(vm)` 来获取默认值，否则直接使用 `def` 作为默认值。当然了我们还需要一个判断条件，即：
+我们知道 `def` 常量为该 `prop` 的 `default` 属性的值，它代表了默认值，但是由于默认值可能是由工厂函数执行产生的，所以如果 `def` 的类型是函数则通过执行 `def.call(vm)` 来获取默认值，否则直接使用 `def` 作为默认值。当然了我们还需要一个判断条件，即：
 
 ```js
 getType(prop.type) !== 'Function'
@@ -1006,7 +1006,7 @@ if (type) {
 }
 ```
 
-这段代码的作用是用来做类型断言的，即判断外界传递的 `prop` 值的类型与期望的类型是否相符。首先定义了 `type` 变量它的值为 `prop.type` 的值。接着定义了 `valid` 变量，该变量为一个布尔值，代表着类型校验成功与否，我们可以看到其初始值为：
+这段代码的作用是用来做类型断言的，即判断外界传递的 `prop` 值的类型与期望的类型是否相符。首先定义了 `type` 变量，它的值为 `prop.type` 的值。接着定义了 `valid` 变量，该变量为一个布尔值，代表着类型校验成功与否，我们可以看到其初始值为：
 
 ```js
 let valid = !type || type === true
