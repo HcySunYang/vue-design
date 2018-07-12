@@ -57,9 +57,10 @@ module.exports = {
             '80vue-compiler-start',
             '81vue-lexical-analysis',
             '82vue-parsing',
-            '83vue-codegen',
-            '84vue-vdom',
-            '85vue-vdom-patch'
+            '83vue-parsing-2',
+            '84vue-codegen',
+            '85vue-vdom',
+            '86vue-vdom-patch'
           ]
         }
       ],

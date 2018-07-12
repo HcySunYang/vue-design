@@ -1,4 +1,4 @@
-# 句法分析 - 生成真正的AST
+# 句法分析 - 生成真正的AST(一)
 
 在上一章中，我们讲解了解析 `html` 字符串时词法分析的方式，本章我们将再进一步，讲解 `Vue` 是如何在词法分析的基础上构建抽象语法树(`AST`)的，即句法分析。
 
@@ -832,7 +832,7 @@ element = {
 
 以上就是 `parse` 函数之前定义的所有常量、变量以及函数的讲解，接下来我们将正式进入 `parse` 函数的实现讲解。
 
-### parse 函数创建 AST 前的准备工作
+## parse 函数创建 AST 前的准备工作
 
 本节我们主要讲解 `parse` 函数的结构以及真正开始解析之前的准备工作，我们知道 `parse` 函数中主要是通过调用 `parseHTML` 函数来辅助完成 `AST` 构建的，但是在调用 `parseHTML` 函数之前还需要做一些准备工作，比如前面提过的在 `parse` 函数的开头为平台化变量赋了值，如下是 `parse` 函数的整体结构：
 
@@ -1164,7 +1164,7 @@ parseHTML(template, {
 
 下面我们就从 `start` 钩子函数开始说起，为什么从 `start` 钩子函数开始呢？因为正常情况下，解析一段 `html` 字符串时必然最先遇到的就是开始标签。所以我们从 `start` 钩子函数开始讲解，在讲解的过程中为了说明某些问题我们会逐个举例。
 
-### 解析一个开始标签需要做的事情
+## 解析一个开始标签需要做的事情
 
 接下来我们就从 `start` 钩子函数开始，研究一下解析一个开始标签都需要做哪些事情，如下是在 `parse` 函数中调用 `parseHTML` 函数时传递的 `start` 钩子函数：
 
@@ -1799,7 +1799,7 @@ if (children[i].type === 1) {
 
 以上的总结就是 `start` 钩子函数在处理开始标签时所做的事情，实际上由于开始标签中包含了大量指令信息(如 `v-if` 等)或特性信息(如 `slot-scope` 等)，所以在生产 `AST` 过程中，大部分工作都是由 `start` 函数来完成的，接下来我们将更加细致的去讲解解析过程中的每一个细节。
 
-### 处理使用了v-pre指令的元素及其子元素
+## 处理使用了v-pre指令的元素及其子元素
 
 回到 `start` 钩子函数中，我们开始对 `start` 钩子函数内的代码做细致的分析，首先找到如下这段代码：
 
@@ -1824,7 +1824,7 @@ function processPre (el) {
 
 `processPre` 函数接收元素描述对象作为参数，在 `processPre` 函数内部首先通过 `getAndRemoveAttr` 函数并使用其返回值与 `null` 做比较，如果 `getAndRemoveAttr` 函数的返回值不等于 `null` 则执行 `if` 语句块内的代码，即在元素描述对象上添加 `.pre` 属性并将其值设置为 `true`。
 
-大家猜测一下 `getAndRemoveAttr` 函数的作用是什么？根据传递给该函数的两个参数：第一个参数是元素描述对象，第二个参数是一个字符串 `'v-pre'`。我们大概可以猜测到 `getAndRemoveAttr` 函数应该能够获取给定元素的某个属性的值，那么如上代码就应该是获取给定元素的 `v-pre` 属性的值。实际上我们的猜测是正确的，不过只正确了一部分，实际 `getAndRemoveAttr` 函数还会做更多事情，`getAndRemoveAttr` 函数来自于 `src/compiler/helpers.js` 文件，如下是 其代码：
+大家猜测一下 `getAndRemoveAttr` 函数的作用是什么？根据传递给该函数的两个参数：第一个参数是元素描述对象，第二个参数是一个字符串 `'v-pre'`。我们大概可以猜测到 `getAndRemoveAttr` 函数应该能够获取给定元素的某个属性的值，那么如上代码就应该是获取给定元素的 `v-pre` 属性的值。实际上我们的猜测是正确的，不过只正确了一部分，实际上 `getAndRemoveAttr` 函数还会做更多事情，`getAndRemoveAttr` 函数来自于 `src/compiler/helpers.js` 文件，如下是 其代码：
 
 ```js
 export function getAndRemoveAttr (
@@ -2108,7 +2108,7 @@ function processRawAttrs (el) {
 
 以上就是在生成 `AST` 过程中对于使用了 `v-pre` 指令标签的元素描述对象的处理。
 
-### 处理使用了v-for指令的元素
+## 处理使用了v-for指令的元素
 
 接下来我们回到如下这段代码：
 
@@ -2389,7 +2389,7 @@ export function processFor (el: ASTElement) {
 
 以上就是解析器对于使用 `v-for` 指令标签的解析过程，以及对该元素描述对象的补充。
 
-### 处理使用条件指令和v-once指令的元素
+## 处理使用条件指令和v-once指令的元素
 
 在使用 `processFor` 函数处理完元素描述对象之后，紧接着使用了 `processIf` 函数继续对元素的描述对象进行处理，如下高亮代码所示：
 
@@ -2566,7 +2566,7 @@ function processOnce (el) {
 
 首先通过 `getAndRemoveAttr` 函数获取并移除元素描述对象的 `attrsList` 数组中名字为 `v-once` 的属性值，并将获取到的属性值赋值给 `once` 常量，接着使用 `if` 条件语句，如果 `once` 常量不等于 `null`，则说明使用了 `v-once` 指令，此时会在元素描述对象上添加 `el.once` 属性并将其值设置为 `true`。
 
-### 处理使用了key属性的元素
+## 处理使用了key属性的元素
 
 再往下我们要讲解的就应该是 `processElement` 函数了，如下：
 
@@ -2632,7 +2632,7 @@ if (process.env.NODE_ENV !== 'production' && el.tag === 'template') {
 * 1、`key` 属性不能被应用到 `<template>` 标签。
 * 2、使用了 `key` 属性的标签，其元素描述对象的 `el.key` 属性保存在 `key` 属性的值。
 
-### 获取绑定的属性值以及过滤器的解析
+## 获取绑定的属性值以及过滤器的解析
 
 在讲解 `processKey` 函数时我们遇到了 `getBindingAttr` 函数，当时我们没有仔细讲解，并且让大家理解为它的作用与 `getAndRemoveAttr` 函数的作用相同。接下来我们就仔细研究一下 `getBindingAttr` 函数，如下是其源码：
 
@@ -3423,7 +3423,7 @@ el.key = '_f("featId")(id)'
 
 以上就是 `el.key` 属性的所有可能值。
 
-### 处理使用了ref属性的元素
+## 处理使用了ref属性的元素
 
 接下来我们讲解对于使用 `ref` 属性的标签是如何处理的，即 `processRef` 函数，如下高亮的代码所示：
 
@@ -3545,7 +3545,7 @@ function checkInFor (el: ASTElement): boolean {
 
 大家也许会有一个疑问，即为什么要检查 `ref` 属性是否在 `v-for` 指令之内使用呢？很简单，如果 `ref` 属性存在于 `v-for` 指令之内，我们需要创建一个组件实例或DOM节点的引用数组，而不是单一引用，这个时候就需要 `el.refInFor` 属性来区分了。这些内容会在讲解 `$ref` 属性的实现时详细阐述。
 
-### 处理(作用域)插槽
+## 处理(作用域)插槽
 
 我们下一个要讲解的将是 `processSlot` 函数，如下：
 
@@ -3827,18 +3827,146 @@ if (el.tag !== 'template' && !el.slotScope) {
 * 3、对于其他标签，会尝试获取 `slot-scope` 属性的值，并将获取到的值赋值给元素描述对象的 `el.slotScope` 属性。
 * 4、对于非 `<slot>` 标签，会尝试获取该标签的 `slot` 属性，并将获取到的值赋值给元素描述对象的 `el.slotTarget` 属性。如果一个标签使用了 `slot` 属性但却没有给定相应的值，则该标签元素描述对象的 `el.slotTarget` 属性值为字符串 `'"default"'`。
 
+## 处理使用了is或inline-template属性的元素
 
+再往下，我们将来到 `processComponent` 函数：
 
+```js {10}
+export function processElement (element: ASTElement, options: CompilerOptions) {
+  processKey(element)
 
+  // determine whether this is a plain element after
+  // removing structural attributes
+  element.plain = !element.key && !element.attrsList.length
 
+  processRef(element)
+  processSlot(element)
+  processComponent(element)
+  for (let i = 0; i < transforms.length; i++) {
+    element = transforms[i](element, options) || element
+  }
+  processAttrs(element)
+}
+```
 
+`processComponent` 函数的源码如下：
 
-### 增强的 class
-### 增强的 style
-### 特殊的 model
+```js
+function processComponent (el) {
+  let binding
+  if ((binding = getBindingAttr(el, 'is'))) {
+    el.component = binding
+  }
+  if (getAndRemoveAttr(el, 'inline-template') != null) {
+    el.inlineTemplate = true
+  }
+}
+```
 
-## 生成抽象语法树(AST)
+我们知道 `Vue` 内置了 `component` 组件，并且该组件接收两个 `prop` 分别是：`is` 和 `inline-template`。而 `processComponent` 函数就是用来处理 `is` 属性和 `inline-template` 属性的。在 `processComponent` 函数内部，首先执行的是如下这段代码：
 
-## 静态优化
+```js
+let binding
+if ((binding = getBindingAttr(el, 'is'))) {
+  el.component = binding
+}
+```
 
+定义了 `binding` 变量，它的值是通过 `getBindingAttr` 函数获取元素的 `is` 属性值得到的，如果获取成功，则会将取到的值赋值给元素描述对象的 `el.component` 属性。
+
+举一个例子：
+
+* 例子一：
+
+```html
+<div is></div>
+```
+
+上例中的 `is` 属性是非绑定的，并且没有任何值，则最终如上标签经过处理后其元素描述对象的 `el.component` 属性值为空字符串：
+
+```js
+el.component = ''
+```
+
+* 例子二：
+
+```html
+<div is="child"></div>
+```
+
+上例中的 `is` 属性是非绑定的，但是有一个字符串值，则最终如上标签经过处理后其元素描述对象的 `el.component` 属性值为：
+
+```js
+el.component = JSON.stringify('child')
+```
+
+* 例子三：
+
+```html
+<div :is="child"></div>
+```
+
+上例中的 `is` 属性是非绑定的，但是有一个字符串值，则最终如上标签经过处理后其元素描述对象的 `el.component` 属性值为：
+
+```js
+el.component = 'child'
+```
+
+接着我们再来看 `processComponent` 函数中如下的这段代码：
+
+```js
+if (getAndRemoveAttr(el, 'inline-template') != null) {
+  el.inlineTemplate = true
+}
+```
+
+这段代码用来处理 `inline-template` 属性的，首先通过 `getAndRemoveAttr` 属性获取 `inline-template` 属性的值，如果获取成功，则将元素描述对象的 `el.inlineTemplate` 属性设置为 `true`，代表着该标签使用了 `inline-template` 属性。
+
+以上就是 `processComponent` 函数所做的事情。
+
+## 前置处理、中置处理、后置处理
+
+我们回到 `processElement` 函数：
+
+```js {11-13}
+export function processElement (element: ASTElement, options: CompilerOptions) {
+  processKey(element)
+
+  // determine whether this is a plain element after
+  // removing structural attributes
+  element.plain = !element.key && !element.attrsList.length
+
+  processRef(element)
+  processSlot(element)
+  processComponent(element)
+  for (let i = 0; i < transforms.length; i++) {
+    element = transforms[i](element, options) || element
+  }
+  processAttrs(element)
+}
+```
+
+如上高亮代码所示，这段代码是一段 `for` 循环，用来遍历 `transforms` 数组，我们前面曾经遇到过对于 `preTransforms` 数组的遍历，我们当时说这是在应用“前置处理”，而 `transforms` 则可以成为“中置处理”，实际上还有“后置处理”，“后置处理”的代码存在于 `closeElement` 函数中，如下：
+
+```js {10-12}
+function closeElement (element) {
+  // check pre state
+  if (element.pre) {
+    inVPre = false
+  }
+  if (platformIsPreTag(element.tag)) {
+    inPre = false
+  }
+  // apply post-transforms
+  for (let i = 0; i < postTransforms.length; i++) {
+    postTransforms[i](element, options)
+  }
+}
+```
+
+如上高亮代码所示，`closeElement` 函数内部使用一个 `for` 循环遍历了 `postTransforms` 数组，这实际上就是在应用“后置处理”，为什么说这是“后置处理”呢？那是因为只有当遇到二元标签的结束标签或一元标签时才会调用 `closeElement` 函数。
+
+无论是前置处理，中置处理还是后置处理，这些名词都是为了让大家更好理解而“杜撰”出来的，他们的作用等价于提供了对元素描述对象处理的钩子，让外界有能力参与不同阶段的元素描述对象的处理，这对于平台化是很重要的事情，不同平台能够通过这些处理钩子去处理那些特定平台下特有的元素或元素的属性。
+
+由于这套文章只关注 `web` 平台，所以后面会详细讲解 `web` 平台下都应用了那些前置处理，中置处理和后置处理，以及处理的目的。
  
