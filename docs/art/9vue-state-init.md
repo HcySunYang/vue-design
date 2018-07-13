@@ -1148,7 +1148,7 @@ if (simpleCheckRE.test(expectedType)) {
 if (simpleCheckRE.test(expectedType))
 ```
 
-使用 `simpleCheckRE` 去匹配字符串 `expectedType`，如果匹配成功则说明期望的类型为一下五种类型之一：`'String'`、`'Number'`、`'Boolean'`、`'Function'` 以及 `'Symbol'`，这五种类型有什么特点呢？它们的特点是都可以通过 `typeof` 操作符进行区分判断。在 `if` 语句块内执行的是如下代码：
+使用 `simpleCheckRE` 去匹配字符串 `expectedType`，如果匹配成功则说明期望的类型为以下五种类型之一：`'String'`、`'Number'`、`'Boolean'`、`'Function'` 以及 `'Symbol'`，这五种类型有什么特点呢？它们的特点是都可以通过 `typeof` 操作符进行区分判断。在 `if` 语句块内执行的是如下代码：
 
 ```js
 const t = typeof value
@@ -1334,7 +1334,7 @@ methods: {
 
 ## provide 选项的初始化及实现
 
-再往下我们将研究最后两个选项的初始化工作，即 `provide` 选项以及 `inject` 选项。在这之前我们来回顾一下这两个选项的作用，实际上 `Vue` 的官方文档已经明确告诉我们这两个选项主要用来辅助测试的，在正真的业务代码中是不推荐使用的，一般情况下我们也不需要使用这两个选项。
+再往下我们将研究最后两个选项的初始化工作，即 `provide` 选项以及 `inject` 选项。在这之前我们来回顾一下这两个选项的作用，实际上 `Vue` 的官方文档已经明确告诉我们这两个选项主要是用来辅助测试的，在真正的业务代码中是不推荐使用的，一般情况下我们也不需要使用这两个选项。
 
 如果一个组件使用了 `provide` 选项，那么该选项指定的数据将会被注入到该组件的所有后代组件中，在后代组件中可以使用 `inject` 选项选择性注入，这样后代组件就拿到了祖先组件提供的数据，这么做的好处是方便了为高阶组件提供数据并测试。
 
@@ -1366,7 +1366,7 @@ export function initProvide (vm: Component) {
 }
 ```
 
-如上是 `initProvide` 函数的全部代码，它接收组件实例对象作为参数。在 `initProvide` 函数内部首先定义了 `provide` 常量，它的值是 `vm.$options.provide` 选项的引用，接着是一个 `if` 条件语句，只有在 `provide` 选项存在的情况下才会执行 `if` 语句块内的代码，我们知道 `provide` 选项可以是对象，也可以是一个返回对象的函数。所以在 `if` 语句块内使用 `typeof` 操作符检测 `provide` 常量的类型，如果是函数则执行该函数说获取数据，否则直接将 `provide` 本身作为数据。最后将数据复制给组件实例对象的 `vm._provided` 属性，后面我们可以看到当组件初始化 `inject` 选项时，其注入的数据就是从父代组件实例的 `vm._provided` 属性中获取的。
+如上是 `initProvide` 函数的全部代码，它接收组件实例对象作为参数。在 `initProvide` 函数内部首先定义了 `provide` 常量，它的值是 `vm.$options.provide` 选项的引用，接着是一个 `if` 条件语句，只有在 `provide` 选项存在的情况下才会执行 `if` 语句块内的代码，我们知道 `provide` 选项可以是对象，也可以是一个返回对象的函数。所以在 `if` 语句块内使用 `typeof` 操作符检测 `provide` 常量的类型，如果是函数则执行该函数获取数据，否则直接将 `provide` 本身作为数据。最后将数据复制给组件实例对象的 `vm._provided` 属性，后面我们可以看到当组件初始化 `inject` 选项时，其注入的数据就是从父代组件实例的 `vm._provided` 属性中获取的。
 
 以上就是 `provide` 选项的初始化及实现，它本质上就是在组件实例对象上添加了 `vm._provided` 属性，并保存了用于子代组件的数据。
 
