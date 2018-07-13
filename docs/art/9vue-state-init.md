@@ -1186,7 +1186,7 @@ if (!valid && t === 'object') {
 
 如上高亮代码所示使用 `instanceof` 操作符判断 `value` 是否是 `type` 的实例，如果是则依然认为该 `prop` 值是有效的。
 
-处理完了以上类型的检查，还要处理对象和数组已经自定义类型的检查，如下：
+处理完了以上类型的检查，还要处理对象和数组以及自定义类型的检查，如下：
 
 ```js
 if (simpleCheckRE.test(expectedType)) {
