@@ -188,9 +188,9 @@ export function createCompileToFunctionFn (compile: Function): Function {
 }
 ```
 
-以上是 `createCompileToFunctionFn` 函数的代码，我们发现这个函数的返回值是一个函数，该函数才是我们真正想要的 `compileToFunctions`，在返回这个函数之前定义了常量 `cache`，所以 `cache` 常量肯定是被 `compileToFunctions` 函数引用的，那么这里可以理解为创建了一个闭包，其实如果大家留意的话，在上面的讲解中我们已经遇到了很多利用闭包引用变量的场景，还是拿上面的代码为例，`createCompileToFunctionFn` 函数接受一个参数 `compile`，而这个参数其实也是被 `compileToFunctions` 闭包引用的。
+以上是 `createCompileToFunctionFn` 函数的代码，我们发现这个函数的返回值是一个函数，该函数才是我们真正想要的 `compileToFunctions`，在返回这个函数之前定义了常量 `cache`，所以 `cache` 常量肯定是被 `compileToFunctions` 函数引用的，那么这里可以理解为创建了一个闭包，其实如果大家留意的话，在上面的讲解中我们已经遇到了很多利用闭包引用变量的场景，还是拿上面的代码为例，`createCompileToFunctionFn` 函数接收一个参数 `compile`，而这个参数其实也是被 `compileToFunctions` 闭包引用的。
 
-至此我们经历了一波三折，终于找到了 `compileToFunctions` 函数，`/entry-runtime-with-compiler.js` 文件中执行的 `compileToFunctions` 函数，其实就是在执行 `src/compiler/to-function.js` 文件中 `createCompileToFunctionFn` 函数返回的 `compileToFunctions` 函数。
+至此我们经历了一波三折，终于找到了 `compileToFunctions` 函数，`src/platforms/web/entry-runtime-with-compiler.js` 文件中执行的 `compileToFunctions` 函数，其实就是在执行 `src/compiler/to-function.js` 文件中 `createCompileToFunctionFn` 函数返回的 `compileToFunctions` 函数。
 
 ## compileToFunctions 的作用
 
@@ -366,7 +366,7 @@ res.staticRenderFns = compiled.staticRenderFns.map(code => {
 })
 ```
 
-定义了两个常量 `res` 以及 `fnGenErrors`，其中 `res` 是一个空对象且它就是最终的返回值，`fnGenErrors` 是一个空数组。然后在 `res` 对象上添加一个 `render` 属性，这个 `render` 属性，实际上就是最终生成的渲染函数，它的值是通过 `createFunction` 创建出来了，其中 `createFunction` 函数就定义在 `to-function.js` 文件的开头，源码如下：
+定义了两个常量 `res` 以及 `fnGenErrors`，其中 `res` 是一个空对象且它就是最终的返回值，`fnGenErrors` 是一个空数组。然后在 `res` 对象上添加一个 `render` 属性，这个 `render` 属性，实际上就是最终生成的渲染函数，它的值是通过 `createFunction` 创建出来的，其中 `createFunction` 函数就定义在 `to-function.js` 文件的开头，源码如下：
 
 ```js
 function createFunction (code, errors) {
@@ -605,7 +605,7 @@ export default {
 }
 ```
 
-同样类似于 `modules` 输出，只不过 `directives` 最终输出的不是数组，而是一个对象，这个对象包含三个属性 `model`、`text` 以及 `html`，这三个属性同样来自于当前目前下的三个文件：`model.js`、`text.js` 以及 `html.js` 文件，我们分别查看这三个文件的输出：
+同样类似于 `modules` 输出，只不过 `directives` 最终输出的不是数组，而是一个对象，这个对象包含三个属性 `model`、`text` 以及 `html`，这三个属性同样来自于当前目录下的三个文件：`model.js`、`text.js` 以及 `html.js` 文件，我们分别查看这三个文件的输出：
 
 ```js
 // model.js 的输出
