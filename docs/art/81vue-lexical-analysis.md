@@ -1,6 +1,6 @@
 # 词法分析 - 为生成AST做准备
 
-在 [Vue的编译器初探](./80vue-compiler-start.md) 这一章节中，我们对 `Vue` 如何创建编译器，以及在这个过程中经历过的几个重要的函数做了分析，比如 `compileToFunctions` 函数以及 `compile` 函数，并且我们知道真正对模板进行编译工作的实际是 `baseCompile` 函数，而接下来我们任务就是搞清楚 `baseCompile` 函数的内容。
+在 [Vue的编译器初探](./80vue-compiler-start.md) 这一章节中，我们对 `Vue` 如何创建编译器，以及在这个过程中经历过的几个重要的函数做了分析，比如 `compileToFunctions` 函数以及 `compile` 函数，并且我们知道真正对模板进行编译工作的实际是 `baseCompile` 函数，而接下来我们的任务就是搞清楚 `baseCompile` 函数的内容。
 
 `baseCompile` 函数是在 `src/compiler/index.js` 中作为 `createCompilerCreator` 函数的参数使用的，代码如下：
 
@@ -78,7 +78,7 @@ const ast = parse(template.trim(), options)
 const ast = parse(template.trim(), options)
 ```
 
-由这句代码可知 `parse` 函数就是用来解析模板字符串的，最终生成 `AST`，根据文件头部的引用关系可知 `parse` 函数 `src/compiler/parser/index.js` 文件，打开该文件可以发现其的确导出了一个名字为 `parse` 的函数，如下：
+由这句代码可知 `parse` 函数就是用来解析模板字符串的，最终生成 `AST`，根据文件头部的引用关系可知 `parse` 函数位于 `src/compiler/parser/index.js` 文件，打开该文件可以发现其的确导出了一个名字为 `parse` 的函数，如下：
 
 ```js
 export function parse (
@@ -169,7 +169,7 @@ const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-12-04-111.jpg)
 
-我们在观察一个复杂的正则表达式时，主要就是要观察它有几个分组(准确的说应该是有几个捕获的分组)，通过上图我们能够清晰的看到，这个表达式有五个捕获组，第一个捕获组用来匹配属性名，第二个捕获组用来匹配等于号，第三、第四、第五个捕获组都是用来匹配属性值的，同时 `?` 表明第三、四、五个分组是可选的。 这是因为在 `html` 标签中有4种写属性值的方式：
+我们在观察一个复杂的正则表达式时，主要就是要观察它有几个分组(准确地说应该是有几个捕获的分组)，通过上图我们能够清晰地看到，这个表达式有五个捕获组，第一个捕获组用来匹配属性名，第二个捕获组用来匹配等于号，第三、第四、第五个捕获组都是用来匹配属性值的，同时 `?` 表明第三、四、五个分组是可选的。 这是因为在 `html` 标签中有4种写属性值的方式：
 
 * 1、使用双引号把值引起来：`class="some-class"`
 * 2、使用单引号把值引起来：`class='some-class'`
@@ -265,7 +265,7 @@ const ncname = '[a-zA-Z_][\\w\\-\\.]*'
 
 * 三、什么是 `qname`？
 
-我们可以在 `Vue` 的源码中看到其给出了一个连接：[https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName](https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName)，其实 `qname` 就是：`<前缀:标签名称>`，也就是合法的XML标签。
+我们可以在 `Vue` 的源码中看到其给出了一个链接：[https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName](https://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-QName)，其实 `qname` 就是：`<前缀:标签名称>`，也就是合法的XML标签。
 
 了解了这些，我们再来看 `ncname` 的正则表达式，它定义了 `ncname` 的合法组成，这个正则所匹配的内容很简单：*字母或下划线开头，后面可以跟任意数量的字符、中横线和 `.`*。
 
@@ -368,7 +368,7 @@ const encodedAttrWithNewLines = /&(?:lt|gt|quot|amp|#10|#9);/g
 
 上面这段代码中，包含 `5` 个常量，我们逐个来看。
 
-首先是 `isPlainTextElement` 常量是一个函数，它是通过 `makeMap` 函数生成的，用来检测给定的标签名字是不是纯文本标签（包括：`script`、`style`、`textarea`）。
+首先 `isPlainTextElement` 常量是一个函数，它是通过 `makeMap` 函数生成的，用来检测给定的标签名字是不是纯文本标签（包括：`script`、`style`、`textarea`）。
 
 然后定义了 `reCache` 常量，它被初始化为一个空的 `JSON` 对象字面量。
 
@@ -957,7 +957,7 @@ match.unarySlash = end[1]
 
 我们发现只有当变量 `end` 存在时，即能够确定确实解析到了一个开始标签的时候 `parseStartTag` 函数才会有返回值，并且返回值是 `match` 对象，其他情况下 `parseStartTag` 全部返回 `undefined`。
 
-下面我们整理一下 `parseStartTag` 函数的返回值，即 `match` 对象。当成功的匹配到一个开始标签时，假设有如下 `html` 字符串：
+下面我们整理一下 `parseStartTag` 函数的返回值，即 `match` 对象。当成功地匹配到一个开始标签时，假设有如下 `html` 字符串：
 
 ```html
 <div v-if="isSucceed" v-for="v in map"></div>
