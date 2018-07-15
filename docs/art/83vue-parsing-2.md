@@ -621,5 +621,324 @@ isProp || (!el.component && platformMustUseProp(el.tag, el.attrsMap.type, name))
 
 ### 解析 v-on 指令
 
+接下来我们来看一下 `processAttrs` 函数对于 `v-on` 指令的解析，如下代码所示：
+
+```js {4-5}
+if (bindRE.test(name)) { // v-bind
+  // 省略...
+} else if (onRE.test(name)) { // v-on
+  name = name.replace(onRE, '')
+  addHandler(el, name, value, modifiers, false, warn)
+} else { // normal directives
+  // 省略...
+}
+```
+
+与 `v-bind` 指令类似，使用 `onRE` 正则去匹配指令字符串，如果该指令字符串以 `@` 或 `v-on:` 开头，则说明该指令是事件绑定，此时 `elseif` 语句块内的代码将会被执行，在 `elseif` 语句块内，首先将指令字符串中的 `@` 字符或 `v-on:` 字符串去掉，然后直接调用 `addHandler` 函数。
+
+打开 `src/compiler/helpers.js` 文件并找到 `addHandler` 函数，如下是 `addHandler` 函数签名：
+
+```js
+export function addHandler (
+  el: ASTElement,
+  name: string,
+  value: string,
+  modifiers: ?ASTModifiers,
+  important?: boolean,
+  warn?: Function
+) {
+  // 省略...
+}
+```
+
+可以看到 `addHandler` 函数接收六个参数，分别是：
+
+* `el`：当前元素描述对象
+* `name`： 绑定属性的名字，即事件名称
+* `value`：绑定属性的值，这个值有可能是事件回调函数名字，有可能是内联语句，有可能是函数表达式
+* `modifiers`：指令对象
+* `important`：可选参数，是一个布尔值，代表着添加的事件侦听函数的重要级别，如果为 `true`，则该侦听函数会被添加到该事件侦听函数数组的头部，否则会将其添加到尾部，
+* `warn`：打印警告信息的函数，是一个可选参数
+
+了解 `addHandler` 函数所需的参数，我们再来看一下解析 `v-on` 指令时调用 `addHandler` 函数所传递的参数，如下高亮代码所示：
+
+```js
+if (bindRE.test(name)) { // v-bind
+  // 省略...
+} else if (onRE.test(name)) { // v-on
+  name = name.replace(onRE, '')
+  addHandler(el, name, value, modifiers, false, warn)
+} else { // normal directives
+  // 省略...
+}
+```
+
+如上高亮代码中在调用 `addHandler` 函数时传递了全部六个参数。这里就不一一介绍这六个实参了，相信大家都知道这六个实参是什么。我们开始研究 `addHandler` 函数的实现，在 `addHandler` 函数的开头是这样一段代码：
+
+```js
+modifiers = modifiers || emptyObject
+// warn prevent and passive modifier
+/* istanbul ignore if */
+if (
+  process.env.NODE_ENV !== 'production' && warn &&
+  modifiers.prevent && modifiers.passive
+) {
+  warn(
+    'passive and prevent can\'t be used together. ' +
+    'Passive handler can\'t prevent default event.'
+  )
+}
+```
+
+首先检测 `v-on` 指令的修饰符对象 `modifiers` 是否存在，如果在使用 `v-on` 指令时没有指定任何修饰符，则 `modifiers` 的值为 `undefined`，此时会使用冻结的空对象 `emptyObject` 作为代替。接着是一个 `if` 条件语句块，如果该 `if` 语句的判断条件成立，则说明开发者同时使用了 `prevent` 修饰符和 `passive` 修饰符，此时如果是在非生产环境下并且 `addHandler` 函数的第六个参数 `warn` 存在，则使用 `warn` 函数打印警告信息，提示开发者 `passive` 修饰符不能和 `prevent` 修饰符一起使用，这是因为在事件监听中 `passive` 选项参数就是用来告诉浏览器该事件监听函数是不会阻止默认行为的。
+
+在往下是这样一段代码：
+
+```js
+// check capture modifier
+if (modifiers.capture) {
+  delete modifiers.capture
+  name = '!' + name // mark the event as captured
+}
+if (modifiers.once) {
+  delete modifiers.once
+  name = '~' + name // mark the event as once
+}
+/* istanbul ignore if */
+if (modifiers.passive) {
+  delete modifiers.passive
+  name = '&' + name // mark the event as passive
+}
+```
+
+这段代码由三个 `if` 条件语句块组成，如果事件指令中使用了 `capture` 修饰符，则第一个 `if` 语句块的内容将被卑职，可以到在第一个 `if` 语句块内首先将 `modifiers.capture` 选项移除，紧接着在原始事件名称之前添加一个字符 `!`。假设我们事件绑定代码如下：
+
+```html
+<div @click.capture="handleClick"></div>
+```
+
+如上代码中点击事件使用了 `capture` 修饰符，所以在 `addHandler` 函数内部，会把事件名称 `'click'` 修改为 `'!click'`。
+
+与第一个 `if` 语句块类似，第二个和第三个 `if` 语句块分别用来处理当事件使用了 `once` 修饰符和 `passive` 修饰符的情况。可以看到如果事件使用了 `once` 修饰符，则会在事件名称的前面添加字符 `~`，如果事件使用了 `passive` 修饰符，则会在事件名称前面添加字符 `&`。也就是说如下两端代码是等价的：
+
+```html
+<div @click.once="handleClick"></div>
+```
+
+等价于：
+
+```html
+<div @~click="handleClick"></div>
+```
+
+再往下是如下这段代码：
+
+```js
+// normalize click.right and click.middle since they don't actually fire
+// this is technically browser-specific, but at least for now browsers are
+// the only target envs that have right/middle clicks.
+if (name === 'click') {
+  if (modifiers.right) {
+    name = 'contextmenu'
+    delete modifiers.right
+  } else if (modifiers.middle) {
+    name = 'mouseup'
+  }
+}
+```
+
+这段代码用来规范化“右击”事件和点击鼠标中间按钮的事件，我们知道在浏览器中点击右键一般会出来一个菜单，这本质上是触发了 `contextmenu` 事件。而 `Vue` 中定义“右击”事件的方式是为 `click` 事件添加 `right` 修饰符。所以如上代码中首先检查了事件名称是否是 `click`，如果事件名称是 `click` 并且使用了 `right` 修饰符，则会将事件名称重写为 `contextmenu`，同时使用 `delete` 操作符删除 `modifiers.right` 属性。类似的在 `Vue` 中定义点击滚轮事件的方式是为 `click` 事件指定 `middle` 修饰符，但我们知道鼠标本没有滚轮点击事件，一般我们区分用户点击的按钮是不是滚轮的方式是监听 `mouseup` 事件，然后通过事件对象的 `event.button` 属性值来判断，如果 `event.button === 1` 则说明用户点击的是滚轮按钮。
+
+不过这里有一点需要提醒大家，我们知道如果 `click` 事件使用了 `once` 修饰符，则事件的名字会被修改为 `~click`，所以当程序执行到如上这段时，事件名字是永远不会等于字符串 `'click'` 的，换句话说，如果同时使用 `once` 修饰符和 `right` 修饰符，则右击事件不会被触发，如下代码所示：
+
+```html
+<div @click.right.once="handleClickRightOnce"></div>
+```
+
+如上代码无效，作为变通方案我们可以直接监听 `contextmenu` 事件，如下：
+
+```html
+<div @contextmenu.once="handleClickRightOnce"></div>
+```
+
+但其实从源码角度也是很好解决的，只需要把范化“右击”事件和点击鼠标中间按钮的事件的这段代码提前即可，关于这一点我提交了一个 [PR](https://github.com/vuejs/vue/pull/8492)，但实际上我认为还有更好的解决方案，那就是从 `mouseup` 事件入手，将 `contextmenu` 事件与“右击”事件完全分离处理，这里就不展开讨论了。
+
+我们回到 `addHandler` 函数继续看后面的代码，接下来我们要看的是如下这段代码：
+
+```js
+let events
+if (modifiers.native) {
+  delete modifiers.native
+  events = el.nativeEvents || (el.nativeEvents = {})
+} else {
+  events = el.events || (el.events = {})
+}
+```
+
+定义了 `events` 变量，然后判断是否存在 `native` 修饰符，如果 `native` 修饰符存在则会在元素描述对象上添加 `el.nativeEvents` 属性，初始值为一个空对象，并且 `events` 变量与 `el.nativeEvents` 属性具有相同的引用，另外大家注意如上代码中使用 `delete` 操作符删除了 `modifiers.native` 属性，到目前为止我们在讲解 `addHandler` 函数时以及遇到了很多次使用 `delete` 操作符删除修饰符对象属性的做法，那这么做的目的是什么呢？这是因为在代码生成阶段会使用 `for...in` 语句遍历修饰符对象，然后做一些相关的事情，所以在生成 `AST` 阶段把那些不希望被遍历的属性删除掉，更具体的内容我们会在代码生成中为大家详细讲解。回过头来，如果 `native` 属性不存在则会在元素描述对象上添加 `el.events` 属性，它的初始值也是一个空对象，此时 `events` 变量的引用将于 `el.events` 属性相同。
+
+再往下是这样一段代码：
+
+```js
+const newHandler: any = {
+  value: value.trim()
+}
+if (modifiers !== emptyObject) {
+  newHandler.modifiers = modifiers
+}
+```
+
+定义了 `newHandler` 对象，该对象初始拥有一个 `value` 属性，该属性的值就是 `v-on` 指令的属性值。接着是一个 `if` 条件语句，该 `if` 语句的判断条件检测了修饰符对象 `modifiers` 是否不等于 `emptyObject`，我们知道当一个事件没有使用任何修饰符时，修饰符对象 `modifiers` 会被初始化为 `emptyObject`，所以如果修饰符对象 `modifiers` 不等于 `emptyObject` 则说明事件使用了修饰符，此时会把修饰符对象赋值给 `newHandler.modifiers` 属性。
+
+再往下是 `addHandler` 函数的最后一段代码：
+
+```js
+const handlers = events[name]
+/* istanbul ignore if */
+if (Array.isArray(handlers)) {
+  important ? handlers.unshift(newHandler) : handlers.push(newHandler)
+} else if (handlers) {
+  events[name] = important ? [newHandler, handlers] : [handlers, newHandler]
+} else {
+  events[name] = newHandler
+}
+
+el.plain = false
+```
+
+首先定义了 `handlers` 常量，它的值是通过事件名称获取 `events` 对象下的对应的属性值得到的：`events[name]`，我们知道变量 `events` 要么是元素描述对象的 `el.nativeEvents` 属性的引用，要么就是元素描述对象 `el.events` 属性的引用。无论是谁的引用，在初始情况下 `events` 变量都是一个空对象，所以在第一次调用 `addHandler` 时 `handlers` 常量是 `undefined`，这件会导致接下来的代码中 `else` 语句块将被执行：
+
+```js {6}
+if (Array.isArray(handlers)) {
+  // 省略...
+} else if (handlers) {
+  // 省略...
+} else {
+  events[name] = newHandler
+}
+```
+
+可以看到在 `else` 语句块内，为 `events` 对象定义了与事件名称相同的属性，并以 `newHandler` 对象作为属性值。举个例子，假设我们有如下模板代码：
+
+```html
+<div @click.once="handleClick"></div>
+```
+
+如上模板中监听了 `click` 事件，并绑定了名字叫做 `handleClick` 的事件监听函数，所以此时 `newHandler` 对象应该是：
+
+```js
+newHandler = {
+  value: 'handleClick',
+  modifiers: {} // 注意这里是空对象，因为 modifiers.once 修饰符被 delete 了
+}
+```
+
+由因为使用了 `once` 修饰符，所以事件名称将变为字符串 `'~click'`，又因为在监听事件时没有使用 `native` 修饰符，所以 `events` 变量是元素描述对象的 `el.events` 属性的引用，所以调用 `addHandler` 函数的最终结果就是在元素描述对象的 `el.events` 对象中添加相应事件的处理结果：
+
+```js
+el.events = {
+  '~click': {
+    value: 'handleClick',
+    modifiers: {}
+  }
+}
+```
+
+现在我们来修改一个之前的模板，如下：
+
+```html
+<div @click.prevent="handleClick1" @click="handleClick2"></div>
+```
+
+如上模板所示，我们有两个 `click` 事件的侦听，其中一个 `click` 事件使用了 `prevent` 修饰符，而另外一个 `click` 事件则没有使用修饰符，所以这两个 `click` 事件是不同，但这两个事件的名称却是相同的，都是 `'click'`，所以这将导致调用两次 `addHandler` 函数添加两次名称相同的事件，但是由于第一次调用 `addHandler` 函数添加 `click` 事件之后元素描述对象的 `el.events` 对象已经存在一个 `click` 属性，如下：
+
+```js
+el.events = {
+  click: {
+    value: 'handleClick1',
+    modifiers: { prevent: true }
+  }
+}
+```
+
+所以当第二次调用 `addHandler` 函数时，如下 `elseif` 语句块的代码将被执行：
+
+```js {6}
+const handlers = events[name]
+/* istanbul ignore if */
+if (Array.isArray(handlers)) {
+  important ? handlers.unshift(newHandler) : handlers.push(newHandler)
+} else if (handlers) {
+  events[name] = important ? [newHandler, handlers] : [handlers, newHandler]
+} else {
+  events[name] = newHandler
+}
+```
+
+此时 `newHandler` 对象是第二个 `click` 事件侦听的信息对象，而 `handlers` 常量保存的则是第一次被添加的事件信息，我们看如上高亮的那句代码，这句代码检测了参数 `important` 的真假，根据 `important` 参数的不同，会重新为 `events[name]` 赋值。可以看到 `important` 参数的真假所影响的仅仅是被添加的 `handlers` 对象的顺序。最终元素描述对象的 `el.events.click` 属性将变成一个数组，这个数组保存着前后两次添加的 `click` 事件的信息对象，如下：
+
+```js
+el.events = {
+  click: [
+    {
+      value: 'handleClick1',
+      modifiers: { prevent: true }
+    },
+    {
+      value: 'handleClick2'
+    }
+  ]
+}
+```
+
+这还没完，我们再次尝试修改我们的模板：
+
+```html
+<div @click.prevent="handleClick1" @click="handleClick2" @click.self="handleClick3"></div>
+```
+
+我们在上一次修改的基础上添加了第三个 `click` 事件侦听，但是我们使用了 `self` 修饰符，所以这个 `click` 事件与前两个 `click` 事件也是不同的，此时如下 `if` 语句块的代码将被执行：
+
+```js {4}
+const handlers = events[name]
+/* istanbul ignore if */
+if (Array.isArray(handlers)) {
+  important ? handlers.unshift(newHandler) : handlers.push(newHandler)
+} else if (handlers) {
+  events[name] = important ? [newHandler, handlers] : [handlers, newHandler]
+} else {
+  events[name] = newHandler
+}
+```
+
+由于此时 `el.events.click` 属性已经是一个数组，所以如上 `if` 语句的判断条件成立。在 `if` 语句块内执行了一句代码，这句代码是一个三元运算符，其作用很简单，我们知道 `important` 所影响的就是事件作用的顺序，所以根据 `important` 参数的不同，会选择使用数组的 `unshift` 方法将新添加的事件信息对象放到数组的头部，或者选择数组的 `push` 方法将新添加的事件信息对象放到数组的尾部。这样无论你有多少个同名事件的监听，都不会落下任何一个监听函数的执行。
+
+接着我们注意到 `addHandler` 函数的最后一句代码，如下：
+
+```js
+el.plain = false
+```
+
+如果一个标签存在事件侦听，无论如何都不会认为这个元素是“纯”的，所以这里直接将 `el.plain` 设置为 `false`。`el.plain` 属性会影响代码生成阶段，并间接导致程序的执行行为，我们后面会总结一个分关于 `el.plain` 的变更情况，让大家充分的理解。
+
+以上就是对于 `addHandler` 函数的讲解，我们发现 `addHandler` 函数对于元素描述对象的影响主要是在元素描述对象上添加了 `el.events` 属性和 `el.nativeEvents` 属性。对于 `el.events` 属性和 `el.nativeEvents` 属性的结构我们前面已经讲解得很细了，这里不再做总结。
+
+最后我们回到 `src/compiler/parser/index.js` 文件中的 `processAttrs` 函数中，如下高亮代码所示：
+
+```js {4,5}
+if (bindRE.test(name)) { // v-bind
+  // 省略...
+} else if (onRE.test(name)) { // v-on
+  name = name.replace(onRE, '')
+  addHandler(el, name, value, modifiers, false, warn)
+} else { // normal directives
+  // 省略...
+}
+```
+
+现在大家应该知道对于使用 `v-on` 指令绑定的时间，在解析阶段都做了哪些处理了吧。另外我们注意一下如上代码中调用 `addHandler` 函数时传递的第五个参数为 `false`，它实际上就是 `addHandler` 函数中名字为 `important` 的参数，它影响的是新添加的时间信息对象的顺序，由于上面代码中传递的 `important` 参数为 `false`，所以使用 `v-on` 添加的事件侦听函数将按照添加的顺序被先后执行。
+
+以上就是对于 `processAttrs` 函数中对于 `v-on` 指令的解析。
+
 ### 解析其他指令
 
