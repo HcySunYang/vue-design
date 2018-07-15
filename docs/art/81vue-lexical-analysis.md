@@ -1068,7 +1068,7 @@ const tagName = match.tagName
 const unarySlash = match.unarySlash
 ```
 
-这两个常量的值都来自于开始标签的匹配结果，以下我们统一将开始标签的匹配结果称为 `match` 对象。其中常量 `tagName` 为开始标签的标签名，常量 `unarySlash` 的值为 `'/'` 或 `undefined` 其中之一。
+这两个常量的值都来自于开始标签的匹配结果，以下我们统一将开始标签的匹配结果称为 `match` 对象。其中常量 `tagName` 为开始标签的标签名，常量 `unarySlash` 的值为 `'/'` 或 `undefined` 。
 
 接着是一个 `if` 语句块，`if` 语句的判断条件是 `if (expectHTML)`，前面说过 `expectHTML` 是 `parser` 选项，是一个布尔值，如果为真则该 `if` 语句块的代码将被执行。但是现在我们暂时不看这段代码，因为这段代码包含 `parseEndTag` 函数的调用，所以待我们讲解完 `parseEndTag` 函数之后，再回头来说这段代码。
 
@@ -1171,7 +1171,7 @@ if (options.start) {
 }
 ```
 
-如果 `parser` 选项中包含 `options.start` 函数，则调用之，并将开始标签的名字(`tagName`)，格式化后的属性数组(`attrs`)，是否为一元标签(`unary`)，以及开始标签在元 `html` 中的开始和结束位置(`match.start` 和 `match.end`) 作为参数传递。
+如果 `parser` 选项中包含 `options.start` 函数，则调用之，并将开始标签的名字(`tagName`)，格式化后的属性数组(`attrs`)，是否为一元标签(`unary`)，以及开始标签在原 `html` 中的开始和结束位置(`match.start` 和 `match.end`) 作为参数传递。
 
 ### parse 结束标签
 
@@ -1296,7 +1296,7 @@ function parseEndTag (tagName, start, end) {
 
 当一个函数拥有两个及以上功能的时候，最常用的技巧就是通过参数进行控制，所以 `parseEndTag` 函数也不例外。`parseEndTag` 函数接收三个参数，这三个参数其实都是可选的，根据传参的不同其功能也不同。
 
-可以明确的告诉大家，在 `Vue` 的 `html-parser` 中 `parseEndTag` 函数的使用方式有三种：
+可以明确地告诉大家，在 `Vue` 的 `html-parser` 中 `parseEndTag` 函数的使用方式有三种：
 
 * 第一种是处理普通的结束标签，此时**三个参数都传递**
 * 第二种是只传递第一个参数：
@@ -1397,7 +1397,7 @@ if (tagName) {
 }
 ```
 
-用一句话描述上面这代码的作用：寻找当前解析的结束标签所对应的开始标签在 `stack` 栈中的位置。实现方式是如果 `tagName` 存在，则开启一个 `for` 循环从后向前遍历 `stack` 栈，直到找到相应的位置，并且该位置索引会保存到 `pos` 变量中，如果 `tagName` 不存在，则直接将 `pos` 设置为 `0`。
+用一句话描述上面这段代码的作用：寻找当前解析的结束标签所对应的开始标签在 `stack` 栈中的位置。实现方式是如果 `tagName` 存在，则开启一个 `for` 循环从后向前遍历 `stack` 栈，直到找到相应的位置，并且该位置索引会保存到 `pos` 变量中，如果 `tagName` 不存在，则直接将 `pos` 设置为 `0`。
 
 那么 `pos` 变量是用来干什么的呢？实际上 `pos` 变量会被用来判断是否有元素缺少闭合标签。我们继续查看后面的代码就明白了，即：
 
@@ -1606,7 +1606,7 @@ if (options.chars && text) {
 
 根据上例，此时 `text` 的值为字符串 `0<1`，所以这部分字符串将被作为普通字符串处理，如果 `options.chars` 存在，则会调用该钩子函数并将字符串传递过去。
 
-大家也许注意到了，原始的 `html` 被分拆为两部分，其中一部分为 `0<1`，这部分被作为普通文本对待，那么剩余的字符串 `<2` 呢？这部分字符串将会在下一次整体的 `while` 循环处理，此时由于 `html` 字符串的值将被更新为 `<2`，第一个字符为 `<`，所以该字符的索引为 `0`，这时既会匹配 `textEnd` 等于 `0` 的情况，也会匹配 `textEnd` 大于等于 `0` 的情况，但是由于字符串 `<2` 既不能匹配标签，也不会被 `textEnd` 大于等于 `0` 的 `if` 语句块处理，所以代码最终会来到这里：
+大家也许注意到了，原始的 `html` 被拆分为两部分，其中一部分为 `0<1`，这部分被作为普通文本对待，那么剩余的字符串 `<2` 呢？这部分字符串将会在下一次整体的 `while` 循环处理，此时由于 `html` 字符串的值将被更新为 `<2`，第一个字符为 `<`，所以该字符的索引为 `0`，这时既会匹配 `textEnd` 等于 `0` 的情况，也会匹配 `textEnd` 大于等于 `0` 的情况，但是由于字符串 `<2` 既不能匹配标签，也不会被 `textEnd` 大于等于 `0` 的 `if` 语句块处理，所以代码最终会来到这里：
 
 ```js
 if (html === last) {
@@ -1660,7 +1660,7 @@ while (html) {
 }
 ```
 
-在这个 `while` 循环内有一个 `if...else` 语句块，代码被该 `if...else` 语句块分为两部分处理，前面我们所讲的都是 `if` 语句块内的代码，我们知道 `else` 语句块的代码只有当 `lastTag` 存在并且 `lastTag` 为纯文本标签是才会被执行，所以可想而知 `else` 语句块的代码就是用来处理纯文本标签内的内容的，什么是纯文本标签呢？根据 `isPlainTextElement` 函数可知纯文本标签包括 `script` 标签、`style` 标签以及 `textarea` 标签。
+在这个 `while` 循环内有一个 `if...else` 语句块，代码被该 `if...else` 语句块分为两部分处理，前面我们所讲的都是 `if` 语句块内的代码，我们知道 `else` 语句块的代码只有当 `lastTag` 存在并且 `lastTag` 为纯文本标签时才会被执行，所以可想而知 `else` 语句块的代码就是用来处理纯文本标签内的内容的，什么是纯文本标签呢？根据 `isPlainTextElement` 函数可知纯文本标签包括 `script` 标签、`style` 标签以及 `textarea` 标签。
 
 下面我们就看一下它是如何处理纯文本标签的内容的，首先我们要明确的一点是 `else` 分支的代码处理的是纯文本标签的**内容**，并不是纯文本标签。假设我们的 `html` 字符串如下：
 
@@ -1686,7 +1686,7 @@ const stackedTag = lastTag.toLowerCase()
 const reStackedTag = reCache[stackedTag] || (reCache[stackedTag] = new RegExp('([\\s\\S]*?)(</' + stackedTag + '[^>]*>)', 'i'))
 ```
 
-变量 `endTagLength` 的初始值为 `0`，后面我们会看到 `endTagLength` 变量用来保存纯文本标签闭合标签的字符长度。`stackedTag` 常量的值为纯文本标签的小写版，`reStackedTag` 常量稍微复杂一些，它的值是一个正则表达式实例，并且使用 `reCache[stackedTag]` 做了缓存，我们看下一啊 `reStackedTag` 正则的作用是什么，如下：
+变量 `endTagLength` 的初始值为 `0`，后面我们会看到 `endTagLength` 变量用来保存纯文本标签闭合标签的字符长度。`stackedTag` 常量的值为纯文本标签的小写版，`reStackedTag` 常量稍微复杂一些，它的值是一个正则表达式实例，并且使用 `reCache[stackedTag]` 做了缓存，我们看一下 `reStackedTag` 正则的作用是什么，如下：
 
 ```js
 new RegExp('([\\s\\S]*?)(</' + stackedTag + '[^>]*>)', 'i'))
@@ -1743,7 +1743,7 @@ html = rest
 parseEndTag(stackedTag, index - endTagLength, index)
 ```
 
-上面的代码中，首先跟新 `index` 的值，用 `html` 原始字符串的值减去 `rest` 字符串的长度，我们知道 `rest` 常量保存着剩余的字符串，所以二者的差就是被替换掉的那部分字符串的字符数。接着将 `rest` 常量的值赋值给 `html`，所以如果有剩余的字符串的话，它们将在下一次 `while` 循环被处理，最后调用 `parseEndTag` 函数解析纯文本标签的结束标签，这样就大功告成了。
+上面的代码中，首先更新 `index` 的值，用 `html` 原始字符串的值减去 `rest` 字符串的长度，我们知道 `rest` 常量保存着剩余的字符串，所以二者的差就是被替换掉的那部分字符串的字符数。接着将 `rest` 常量的值赋值给 `html`，所以如果有剩余的字符串的话，它们将在下一次 `while` 循环被处理，最后调用 `parseEndTag` 函数解析纯文本标签的结束标签，这样就大功告成了。
 
 可以发现对于纯文本标签的处理宗旨就是将其内容作为纯文本对待。
 
