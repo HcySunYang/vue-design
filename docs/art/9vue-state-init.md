@@ -1490,7 +1490,7 @@ const keys = hasSymbol
   : Object.keys(inject)
 ```
 
-现在我们知道 `keys` 常量中保存中 `inject` 选项对象的每一个键值，但我们注意到这里有一个对 [hasSymbol](../appendix/core-util.html#hassymbol) 的判断，其目的是保证 `Symbol` 类型与 `Reflect.ownKeys` 可用且为宿主环境原生提供，如果 `hasSymbol` 为真，则说明可用，此时会使用 `Reflect.ownKeys` 获取 `inject` 对象中所有可枚举的键名，否则使用 `Object.keys` 作为降级处理。实际上 `Reflect.ownKeys` 配合可枚举过滤等价于 `Object.keys` 与 `Object.getOwnPropertySymbols` 配合可枚举过滤之和，其好处是支持 `Symbol` 类型作为键名，当然了这一切都建立在宿主环境的支持之上，所以 `Vue` 官网中提到了**`inject` 选项对象的属性可以使用 `ES2015 Symbols` 作为 `key`，但是只在原生支持 `Symbol` 和 `Reflect.ownKeys` 的环境下可工作**。
+现在我们知道 `keys` 常量中保存 `inject` 选项对象的每一个键名，但我们注意到这里有一个对 [hasSymbol](../appendix/core-util.html#hassymbol) 的判断，其目的是保证 `Symbol` 类型与 `Reflect.ownKeys` 可用且为宿主环境原生提供，如果 `hasSymbol` 为真，则说明可用，此时会使用 `Reflect.ownKeys` 获取 `inject` 对象中所有可枚举的键名，否则使用 `Object.keys` 作为降级处理。实际上 `Reflect.ownKeys` 配合可枚举过滤等价于 `Object.keys` 与 `Object.getOwnPropertySymbols` 配合可枚举过滤之和，其好处是支持 `Symbol` 类型作为键名，当然了这一切都建立在宿主环境的支持之上，所以 `Vue` 官网中提到了**`inject` 选项对象的属性可以使用 `ES2015 Symbols` 作为 `key`，但是只在原生支持 `Symbol` 和 `Reflect.ownKeys` 的环境下可工作**。
 
 回过头来继续看 `resolveInject` 函数的代码，接下来的代码使用 `for` 循环，用来遍历刚刚获取到的 `keys` 数组：
 
