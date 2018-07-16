@@ -1078,7 +1078,7 @@ preTransforms = []
 delimiters = options.delimiters
 ```
 
-它的值为 `options.delimiters` 属性，它的值就是在创建 `Vue` 实例对象所传递的 `delimiters` 选项，它是一个数组。
+它的值为 `options.delimiters` 属性，它的值就是在创建 `Vue` 实例对象时所传递的 `delimiters` 选项，它是一个数组。
 
 在如上讲解的八个平台化变量的下面，又定义了一些常量和变量，如下：
 
@@ -1092,11 +1092,11 @@ let inPre = false
 let warned = false
 ```
 
-首先定义的是 `stack` 常量，它的初始值是一个空数组。我们在讲解创建 `AST` 思路的时候也使用到了 `stack` 数组，当时讲到了它的作用是用来修正当前正在解析元素的父级的。在 `stack` 常量之后定义了 `preserveWhitespace` 常量，它是一个布尔值并且它的值与编译器选项中的 `options.preserveWhitespace` 选项有关，只要 `options.preserveWhitespace` 的值不为 `false`，那么 `preserveWhitespace` 的值就为真。其中 `options.preserveWhitespace` 选项用来告诉编译器在编译 `html` 字符串时是否放弃标签之间的空格，如果为 `true` 则代表放弃。
+首先定义的是 `stack` 常量，它的初始值是一个空数组。我们在讲解创建 `AST` 思路的时候也使用到了 `stack` 数组，当时讲到了它的作用是用来修正当前正在解析元素的父级。在 `stack` 常量之后定义了 `preserveWhitespace` 常量，它是一个布尔值并且它的值与编译器选项中的 `options.preserveWhitespace` 选项有关，只要 `options.preserveWhitespace` 的值不为 `false`，那么 `preserveWhitespace` 的值就为真。其中 `options.preserveWhitespace` 选项用来告诉编译器在编译 `html` 字符串时是否放弃标签之间的空格，如果为 `true` 则代表放弃。
 
 接着定义了 `root` 变量，我们知道 `parse` 函数的返回值就是 `root` 变量，所以 `root` 变量就是最终的 `AST`。在 `root` 变量之后定义了 `currentParent` 变量，我们在讲解创建 `AST` 思路时也定义了一个 `currentParent`，我们知道元素描述对象之间的父子关系就是靠该变量进行联系的。
 
-接着又定义了三个变量，分别是 `inVPre`、`inPre` 以及 `warned`，并且它们的初始值都为 `false`。其中 `inVPre` 变量用来标识当前解析的标签是否在拥有 `v-pre` 标签之内，`inPre` 变量用来标识当前正在解析的标签是否在 `<pre></pre>` 标签之内。而 `warned` 变量则用于接下来定义的 `warnOnce` 函数：
+接着又定义了三个变量，分别是 `inVPre`、`inPre` 以及 `warned`，并且它们的初始值都为 `false`。其中 `inVPre` 变量用来标识当前解析的标签是否在拥有 `v-pre` 的标签之内，`inPre` 变量用来标识当前正在解析的标签是否在 `<pre></pre>` 标签之内。而 `warned` 变量则用于接下来定义的 `warnOnce` 函数：
 
 ```js
 function warnOnce (msg) {
@@ -1129,7 +1129,7 @@ function closeElement (element) {
 
 每当遇到一个标签的结束标签时，或遇到一元标签时都会调用该方法“闭合”标签，具体功能我们在后面的内容中详细讲解。
 
-经过了一些列准备，我们终于到了最关键的一步，即调用 `parseHTML` 函数解析模板字符串并借助它来构建一棵 `AST`，如下是调用 `parseHTML` 函数时所传递的选项参数：
+经过了一系列的准备，我们终于到了最关键的一步，即调用 `parseHTML` 函数解析模板字符串并借助它来构建一棵 `AST`，如下是调用 `parseHTML` 函数时所传递的选项参数：
 
 ```js
 parseHTML(template, {
@@ -1166,7 +1166,7 @@ parseHTML(template, {
 
 ## 解析一个开始标签需要做的事情
 
-接下来我们就从 `start` 钩子函数开始，研究一下解析一个开始标签都需要做哪些事情，如下是在 `parse` 函数中调用 `parseHTML` 函数时传递的 `start` 钩子函数：
+接下来我们就从 `start` 钩子函数开始，研究一下解析一个开始标签都需要做哪些事情，如下是在 `parse` 函数中，调用 `parseHTML` 函数时传递的 `start` 钩子函数：
 
 ```js
 start (tag, attrs, unary) {
@@ -1174,7 +1174,7 @@ start (tag, attrs, unary) {
 }
 ```
 
-我们知道 `start` 钩子函数是接收五个参数的，但是如上代码中只使用到了 `start` 钩子函数的前三个参数，也就是说只需要这个三个参数就足够完成任务了。这三个参数分别是标签名字 `tag`，该标签的属性数组 `attrs`，以及代表着该标签是否是一元标签的标识 `unary`。
+我们知道 `start` 钩子函数是接收五个参数的，但是如上代码中只使用到了 `start` 钩子函数的前三个参数，也就是说只需要这三个参数就足够完成任务了。这三个参数分别是标签名字 `tag`，该标签的属性数组 `attrs`，以及代表着该标签是否是一元标签的标识 `unary`。
 
 在 `start` 钩子函数的内部首先执行的是如下这句代码：
 
@@ -1202,9 +1202,9 @@ platformGetTagNamespace('svg')  // 'svg'
 
 `platformGetTagNamespace` 函数只会获取 `svg` 和 `math` 这两个标签的命名空间，但这两个标签的所有子标签都会继承它们两个的命名空间。对于其他标签则不存在命名空间。
 
-总之在 `start` 钩子函数内部首先会尝获取一个元素的命名空间，并将获取到的命名空间的名字赋值给 `ns` 常量，这个常量在后面会用到。
+总之在 `start` 钩子函数内部首先会尝试获取一个元素的命名空间，并将获取到的命名空间的名字赋值给 `ns` 常量，这个常量在后面会用到。
 
-再获取命名空间之后，执行的是如下这段 `if` 条件语句块：
+在获取命名空间之后，执行的是如下这段 `if` 条件语句块：
 
 ```js
 if (isIE && ns === 'svg') {
@@ -1301,11 +1301,11 @@ if (ns) {
 }
 ```
 
-这段代码是很关键的一段代码，如上高亮的那句代码所示，这句代码的执行为当前元素创建了描述对象，并且元素描述对象的创建是通过我们前面讲过的 `createASTElement` 完成的，并将当前标签的元素描述对象赋值类 `element` 变量。紧接着检查当前元素是否存在命名空间 `ns`，如果存在则在元素对象上添加 `ns` 属性，其值为名称空间的值。
+这段代码是很关键的一段代码，如上高亮的那句代码所示，这句代码的执行为当前元素创建了描述对象，并且元素描述对象的创建是通过我们前面讲过的 `createASTElement` 完成的，并将当前标签的元素描述对象赋值给 `element` 变量。紧接着检查当前元素是否存在命名空间 `ns`，如果存在则在元素对象上添加 `ns` 属性，其值为命名空间的值。
 
 通过如上代码可知，如果当前解析的开始标签为 `svg` 标签或者 `math` 标签或者它们两个的子节点标签，都将会比其他 `html` 标签的元素描述对象多出一个 `ns` 属性，且该属性标识了该标签的命名空间。
 
-在往下是这样一段代码：
+再往下是这样一段代码：
 
 ```js
 if (isForbiddenTag(element) && !isServerRendering()) {
@@ -1326,7 +1326,7 @@ if (isForbiddenTag(element) && !isServerRendering()) {
 </script>
 ```
 
-把模板放到 `<script>` 元素中，并在 `<script>` 元素上条件 `type="text/x-template"` 属性。可以看到 `Vue` 并非禁止了所有的 `<script>` 元素，这在 `isForbiddenTag` 函数中是有体现的，如下是 `isForbiddenTag` 函数的代码：
+把模板放到 `<script>` 元素中，并在 `<script>` 元素上添加 `type="text/x-template"` 属性。可以看到 `Vue` 并非禁止了所有的 `<script>` 元素，这在 `isForbiddenTag` 函数中是有体现的，如下是 `isForbiddenTag` 函数的代码：
 
 ```js
 function isForbiddenTag (el): boolean {
@@ -1355,11 +1355,11 @@ for (let i = 0; i < preTransforms.length; i++) {
 }
 ```
 
-如上代码中使用 `for` 循环遍历了 `preTransforms` 数组，我们知道 `preTransforms` 是通过 `pluckModuleFunction` 函数从 `options.modules` 选项中筛选出名字为 `preTransformNode` 函数所组成的数组。该数组中每个元素都是一个函数，所以如上代的 `for` 循环内部直接调用了 `preTransforms` 数组中的每一个函数并为这些函数传递了两个参数，分别是当前元素描述对象(`element`)以及编译器选项(`options`)。
+如上代码中使用 `for` 循环遍历了 `preTransforms` 数组，我们知道 `preTransforms` 是通过 `pluckModuleFunction` 函数从 `options.modules` 选项中筛选出名字为 `preTransformNode` 函数所组成的数组。该数组中每个元素都是一个函数，所以如上代码的 `for` 循环内部直接调用了 `preTransforms` 数组中的每一个函数并为这些函数传递了两个参数，分别是当前元素描述对象(`element`)以及编译器选项(`options`)。
 
-这里我们简单的说一下 `preTransforms` 数组中的函数的作用，其实本质上这些函数的作用与我们之前见到过的 `process*` 系列的函数没什么区别，都是用来对当前元素描述对象做进一步处理。不仅仅是 `preTransforms` 数组，对于 `transforms` 数组和 `postTransforms` 数组也是一样的，它们之间的却别就像它们的名字一样，根据不同的调用时机为它们定义了相应的名字。那么为什么把这三个数组中的处理函数与当前文件中 `process*` 系列函数区分开呢？这是出于平台化的考虑，通过前面的分析我们知道 `preTransforms` 数组中的那些 `preTransformNode` 函数来由 `src/platforms/web/compiler/modules` 目录下定义的一些文件定义的，根据目录路径可知这些代码应该是用来处理 `web` 平台相关逻辑的，除了 `web` 平台之外我们也可以看到 `weex` 平台下相应的代码，你在源码中是能够找到这个目录的：`src/platforms/weex/compiler/modules`。
+这里我们简单地说一下 `preTransforms` 数组中的函数的作用，其实本质上这些函数的作用与我们之前见到过的 `process*` 系列的函数没什么区别，都是用来对当前元素描述对象做进一步处理。不仅仅是 `preTransforms` 数组，对于 `transforms` 数组和 `postTransforms` 数组也是一样的，它们之间的区别就像它们的名字一样，根据不同的调用时机为它们定义了相应的名字。那么为什么把这三个数组中的处理函数与当前文件中 `process*` 系列函数区分开呢？这是出于平台化的考虑，通过前面的分析我们知道 `preTransforms` 数组中的那些 `preTransformNode` 函数是 `src/platforms/web/compiler/modules` 目录下定义的一些文件定义的，根据目录路径可知这些代码应该是用来处理 `web` 平台相关逻辑的，除了 `web` 平台之外我们也可以看到 `weex` 平台下相应的代码，你在源码中是能够找到这个目录的：`src/platforms/weex/compiler/modules`。
 
-总之你只需要知道 `preTransforms` 数组中的那些函数与 `process*` 系列函数唯一的区别就是平台化的区分即可了。
+总之你只需要知道 `preTransforms` 数组中的那些函数与 `process*` 系列函数唯一的区别就是平台化的区分即可。
 
 根据我们前面的分析，实际上 `preTransforms` 数组中只有一个函数，这个函数就是由 `src/platforms/web/compiler/modules/model.js` 文件导出的 `preTransformNode` 函数。大家可以打开该文件查看一下 `preTransformNode` 函数，可以发现该函数内部大量使用了 `process*` 系列的函数，并且该函数只用来处理 `input` 标签，正是由于这一点，所以我们决定暂时不对其进行讲解，因为这会让我们脱离主线。在接下来的讲解中我们会逐个击破 `process*` 系列函数的作用，等大家了解了 `process*` 系列函数所做的事情之后再回头来看 `preTransformNode` 函数的代码会更加容易理解。
 
@@ -1412,7 +1412,7 @@ function checkRootConstraints (el) {
 
 该函数的作用是什么呢？它的作用是用来检测模板根元素是否符合要求，我们知道在编写 `Vue` 模板的时候会受到两种约束，首先模板必须有且仅有一个被渲染的根元素，第二不能使用 `slot` 标签和 `template` 标签作为模板的根元素，对于第一点为什么模板必须有且仅有一个被渲染的根元素，我们会在代码生成的部分为大家讲解，对于第二点为什么不能使用 `slot` 和 `template` 标签作为模板根元素，这是因为 `slot` 作为插槽，它的内容是由外界决定的，而插槽的内容很有可能渲染多个节点，`template` 元素的内容虽然不是由外界决定的，但它本身作为抽象组件是不会渲染任何内容到页面的，而其又可能包含多个子节点，所以也不允许使用 `template` 标签作为根节点。总之这些限制都是出于**必须有且仅有一个根元素**考虑的。
 
-可以看到在 `checkRootConstraints` 函数内部首先通过判断 `el.tag === 'slot' || el.tag === 'template'` 来判断根元素是否是 `slot` 标签或 `template` 标签，如果是则打印警告信息。接着又判断当前元素是否是使用了 `v-for` 标签，因为 `v-for` 标签会渲染多个节点所以根元素是不允许使用 `v-for` 标签的。另外大家注意在 `checkRootConstraints` 函数内部打印警告信息时使用的是 `warnOnce` 函数而非 `warn` 函数，也就是说如果第一个 `warnOnce` 函数执行并打印了警告信息那么第二个 `warnOnce` 函数就不会再次打印警告信息，这么做的目的是每次只提示一个编译错误给用户，避免多次打印不同错误给用户造成迷惑，这是出于对开发者解决问题友好的考虑。
+可以看到在 `checkRootConstraints` 函数内部首先通过判断 `el.tag === 'slot' || el.tag === 'template'` 来判断根元素是否是 `slot` 标签或 `template` 标签，如果是则打印警告信息。接着又判断当前元素是否使用了 `v-for` 指令，因为 `v-for` 指令会渲染多个节点所以根元素是不允许使用 `v-for` 指令的。另外大家注意在 `checkRootConstraints` 函数内部打印警告信息时使用的是 `warnOnce` 函数而非 `warn` 函数，也就是说如果第一个 `warnOnce` 函数执行并打印了警告信息那么第二个 `warnOnce` 函数就不会再次打印警告信息，这么做的目的是每次只提示一个编译错误给用户，避免多次打印不同错误给用户造成迷惑，这是出于对开发者解决问题友好的考虑。
 
 在 `checkRootConstraints` 函数的下面是一段 `if...elseif` 语句块，我们首先查看 `if` 语句块：
 
@@ -1505,7 +1505,7 @@ export function addIfCondition (el: ASTElement, condition: ASTIfCondition) {
 }
 ```
 
-在 `addIfCondition` 函数内首先检查根元素描述对象是否有 `el.ifConditions` 属性，如果没有则创建该属性同时初始化为空数组，接着将 `ASTIfCondition` 类型的对象条件到该数组中，实际上该函数是一个通用的函数，不仅仅用在根元素中，它用在任何由 `v-if`、`v-else-if` 以及 `v-else` 组成的条件渲染的模板中。
+在 `addIfCondition` 函数内首先检查根元素描述对象是否有 `el.ifConditions` 属性，如果没有则创建该属性同时初始化为空数组，接着将 `ASTIfCondition` 类型的对象推进到该数组中，实际上该函数是一个通用的函数，不仅仅用在根元素中，它用在任何由 `v-if`、`v-else-if` 以及 `v-else` 组成的条件渲染的模板中。
 
 通过如上分析我们可以发现，具有 `v-else-if` 或 `v-else` 属性的元素的描述对象会被添加到具有 `v-if` 属性的元素描述对象的 `.ifConnditions` 数组中。
 
