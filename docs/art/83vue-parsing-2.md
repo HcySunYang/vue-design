@@ -942,3 +942,229 @@ if (bindRE.test(name)) { // v-bind
 
 ### 解析其他指令
 
+讲解完了对于 `v-on` 指令的解析，接下来我们进入如下这段代码：
+
+```js {6-16}
+if (bindRE.test(name)) { // v-bind
+  // 省略...
+} else if (onRE.test(name)) { // v-on
+  // 省略...
+} else { // normal directives
+  name = name.replace(dirRE, '')
+  // parse arg
+  const argMatch = name.match(argRE)
+  const arg = argMatch && argMatch[1]
+  if (arg) {
+    name = name.slice(0, -(arg.length + 1))
+  }
+  addDirective(el, name, rawName, value, arg, modifiers)
+  if (process.env.NODE_ENV !== 'production' && name === 'model') {
+    checkForAliasModel(el, value)
+  }
+}
+```
+
+如上高亮代码所示，如果一个指令既不是 `v-bind` 也不是 `v-on`，则如上 `else` 语句块的代码将被执行。这段代码的作用是用来处理除 `v-bind` 和 `v-on` 指令之外的其他指令，但这些指令中不包含 `v-once` 指令，因为 `v-once` 指令已经在 `processOnce` 函数中被处理了，同样的 `v-if/v-else-if/v-else` 等指令也不会被如上这段代码处理，下面是一个表格，表格中列出了所有 `Vue` 内置提供的指令与已经处理过的指令和剩余为处理指令的对照表格：
+
+| Vue 内置提供的所有指令  | 是否已经被解析 | 解析函数 |
+| ------------- | ------------- | ------------- |
+| `v-if`  | 是  | `processIf`  |
+| `v-else-if`  | 是  | `processIf`  |
+| `v-else`  | 是  | `processIf`  |
+| `v-for`  | 是  | `processFor`  |
+| `v-on`  | 是  | `processAttrs`  |
+| `v-bind`  | 是  | `processAttrs`  |
+| `v-pre`  | 是  | `processPre`  |
+| `v-once`  | 是  | `processOnce`  |
+| `v-text`  | 否  | 无  |
+| `v-html`  | 否  | 无  |
+| `v-show`  | 否  | 无  |
+| `v-cloak`  | 否  | 无  |
+| `v-model`  | 否  | 无  |
+
+通过如上表格可以看到到目前为止还有五个指令没有得到处理，分别是 `v-text`、`v-html`、`v-show`、`v-cloak` 以及 `v-model`，除了这五个 `Vue` 内置提供的指令之外，开发者还可以自定义指令，所以上面代码中 `else` 语句块内的代码就是用来处理剩余这五个内置指令和自定义指令的。
+
+我们回到 `else` 语句块内的代码，如下：
+
+```js {6-16}
+if (bindRE.test(name)) { // v-bind
+  // 省略...
+} else if (onRE.test(name)) { // v-on
+  // 省略...
+} else { // normal directives
+  name = name.replace(dirRE, '')
+  // parse arg
+  const argMatch = name.match(argRE)
+  const arg = argMatch && argMatch[1]
+  if (arg) {
+    name = name.slice(0, -(arg.length + 1))
+  }
+  addDirective(el, name, rawName, value, arg, modifiers)
+  if (process.env.NODE_ENV !== 'production' && name === 'model') {
+    checkForAliasModel(el, value)
+  }
+}
+```
+
+在 `else` 语句块内，首先使用字符串的 `replace` 方法配合 `dirRE` 正则去掉属性名称中的 `'v-'` 或 `':'` 或 `'@'` 等字符，并重新赋值 `name` 变量，所以此时 `name` 变量应该只包含属性名字，假如我们在一个标签中使用 `v-show` 指令，则此时 `name` 变量的值为字符串 `'show'`。但是对于自定义指令，开发者很可能为该指令提供参数，假设我们有一个叫做 `v-custom` 的指令，并且我们在使用该指令时为其指定了参数：`v-custom:arg`，这时重新赋值后的 `name` 变量应该是字符串 `'custom:arg'`。可能大家会问：如果指令有修饰符那是不是 `name` 变量保存的字符串中也包含修饰符？不会的，大家别忘了在 `processAttrs` 函数中每解析一个指令时都优先使用 `parseModifiers` 函数将修饰符解析完毕了，并且修饰符相关的字符串已经被移除，所以如上代码中的 `name` 变量中将不会包含修饰符字符串。
+
+重新赋值 `name` 变量之后，会执行如下这两句代码：
+
+```js
+const argMatch = name.match(argRE)
+const arg = argMatch && argMatch[1]
+```
+
+第一句代码使用 `argRE` 正则匹配变量 `name`，并将匹配结果保存在 `argMatch` 常量中，由于使用的是 `match` 方法，所以如果匹配成功则会返回一个结果数组，匹配失败则会得到 `null`。`argRE` 正则我们在上一章讲解过，它用来匹配指令字符串中的参数部分，并且拥有一个捕获组用来捕获参数字符串，假设现在 `name` 变量的值为 `custom:arg`，是最终 `argMatch` 常量将是一个数组：
+
+```js
+const argMatch = [':arg', 'arg']
+```
+
+可以看到 `argMatch` 数组中索引为 `1` 的元素保存着参数字符串。有了 `argMatch` 数组后将会执行第二句代码，第二句代码首先检测了 `argMatch` 是否存在，如果存在则取 `argMatch` 数组中索引为 `1` 的元素作为常量 `arg` 的值，所以常量 `arg` 所保存的就是参数字符串。
+
+再我往下是一个 `if` 条件语句，如下：
+
+```js
+if (arg) {
+  name = name.slice(0, -(arg.length + 1))
+}
+```
+
+这个 `if` 语句检测了参数字符串 `arg` 是否存在，如果存在说明有参数传递给该指令，此时会执行 `if` 语句块内的代码。可以发现 `if` 语句块内的这句代码的作用就是用来将参数字符串从 `name` 字符串中移除掉的，由于参数字符串 `arg` 不包含冒号(`:`)字符，所以需要使用 `-(arg.length + 1)` 才能正确截取。举个例子，假设此时 `name` 字符串为 `'custom:arg'`，再经过如上代码处理之后，最终 `name` 字符串将变为 `'custom'`，可以看到此时的 `name` 变量已经变成了真正的指令名字了。
+
+再往下，将执行如下这句代码：
+
+```js
+addDirective(el, name, rawName, value, arg, modifiers)
+```
+
+这句代码调用了 `addDirective` 函数，并传递给该函数六个参数，为了让大家有直观的感受，我们还是举个例子，假设我们的指令为：`v-custom:arg.modif="myMethod"`，则最终调用 `addDirective` 函数时所传递的参数如下：
+
+```js
+addDirective(el, 'custom', 'v-custom:arg.modif', 'myMethod', 'arg', { modif: true })
+```
+
+实际上 `addDirective` 函数与 `addHandler` 函数类似，只不过 `addDirective` 函数的作用是用来在元素描述对象上添加 `el.directives` 属性的，如下是 `addDirective` 函数的源码，它来自 `src/compiler/helpers.js` 文件：
+
+```js
+export function addDirective (
+  el: ASTElement,
+  name: string,
+  rawName: string,
+  value: string,
+  arg: ?string,
+  modifiers: ?ASTModifiers
+) {
+  (el.directives || (el.directives = [])).push({ name, rawName, value, arg, modifiers })
+  el.plain = false
+}
+```
+
+可以看到 `addDirective` 函数接收六个参数，在 `addDirective` 函数体内，首先判断了元素描述对象的 `el.directives` 是否存在，如果不存在则先将其初始化一个空数组，然后在使用 `push` 方法添加一个指令信息对象到 `el.directives` 数组中，如果 `el.directives` 属性已经存在，则直接使用 `push` 方法将指令信息对象添加到 `el.directives` 数组中。我们一直说的**指令信息对象**实际上指的就是如上代码中传递给 `push` 方法的参数：
+
+```js
+{ name, rawName, value, arg, modifiers }
+```
+
+另外我们注意到在 `addDirective` 函数的最后，与 `addHandler` 函数类似，也有一句将元素描述对象的 `el.plain` 属性设置为 `false` 的代码。
+
+我们回到 `processAttrs` 函数中，继续看代码，如下高亮的代码所示：
+
+```js {14-16}
+if (bindRE.test(name)) { // v-bind
+  // 省略...
+} else if (onRE.test(name)) { // v-on
+  // 省略...
+} else { // normal directives
+  name = name.replace(dirRE, '')
+  // parse arg
+  const argMatch = name.match(argRE)
+  const arg = argMatch && argMatch[1]
+  if (arg) {
+    name = name.slice(0, -(arg.length + 1))
+  }
+  addDirective(el, name, rawName, value, arg, modifiers)
+  if (process.env.NODE_ENV !== 'production' && name === 'model') {
+    checkForAliasModel(el, value)
+  }
+}
+```
+
+这段高亮的代码是 `else` 语句块的最后一段代码，它是一个 `if` 条件语句块，在非生产环境下，如果指令的名字为 `model`，则会调用 `checkForAliasModel` 函数，并将元素描述对象和 `v-model` 属性值作为参数传递，这段代码的作用是什么呢？我们找到 `checkForAliasModel` 函数，如下：
+
+```js
+function checkForAliasModel (el, value) {
+  let _el = el
+  while (_el) {
+    if (_el.for && _el.alias === value) {
+      warn(
+        `<${el.tag} v-model="${value}">: ` +
+        `You are binding v-model directly to a v-for iteration alias. ` +
+        `This will not be able to modify the v-for source array because ` +
+        `writing to the alias is like modifying a function local variable. ` +
+        `Consider using an array of objects and use v-model on an object property instead.`
+      )
+    }
+    _el = _el.parent
+  }
+}
+```
+
+`checkForAliasModel` 函数的作用就是以使用了 `v-model` 指令的标签开始，逐层向上遍历父级标签的元素描述对象，知道根元素为止。并且在遍历的过程中一旦发现这些标签的元素描述对象中存在满足条件：`_el.for && _el.alias === value` 的情况，则会打印警告信息。我们先来看如下条件：
+
+```js
+if (_el.for && _el.alias === value)
+```
+
+如果这个条件成立，则说明使用了 `v-model` 指令的标签或其父代标签使用了 `v-for` 指令，如下：
+
+```html
+<div v-for="item of list">
+  <input v-model="item" />
+</div>
+```
+
+假设如上代码中的 `list` 数组如下：
+
+```js
+[1, 2, 3]
+```
+
+此时将会渲染三个输入框，但是当我们修改输入框的值时，这个变更是不会提现到 `list` 数组的，换句话说如上代码中的 `v-model` 指令无效，为什么无效呢？这与 `v-for` 指令的实现有关，如上代码中的 `v-model` 指令所执行的修改操作等价于修改了函数的局部变量，这当然不会影响到真正的数据。为了解决这个问题，`Vue` 也给了我们一个方案，那就是使用对象数组替代基本类型值的数组，并在 `v-model` 指令中绑定对象的属性，我们修改一下上例并使其生效：
+
+```html
+<div v-for="obj of list">
+  <input v-model="obj.item" />
+</div>
+```
+
+此时在定义 `list` 数组时，应该将其定义为：
+
+```js
+[
+  { item: 1 },
+  { item: 2 },
+  { item: 3 },
+]
+```
+
+所以实际上 `checkForAliasModel` 函数的作用就是给开发者合适的提醒。
+
+以上就是对自定义指令和剩余的五个未被解析的内置指令的处理，可以看到每当遇到一个这样的指令，都会在元素描述对象的 `el.directives` 数组中添加一个指令信息对象，如下：
+
+```js
+el.directives = [
+  {
+    name, // 指令名字
+    rawName, // 指令原始名字
+    value, // 指令的属性值
+    arg, // 指令的参数
+    modifiers // 指令的修饰符
+  }
+]
+```
+
+注意，如上注释中我们把指令信息对象中的 `value` 属性说成“指令的属性值”，我已经不止一次的强调过，在解析编译阶段一切都是字符串，并不是 `Vue` 中数据状态的值，大家千万不要搞混。
+
+### 处理非指令属性
