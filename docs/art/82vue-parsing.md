@@ -2120,7 +2120,7 @@ if (inVPre) {
 }
 ```
 
-如果一个标签使用了 `v-pre` 指令，那么该标签及其子标签的解析都会有 `if` 语句块内的 `processRawAttrs` 函数来完成。反之将会执行 `eelse...if` 条件语句的判断，可以看到其判断条件为 `!element.processed`，这里要补充一下元素描述对象的 `element.processed` 属性是一个布尔值，它标识着当前元素是否已经被解析过了，或许大家会对 `element.processed` 属性有疑问，实际上 `element.processed` 属性是在元素描述对象应用 `preTransforms` 数组中的处理函数时被添加的，我们可以打开 `src/platforms/web/compiler/modules/model.js` 文件找到 `preTransformNode` 函数，该函数中有这样一段代码，如下：
+如果一个标签使用了 `v-pre` 指令，那么该标签及其子标签的解析都会由 `if` 语句块内的 `processRawAttrs` 函数来完成。反之将会执行 `else...if` 条件语句的判断，可以看到其判断条件为 `!element.processed`，这里要补充一下元素描述对象的 `element.processed` 属性是一个布尔值，它标识着当前元素是否已经被解析过了，或许大家会对 `element.processed` 属性有疑问，实际上 `element.processed` 属性是在元素描述对象应用 `preTransforms` 数组中的处理函数时被添加的，我们可以打开 `src/platforms/web/compiler/modules/model.js` 文件找到 `preTransformNode` 函数，该函数中有这样一段代码，如下：
 
 ```js {4}
 processFor(branch0)
@@ -2247,7 +2247,7 @@ export function parseFor (exp: string): ?ForParseResult {
 }
 ```
 
-定义了 `res` 常量，它的初始值为一个空对象，可以看到最后 `parseFor` 函数会将 `res` 对象作为返回值返回。接着在 `res` 对象上添加 `res.for` 属性，它的值为 `inMatch` 数组的第三个元素，假如 `exp` 字符串的值为 `'obj in list'`，则 `res.for` 属性的值将是字符串 `'list'`，所以大家应该能够猜测到了 `res.for` 属性所存储的值应该是被遍历的目标变量的名字。
+定义了 `res` 常量，它的初始值为一个空对象，可以看到最后 `parseFor` 函数会将 `res` 对象作为返回值返回。接着在 `res` 对象上添加 `res.for` 属性，它的值为 `inMatch` 数组的第三个元素，假如 `exp` 字符串的值为 `'obj in list'`，则 `res.for` 属性的值将是字符串 `'list'`，所以大家应该能够猜测到 `res.for` 属性所存储的值应该是被遍历的目标变量的名字。
 
 再往下将会执行如下高亮的这两句代码：
 
@@ -2262,13 +2262,13 @@ export function parseFor (exp: string): ?ForParseResult {
 }
 ```
 
-定义了 `alias` 常量，它的值比较复杂，我们一点点来看，假设字符串 `exp` 的值为 `'obj in list'`，则 `inMatch[1]` 的值应该是字符串 `'obj'`，如果 `exp` 字符串的值是 `'(obj, inde) in list'`，那么 `inMatch[1]` 的值应该是字符串 `'(obj, index)'`，当然啦如果你在编写 `v-for` 指令时存在多余的空格，比如：
+定义了 `alias` 常量，它的值比较复杂，我们一点点来看，假设字符串 `exp` 的值为 `'obj in list'`，则 `inMatch[1]` 的值应该是字符串 `'obj'`，如果 `exp` 字符串的值是 `'(obj, index) in list'`，那么 `inMatch[1]` 的值应该是字符串 `'(obj, index)'`，当然啦如果你在编写 `v-for` 指令时存在多余的空格，比如：
 
 ```html
 <div v-for="  obj in list"></div>
 ```
 
-则 `exp` 字符串也会有多余的空格：`'  obj in list'`，这是就会导致 `inMatch[1]` 的值中也会包含多余的空格：`'  obj'`。理想的做法是此时我们将多余的空格去掉，然后再做下一步处理，这就是为什么 `parseFor` 函数中要对 `inMatch[1]` 字符串使用 `trim()` 函数的原因。去掉空格之后，可以看到紧接着使用该字符串的 `replace` 方法匹配正则 `stripParensRE`，并将匹配的内容替换为空字符串，最终的结果是将 `inMatch[1]` 中的左右圆括号移除，本章的开头讲解了正则 `stripParensRE` 的作用，它用来匹配字符串中的左右圆括号。
+则 `exp` 字符串也会有多余的空格：`'  obj in list'`，这时就会导致 `inMatch[1]` 的值中也会包含多余的空格：`'  obj'`。理想的做法是此时我们将多余的空格去掉，然后再做下一步处理，这就是为什么 `parseFor` 函数中要对 `inMatch[1]` 字符串使用 `trim()` 函数的原因。去掉空格之后，可以看到紧接着使用该字符串的 `replace` 方法匹配正则 `stripParensRE`，并将匹配的内容替换为空字符串，最终的结果是将 `inMatch[1]` 中的左右圆括号移除，本章的开头讲解了正则 `stripParensRE` 的作用，它用来匹配字符串中的左右圆括号。
 
 如下是 `v-for` 指令的值与 `alias` 常量值的对应关系：
 
@@ -2282,7 +2282,7 @@ export function parseFor (exp: string): ?ForParseResult {
 const iteratorMatch = alias.match(forIteratorRE)
 ```
 
-这里定义了 `iteratorMatch` 常量，它的值使用使用 `alias` 字符串的 `match` 方法匹配正则 `forIteratorRE` 得到的，其中正则 `forIteratorRE` 我们也以及在前面的章节中讲过了，这里总结一下对于不同的 `alias` 字符串其对应的匹配结果：
+这里定义了 `iteratorMatch` 常量，它的值是使用 `alias` 字符串的 `match` 方法匹配正则 `forIteratorRE` 得到的，其中正则 `forIteratorRE` 我们也已经在前面的章节中讲过了，这里总结一下对于不同的 `alias` 字符串其对应的匹配结果：
 
 * 1、如果 `alias` 字符串的值为 `'obj'`，则匹配结果 `iteratorMatch` 常量的值为 `null`
 * 2、如果 `alias` 字符串的值为 `'obj, index'`，则匹配结果 `iteratorMatch` 常量的值是一个包含两个元素的数组：`[', index', 'index']`
@@ -2307,7 +2307,7 @@ export function parseFor (exp: string): ?ForParseResult {
 }
 ```
 
-如上高亮的代码所示，我们知道如果 `alias` 常量的值为字符串 `'obj'` 时，则匹配结果 `iteratorMatch` 常量的会是 `null`，所以此时 `if` 条件语句判断失败，`else` 语句块的代码将被执行，即在 `res` 对象上添加 `res.alias` 属性，其值就是 `alias` 常量的值，也就是字符串 `'obj'`。
+如上高亮的代码所示，我们知道如果 `alias` 常量的值为字符串 `'obj'` 时，则匹配结果 `iteratorMatch` 常量的值会是 `null`，所以此时 `if` 条件语句判断失败，`else` 语句块的代码将被执行，即在 `res` 对象上添加 `res.alias` 属性，其值就是 `alias` 常量的值，也就是字符串 `'obj'`。
 
 如果 `alias` 常量的值为字符串 `'obj, index'`，则匹配结果 `iteratorMatch` 常量将会是一个拥有两个元素的数组，此时 `if` 语句块内的代码将被执行，在 `if` 语句块内首先执行的是如下这句代码：
 
@@ -2323,7 +2323,7 @@ res.alias = alias.replace(forIteratorRE, '')
 res.iterator1 = iteratorMatch[1].trim()
 ```
 
-在 `res` 对象上定义 `res.iterator1` 属性，它的值是匹配结果 `iteratorMatch` 数组第二个元素去前后空白之后的值。假设 `alias` 字符串为 `'obj, index'`，则 `res.iterator1` 的值应该为字符串 `'index'`。
+在 `res` 对象上定义 `res.iterator1` 属性，它的值是匹配结果 `iteratorMatch` 数组第二个元素去除前后空白之后的值。假设 `alias` 字符串为 `'obj, index'`，则 `res.iterator1` 的值应该为字符串 `'index'`。
 
 再往下会进入另外一个 `if` 条件语句：
 
@@ -2387,7 +2387,7 @@ export function processFor (el: ASTElement) {
 
 可以看到如果 `parseFor` 函数对 `v-for` 指令的值解析成功，则会将解析结果保存在 `res` 常量中，并使用 `extend` 函数将 `res` 常量中的属性混入当前元素的描述对象中。
 
-以上就是解析器对于使用 `v-for` 指令标签的解析过程，以及对该元素描述对象的补充。
+以上就是解析器对于使用了 `v-for` 指令的标签的解析过程，以及对该元素描述对象的补充。
 
 ## 处理使用条件指令和v-once指令的元素
 
