@@ -1168,3 +1168,129 @@ el.directives = [
 注意，如上注释中我们把指令信息对象中的 `value` 属性说成“指令的属性值”，我已经不止一次的强调过，在解析编译阶段一切都是字符串，并不是 `Vue` 中数据状态的值，大家千万不要搞混。
 
 ### 处理非指令属性
+
+上一节中我们讲解了 `processAttrs` 函数对于指令的处理，接下来我们将讲解 `processAttrs` 函数对于那些非指令的属性是如何处理的，如下代码所示：
+
+```js {9-11}
+function processAttrs (el) {
+  const list = el.attrsList
+  let i, l, name, rawName, value, modifiers, isProp
+  for (i = 0, l = list.length; i < l; i++) {
+    name = rawName = list[i].name
+    value = list[i].value
+    if (dirRE.test(name)) {
+      // 省略...
+    } else {
+      // 省略...
+    }
+  }
+}
+```
+
+如上高亮的代码所示，这个 `else` 语句块内代码的作用就是用来处理非指令属性的，如下列出的非指令属性是我们在之前的讲解中已经讲过的指令：
+
+* `key`
+* `ref`
+* `slot`、`slot-scope`、`scope`、`name`
+* `is`、`inline-template`
+
+这些非指令属性都已经被相应的处理函数解析过了，所以 `processAttrs` 函数是不负责处理如上这些非指令属性的。换句话说除了以上属性基本指令的非指令属性基本都由 `processAttrs` 函数来处理，比如 `id`、`width` 等，如下：
+
+```html
+<div id="box" width="100px"></div>
+```
+
+如上 `div` 标签中的 `id` 属性和 `width` 属性都会被 `processAttrs` 函数处理，可能大家会问 `class` 属性是不是也被 `processAttrs` 函数处理呢？不是的，大家别忘了在 `processElement` 函数中有这样一段代码：
+
+```js
+for (let i = 0; i < transforms.length; i++) {
+  element = transforms[i](element, options) || element
+}
+```
+
+这段代码在 `processAttrs` 函数之前执行，并且这段代码的作用是调用“中置处理”钩子，而 `class` 属性和 `style` 属性都会在中置处理钩子中被处理，而并非 `processAttrs` 函数。
+
+接下来我们就查看一下这段用来处理非指令属性的代码，如下 `else` 语句块内的代码所示：
+
+```js
+if (dirRE.test(name)) {
+  // 省略...
+} else {
+  // literal attribute
+  if (process.env.NODE_ENV !== 'production') {
+    const res = parseText(value, delimiters)
+    if (res) {
+      warn(
+        `${name}="${value}": ` +
+        'Interpolation inside attributes has been removed. ' +
+        'Use v-bind or the colon shorthand instead. For example, ' +
+        'instead of <div id="{{ val }}">, use <div :id="val">.'
+      )
+    }
+  }
+  addAttr(el, name, JSON.stringify(value))
+  // #6887 firefox doesn't update muted state if set via attribute
+  // even immediately after element creation
+  if (!el.component &&
+      name === 'muted' &&
+      platformMustUseProp(el.tag, el.attrsMap.type, name)) {
+    addProp(el, name, 'true')
+  }
+}
+```
+
+如上 `else` 语句块内的代码中，首先执行的是如下这段代码，它是一个 `if` 条件语句块：
+
+```js
+if (process.env.NODE_ENV !== 'production') {
+  const res = parseText(value, delimiters)
+  if (res) {
+    warn(
+      `${name}="${value}": ` +
+      'Interpolation inside attributes has been removed. ' +
+      'Use v-bind or the colon shorthand instead. For example, ' +
+      'instead of <div id="{{ val }}">, use <div :id="val">.'
+    )
+  }
+}
+```
+
+可以看到，在非生产环境下才会执行该 `if` 语句块内的代码，在改 `if` 语句块内首先调用了 `parseText` 函数，这个函数来自于 `src/compiler/parser/text-parser.js` 文件，`parseText` 函数的作用是用来解析字面量表达式的，什么是字面量表达式呢？如下模板代码所示：
+
+```html
+<div id="{{ isTrue ? 'a' : 'b' }}"></div>
+```
+
+其中字符串 `"{{ isTrue ? 'a' : 'b' }}"` 就称为字面量表达式，此时就会使用 `parseText` 函数来解析这段字符串。至于 `parseText` 函数是如何对这段字符串进行解析的，我们会在后面讲解处理文本节点时再来详细说明。这里大家只需要执行，如果使用 `parseText` 函数能够成功解析某个非指令属性的属性值字符串，则说明该非指令属性的属性值使用了字面量表达式，就如同上面的模板中的 `id` 属性一样。此时将会打印警告信息，提示开发者使用绑定属性作为替代，如下：
+
+```html
+<div :id="isTrue ? 'a' : 'b'"></div>
+```
+
+这就是上面那段 `if` 语句块代码的作用，我们往下继续看代码，接下来将执行如下这句代码：
+
+```js
+addAttr(el, name, JSON.stringify(value))
+```
+
+可以看到，对于任何非指令属性，都会使用 `addAttr` 函数将该属性与该属性对应的字符串值添加到元素描述对象的 `el.attrs` 数组中。这里大家需要注意的是，如上这句代码中使用 `JSON.stringify` 函数对属性值做了处理，这么做的目的相信大家都知道了，就是让该属性的值当做一个纯字符串对待。
+
+理论上代码运行到这里就已经足够了，该做的事情都已经完成了，但是我们发现在 `else` 语句块的最后，还有如下这样一段代码：
+
+```js
+// #6887 firefox doesn't update muted state if set via attribute
+// even immediately after element creation
+if (!el.component &&
+    name === 'muted' &&
+    platformMustUseProp(el.tag, el.attrsMap.type, name)) {
+  addProp(el, name, 'true')
+}
+```
+
+实际上元素描述对象的 `el.attrs` 数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中使用 `setAttribute` 方法将属性添加到真实DOM元素上，而在火狐浏览器中存在无法通过DOM元素的 `setAttribute` 方法为 `video` 标签添加 `muted` 属性的问题，所以如上代码就是为了解决该问题的，其方案是如果一个属性的名字是 `muted` 并且该标签满足 [platformMustUseProp](../appendix/web-util.html#mustuseprop) 函数(`video` 标签满足)，则会额外调用 `addProp` 函数将属性添加到元素描述对象的 `el.props` 数组中。为什么这么做呢？这是因为元素描述对象的 `el.props` 数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中直接使用真实DOM对象添加，也就是说对于 `<video>` 标签的 `muted` 属性的添加方式为：`videoEl.muted = true`。另外如上代码的注释中已经提供了相应的 `issue` 号：`#6887`，感兴趣的同学可以去看一下。
+
+## 文本节点的元素描述对象
+## parseText 函数解析字面量表达式
+## 对结束标签的处理
+## 注释节点的元素描述对象
+## 对元素描述对象的总结
