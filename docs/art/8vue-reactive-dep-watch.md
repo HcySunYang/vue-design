@@ -2702,7 +2702,7 @@ evaluate () {
 }
 ```
 
-我们在计算属性的初始化一节中讲过了，在创建计算属性观察者对象时传递给 `Watcher` 类的第二个参数为 `setter` 常量，它的值就是开发者在定义计算属性时的函数(或 `userDef.get`)，如下高亮代码所示：
+我们在计算属性的初始化一节中讲过了，在创建计算属性观察者对象时传递给 `Watcher` 类的第二个参数为 `getter` 常量，它的值就是开发者在定义计算属性时的函数(或 `userDef.get`)，如下高亮代码所示：
 
 ```js {5,12}
 function initComputed (vm: Component, computed: Object) {
@@ -2727,7 +2727,7 @@ function initComputed (vm: Component, computed: Object) {
 }
 ```
 
-所以在 `evaluate` 方法中求值的那句代码最终所执行的求值函数就是用户定义的计算属性的 `set` 函数。举个例子，假设我们这样定义计算属性：
+所以在 `evaluate` 方法中求值的那句代码最终所执行的求值函数就是用户定义的计算属性的 `get` 函数。举个例子，假设我们这样定义计算属性：
 
 ```js
 computed: {
