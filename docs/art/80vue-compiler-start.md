@@ -194,7 +194,7 @@ export function createCompileToFunctionFn (compile: Function): Function {
 
 ## compileToFunctions 的作用
 
-经过前面的讲解，我们已经知道了 `entry-runtime-with-compiler.js` 文件中调用的 `compileToFunctions` 的真正来源，可以说为了创建 `compileToFunctions` 函数经历了一波三折，现在大家也许会有疑问，比如为什么要弄的这么复杂？我们暂时把这个疑问放在心里，随着我们的深入，大家将会慢慢理解其内涵。
+经过前面的讲解，我们已经知道了 `entry-runtime-with-compiler.js` 文件中调用的 `compileToFunctions` 的真正来源，可以说为了创建 `compileToFunctions` 函数经历了一波三折，现在大家也许会有疑问，比如为什么要弄的这么复杂？我们在本章的最后为大家解答这个问题。
 
 这个小节我们就以 `entry-runtime-with-compiler.js` 文件中调用的 `compileToFunctions` 开始，去探索其背后所做的事情。打开 `entry-runtime-with-compiler.js` 文件找到这段代码：
 
@@ -811,6 +811,205 @@ return compiled
 * 3、调用 `baseCompile` 编译模板
 
 补充：上面的分析中，我们并没有深入讲解 `detectErrors` 函数是如何根据抽象语法树(AST)检查模板中是否存在表达式错误的，这是因为现在对于大家来讲还不清楚抽象语法树的模样，且这并不会对大家的理解造成障碍，所以我们将这部分的讲解后移，等我们对 AST 心知肚明之后再来看这部分内容也不迟。
+
+## 为什么编译器的创建如此繁琐
+
+如果你看到了这里，也许心里还有一个疑问，好好的代码为什么感觉如此繁琐。实际上你之所以会有繁琐的感觉，是因为你还没有理解源码为什么这么做的原因，当你明白了源码的动机之后就不会有这种感觉了。而本节的内容就是让你进一步理解为什么这样创建编译器。
+
+首先我们来看一下 `Vue` 源码中编译器的目录结构：
+
+```
+├── src
+│   ├── compiler -------------------------- 编译器代码的存放目录
+│   ├── ├── codegen ----------------------- 根据AST生成目标平台代码
+│   ├── ├── parser ------------------------ 解析原始代码并生成AST
+```
+
+如上目录结构中有两个比较重要的目录，一个是 `codegen` 目录，另一个是 `parser` 目录。其中 `parser` 目录内主要会导出一个叫做 `parse` 的函数，该函数是一个解析器，它的作用是将模板字符串解析为对应的抽象语法树(`AST`)，通常我们会像如下代码这样使用 `parse` 函数：
+
+```js
+// 从 parser 目录下的 index.js 文件中导入 parse 函数
+import { parse } from './parser/index'
+
+// 使用 parse 函数将模板解析为 AST
+const ast = parse(template.trim(), options)
+```
+
+有了 `AST` 之后我们就可以根据这个 `AST` 生成不同平台的目标代码，而 `codegen` 目录内的代码就是用来做这件事情的，`codegen` 目录内的代码会导出一个叫做 `generate` 的函数，这个函数的作用就是根据给定的AST生成最终的目标平台的代码，通常我们会像如下代码这样使用 `generate` 函数：
+
+```js
+// 从 codegen 目录下的 index.js 文件中导入 generate 函数
+import { generate } from './codegen/index'
+
+// 根据给定的AST生成目标平台的代码
+const code = generate(ast, options)
+```
+
+有了这些我们就可以封装一个编译器函数供外部使用：
+
+```js
+export function myCompiler (template: string, options: CompilerOptions) {
+  const ast = parse(template.trim(), options)
+  const code = generate(ast, options)
+
+  return code
+}
+```
+
+当然了，在编译的过程中可能会收集一些错误，我们还需要对错误进行处理，所以我们可能会在上面的代码中添加一些用来处理编译错误的代码：
+
+```js {5}
+export function myCompiler (template: string, options: CompilerOptions) {
+  const ast = parse(template.trim(), options)
+  const code = generate(ast, options)
+
+  // 一些处理编译错误的代码
+
+  return code
+}
+```
+
+这样我们封装的 `myCompiler` 函数就可以导出供给其他部分的代码使用了，假设我们的 `myCompiler` 函数用来将模板编译为可以在 `web` 平台下运行的代码，但是突然有一天你想要根据同样的AST生成其他平台的代码，这时你可以选择再创建一个函数，假设它叫 `otherCompiler`：
+
+```js {3}
+export function otherCompiler (template: string, options: CompilerOptions) {
+  const ast = parse(template.trim(), options)
+  const code = otherGenerate(ast, options)
+
+  // 一些处理编译错误的代码
+
+  return code
+}
+```
+
+如上高亮的代码所示，既然要生成其他平台的代码，那么代码生成部分就需要重写，比如上面的代码中我们使用 `otherGenerate` 函数代替了原来的 `generate` 函数。但是AST还是原来的AST，并且用来处理编译错误的代码可能也不会变动，这时 `myCompiler` 函数和 `otherCompiler` 函数中就存在了冗余的代码，为了解决这个问题，我们可以封装一个叫做 `createCompilerCreator` 函数，把通用的代码封装起来，如下：
+
+```js
+function createCompilerCreator (baseCompile) {
+  return customCompiler function (template: string, options: CompilerOptions) {
+
+    // 一些处理编译错误的代码
+
+    return baseCompile(template, options)
+  }
+}
+```
+
+这样我们就可以使用 `createCompilerCreator` 函数创建出针对于不同平台的编译器了，如下代码所示：
+
+```js
+// 创建 web 平台的编译器
+const webCompiler = createCompilerCreator(function baseCompile (template, options) {
+  const ast = parse(template.trim(), options)
+  const code = generate(ast, options)
+  return code
+})
+
+// 创建其他平台的编译器
+const otherCompiler = createCompilerCreator(function baseCompile (template, options) {
+  const ast = parse(template.trim(), options)
+  const code = otherGenerate(ast, options)
+  return code
+})
+```
+
+看到这里相信聪明的你已经明白了为什么会有 `src/compiler/create-compiler.js` 文件的存在，已经它的作用，实际上该文件中的 `createCompilerCreator` 函数与我们如上例子中的 `createCompilerCreator` 函数作用一致。
+
+现在我们再来看 `src/compiler/index.js` 文件中的如下这段代码：
+
+```js
+export const createCompiler = createCompilerCreator(function baseCompile (
+  template: string,
+  options: CompilerOptions
+): CompiledResult {
+  const ast = parse(template.trim(), options)
+  if (options.optimize !== false) {
+    optimize(ast, options)
+  }
+  const code = generate(ast, options)
+  return {
+    ast,
+    render: code.render,
+    staticRenderFns: code.staticRenderFns
+  }
+})
+```
+
+实际上这段代码所创建的就是 `web` 平台下的编译器，大家可以打开 `src/server/optimizing-compiler/index.js` 文件，你会看到如下这段代码：
+
+```js
+export const createCompiler = createCompilerCreator(function baseCompile (
+  template: string,
+  options: CompilerOptions
+): CompiledResult {
+  const ast = parse(template.trim(), options)
+  optimize(ast, options)
+  const code = generate(ast, options)
+  return {
+    ast,
+    render: code.render,
+    staticRenderFns: code.staticRenderFns
+  }
+})
+```
+
+而这段代码是用来创建服务端渲染环境的编译器，注意如上代码中的 `generate` 函数和 `optimize` 函数已经是来自 `src/server` 目录下的相关文件了。
+
+另外与我们前面举的例子不同，`/src/compiler/create-compiler.js` 文件中的 `createCompilerCreator` 函数所返回的函数接收的参数是 `baseOptions`，所以 `src/compiler/index.js` 文件中导出的 `createCompiler` 函数就会接收 `baseOptions` 参数，这就是为什么在 `src/platforms/web/compiler/index.js` 会像如下这样调用 `createCompiler` 函数：
+
+```js
+const { compile, compileToFunctions } = createCompiler(baseOptions)
+```
+
+如上代码中传递的 `baseOptions` 将作为编译器的基本参数，另外我们注意如上代码中 `createCompiler` 函数的返回值，它返回的是一个对象，对象中包含两个元素，分别是 `compile` 和 `compileToFunctions`，实际上 `compile` 函数与 `compileToFunctions` 函数的区别就在于 **`compile` 函数生成的是字符串形式的代码，而 `compileToFunctions` 生成的才是真正可执行的代码**，并且 `compileToFunctions` 函数本身是使用 `src/compiler/to-function.js` 文件中的 `createCompileToFunctionFn` 函数根据 `compile` 生成的：
+
+```js
+return {
+  compile,
+  compileToFunctions: createCompileToFunctionFn(compile)
+}
+```
+
+而且 `compileToFunctions` 函数中调用了 `compile` 函数，如下：
+
+```js {12}
+export function createCompileToFunctionFn (compile: Function): Function {
+  const cache = Object.create(null)
+
+  return function compileToFunctions (
+    template: string,
+    options?: CompilerOptions,
+    vm?: Component
+  ): CompiledFunctionResult {
+    
+    // compile
+    const compiled = compile(template, options)
+
+  }
+}
+```
+
+如上高亮的代码所示，在调用 `compile` 函数时传递了 `template` 参数和 `options` 参数。这两个参数都是通过 `compileToFunctions` 函数传递过来的。我们找到 `src/platforms/web/entry-runtime-with-compiler.js` 文件，注意如下代码：
+
+```js
+const { render, staticRenderFns } = compileToFunctions(template, {
+  shouldDecodeNewlines,
+  shouldDecodeNewlinesForHref,
+  delimiters: options.delimiters,
+  comments: options.comments
+}, this)
+```
+
+大家注意如上代码中调用 `compileToFunctions` 函数时传递的第二个选项参数，还记得在 `src/platforms/web/compiler/index.js` 中创建 `compileToFunctions` 函数时传递的基本选项吗：
+
+```js
+const { compile, compileToFunctions } = createCompiler(baseOptions)
+```
+
+所以看到这里，你应该知道的是：**在创建编译器的时候传递了基本编译器选项参数，当真正使用编译器变异模板时，依然可以传递编译器选项，并且新的选项和基本选项会以合适的方式融合或覆盖**。
+
+
+
 
 
 
