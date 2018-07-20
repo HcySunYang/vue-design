@@ -3383,7 +3383,7 @@ function processKey (el) {
 }
 ```
 
-如上高亮代码所示，如果一个标签使用了 `key` 属性，则该标签的元素描述对象上将被条件 `el.key` 属性，为了让大家更直观的理解 `el.key` 属性的值，我们来做一些总结：
+如上高亮代码所示，如果一个标签使用了 `key` 属性，则该标签的元素描述对象上将被添加 `el.key` 属性，为了让大家更直观地理解 `el.key` 属性的值，我们来做一些总结：
 
 * 例子一：
 
@@ -3425,7 +3425,7 @@ el.key = '_f("featId")(id)'
 
 ## 处理使用了ref属性的元素
 
-接下来我们讲解对于使用 `ref` 属性的标签是如何处理的，即 `processRef` 函数，如下高亮的代码所示：
+接下来我们讲解对于使用了 `ref` 属性的标签是如何处理的，即 `processRef` 函数，如下高亮的代码所示：
 
 ```js {8}
 export function processElement (element: ASTElement, options: CompilerOptions) {
@@ -3468,7 +3468,7 @@ if (inVPre) {
 }
 ```
 
-注意如上代码中高亮的那句注释，可知对于 `v-for`、`v-if/v-else-if/v-else`、`v-once` 等指令会被认为是结构化的指令(`structural directives`)。这些指令在经过 `processFor`、`processIf` 以及 `processOnce` 等函数处理之后，会把这些指令从元素描述对象的 `attrsList` 数组中移除。
+注意如上代码中高亮的那句注释，可知 `v-for`、`v-if/v-else-if/v-else`、`v-once` 等指令会被认为是结构化的指令(`structural directives`)。这些指令在经过 `processFor`、`processIf` 以及 `processOnce` 等函数处理之后，会把这些指令从元素描述对象的 `attrsList` 数组中移除。
 
 再来看如下代码：
 
@@ -3492,7 +3492,7 @@ function processRef (el) {
 }
 ```
 
-`processRef` 函数接收元素描述对象作为参数，在 `processRef` 函数内部首先通过 `getBindingAttr` 函数解析并获取元素 `ref` 属性的值，则将结果赋值给 `ref` 常量，如果解析并获取成功则会执行 `if` 语句块内的代码，在 `if` 语句块内为元素的描述对象添加了 `el.ref` 属性，它的值就是通过 `getBindingAttr` 函数解析后最终生成的表达式。由于在讲解 `el.key` 属性时我们已经详细将结果 `getBindingAttr` 函数可能产生的返回值，这里就不做过多解释了。
+`processRef` 函数接收元素描述对象作为参数，在 `processRef` 函数内部首先通过 `getBindingAttr` 函数解析并获取元素 `ref` 属性的值，则将结果赋值给 `ref` 常量，如果解析并获取成功则会执行 `if` 语句块内的代码，在 `if` 语句块内为元素的描述对象添加了 `el.ref` 属性，它的值就是通过 `getBindingAttr` 函数解析后最终生成的表达式。由于在讲解 `el.key` 属性时我们已经详细讲解过 `getBindingAttr` 函数可能产生的返回值，这里就不做过多解释了。
 
 除了在元素描述对象上添加 `el.ref` 属性，还会在元素描述对象上添加 `el.refInFor` 属性，该属性是一个布尔值，标识着这个使用了 `ref` 属性的标签是否存在于 `v-for` 指令之内。检查方式是通过调用 `checkInFor` 函数，如下是 `checkInFor` 的代码：
 
@@ -3521,7 +3521,7 @@ function checkInFor (el: ASTElement): boolean {
 </div>
 ```
 
-可以发现，如果一个标签使用了 `ref` 属性，并且该标签或该标签的父代标签使用 `v-for` 指令，则认为 `ref` 属性是在 `v-for` 指令之内的。所以要想判断 `ref` 属性是在 `v-for` 指令之内，就需要从当前元素的描述对象开始一直遍历到根节点元素的描述对象，一旦发现存某个标签，其元素描述对象的 `for` 属性存在，则说明该标签使用 `v-for` 指令。明白了这些再来看如下代码：
+可以发现，如果一个标签使用了 `ref` 属性，并且该标签或该标签的父代标签使用 `v-for` 指令，则认为 `ref` 属性是在 `v-for` 指令之内的。所以要想判断 `ref` 属性是否在 `v-for` 指令之内，就需要从当前元素的描述对象开始一直遍历到根节点元素的描述对象，一旦发现存在某个标签，其元素描述对象的 `for` 属性存在，则说明该标签使用 `v-for` 指令。明白了这些再来看如下代码：
 
 ```js
 function checkInFor (el: ASTElement): boolean {
@@ -3538,7 +3538,7 @@ function checkInFor (el: ASTElement): boolean {
 
 可以看到，如上代码通过 `while` 循环，从当前元素的描述对象开始，逐层向父级节点遍历，直到根节点为止，如果发现某标签的元素描述对象的 `for` 属性不为 `undefined`，则函数返回 `true`，意味着当前元素所使用的 `ref` 属性存在于 `v-for` 指令之内。否则 `checkInFor` 函数会返回 `false`，代表当前元素所使用的 `ref` 属性不在 `v-for` 指令之内。最终会在当前元素描述对象上添加 `el.refInFor` 属性来保存该标识。
 
-由上分析可知，如果一个标签使用了 `ref` 属性，则：
+由以上分析可知，如果一个标签使用了 `ref` 属性，则：
 
 * 1、该标签的元素描述对象会被添加 `el.ref` 属性，该属性为解析后生成的表达式字符串，与 `el.key` 类似。
 * 2、该标签的元素描述对象会被添加 `el.refInFor` 属性，它是一个布尔值，用来标识当前元素的 `ref` 属性是否在 `v-for` 指令之内使用。
@@ -3567,7 +3567,7 @@ export function processElement (element: ASTElement, options: CompilerOptions) {
 }
 ```
 
-`processSlot` 函数用来处理插槽或作用域插槽相关的内容，关于插槽的使用，`Vue` 文档讲的已经很明白了，这里不做赘述。但这里还是强调用下与插槽相关的使用形式：
+`processSlot` 函数用来处理插槽或作用域插槽相关的内容，关于插槽的使用，`Vue` 文档讲的已经很明白了，这里不做赘述。但这里还是强调一下与插槽相关的使用形式：
 
 * 1、默认插槽：
 
@@ -3603,7 +3603,7 @@ export function processElement (element: ASTElement, options: CompilerOptions) {
 
 `scope` 只能使用在 `template` 标签上，并且在 `2.5.0+` 版本中已经被 `slot-scope` 特性替代。
 
-实际上 `processSlot` 函数就用来解析以上标签并为这些标签的描述对象添加相应属性的，`processSlot` 函数有一个 `if...else` 语句块组成，我们先来看 `if` 条件语句块内的代码，如下：
+实际上 `processSlot` 函数就是用来解析以上标签并为这些标签的描述对象添加相应属性的，`processSlot` 函数由一个 `if...else` 语句块组成，我们先来看 `if` 条件语句块内的代码，如下：
 
 ```js
 function processSlot (el) {
@@ -3622,7 +3622,7 @@ function processSlot (el) {
 }
 ```
 
-通过 `if` 语句的条件：`el.tag === 'slot'`，可知 `if` 语句块内的代码用来处理 `<slot>` 插槽标签的，所以如果当前标签是 `<slot>` 标签，则 `if` 语句块内的代码将会被执行，在 `if` 语句块内，首先通过 `getBindingAttr` 函数获取标签的 `name` 属性值，并将获取到的值赋值给元素描述对象的 `el.slotName` 属性。举个例子，如果我们的 `<slot>` 标签如下：
+通过 `if` 语句的条件：`el.tag === 'slot'`，可知 `if` 语句块内的代码是用来处理 `<slot>` 插槽标签的，所以如果当前标签是 `<slot>` 标签，则 `if` 语句块内的代码将会被执行，在 `if` 语句块内，首先通过 `getBindingAttr` 函数获取标签的 `name` 属性值，并将获取到的值赋值给元素描述对象的 `el.slotName` 属性。举个例子，如果我们的 `<slot>` 标签如下：
 
 ```html
 <slot name="header"></slot>
@@ -3650,7 +3650,7 @@ if (process.env.NODE_ENV !== 'production' && el.key) {
 }
 ```
 
-在非生产环境下，如果发现在 `<slot>` 标签中使用 `key` 属性，则会打印警告信息，提示开发者 `key` 属性不能使用在 `slot` 标签上，另外大家应该还记得，在前面的分析中我们也知道 `key` 属性也不能使用在 `<template>` 标签上。大家可以发现 `<slot>` 标签和 `<template>` 标签的共同点就是他们都是抽象组件，抽象组件的特点是要么不渲染真实DOM，要么会被不可预知的DOM元素替代。这就是在这些标签上不能使用 `key` 属性的原因。对于 `<slot>` 标签的处理就是如上这些内容，接着我们再来看 `processSlot` 函数内 `else` 分支的代码：
+在非生产环境下，如果发现在 `<slot>` 标签中使用 `key` 属性，则会打印警告信息，提示开发者 `key` 属性不能使用在 `slot` 标签上，另外大家应该还记得，在前面的分析中我们也知道 `key` 属性同样不能使用在 `<template>` 标签上。大家可以发现 `<slot>` 标签和 `<template>` 标签的共同点就是他们都是抽象组件，抽象组件的特点是要么不渲染真实DOM，要么会被不可预知的DOM元素替代。这就是在这些标签上不能使用 `key` 属性的原因。对于 `<slot>` 标签的处理就是如上这些内容，接着我们再来看 `processSlot` 函数内 `else` 分支的代码：
 
 ```js {5-18}
 function processSlot (el) {
@@ -3709,7 +3709,7 @@ if (process.env.NODE_ENV !== 'production' && slotScope) {
 }
 ```
 
-在非生产环境下，如果 `slotScope` 变量存在，则说明 `<template>` 标签中使用 `scope` 属性，但是这个属性已经在 `2.5.0+` 的版本中被 `slot-scope` 属性替代了，所以现在更推荐使用 `slot-scope` 属性，好处是 `slot-scope` 属性不受限于 `<template>` 标签。
+在非生产环境下，如果 `slotScope` 变量存在，则说明 `<template>` 标签中使用了 `scope` 属性，但是这个属性已经在 `2.5.0+` 的版本中被 `slot-scope` 属性替代了，所以现在更推荐使用 `slot-scope` 属性，好处是 `slot-scope` 属性不受限于 `<template>` 标签。
 
 接着我们再来看如下这段代码：
 
@@ -3759,7 +3759,7 @@ if (process.env.NODE_ENV !== 'production' && el.attrsMap['v-for']) {
 <div slot-scope="slotProps" v-for="item of slotProps.list"></div>
 ```
 
-如上这句代码中，`slot-scope` 属性与 `v-for` 指令共存，这回造成什么影响呢？由于 `v-for` 具有更高的优先级，所以 `v-for` 绑定的状态将会是父组件作用域的状态，而不是子组件通过作用域插槽传递的状态。并且这么使用很容易让人感到困惑。更好的方式是像如下代码这样：
+如上这句代码中，`slot-scope` 属性与 `v-for` 指令共存，这会造成什么影响呢？由于 `v-for` 具有更高的优先级，所以 `v-for` 绑定的状态将会是父组件作用域的状态，而不是子组件通过作用域插槽传递的状态。并且这么使用很容易让人感到困惑。更好的方式是像如下代码这样：
 
 ```html
 <template slot-scope="slotProps">
@@ -3792,7 +3792,7 @@ function processSlot (el) {
 }
 ```
 
-如上这段代码是 `processSlot` 函数的最后一段代码，这段代码主要用来处理标签的 `slot` 属性，首先使用 `getBindingAttr` 函数获取元素 `slot` 属性的值，并将获取到的值赋值给 `slotTarget` 常量，注意这里使用的是 `getBindingAttr` 函数，这意味着 `slot` 属性可以绑定的。接着进入一个 `if` 条件语句的判断，如果 `slotTarget` 存在，则会执行如下这句代码：
+如上这段代码是 `processSlot` 函数的最后一段代码，这段代码主要用来处理标签的 `slot` 属性，首先使用 `getBindingAttr` 函数获取元素 `slot` 属性的值，并将获取到的值赋值给 `slotTarget` 常量，注意这里使用的是 `getBindingAttr` 函数，这意味着 `slot` 属性是可以绑定的。接着进入一个 `if` 条件语句的判断，如果 `slotTarget` 存在，则会执行如下这句代码：
 
 ```js
 el.slotTarget = slotTarget === '""' ? '"default"' : slotTarget
@@ -3906,7 +3906,7 @@ el.component = JSON.stringify('child')
 <div :is="child"></div>
 ```
 
-上例中的 `is` 属性是非绑定的，但是有一个字符串值，则最终如上标签经过处理后其元素描述对象的 `el.component` 属性值为：
+上例中的 `is` 属性是绑定的，并且有一个字符串值，则最终如上标签经过处理后其元素描述对象的 `el.component` 属性值为：
 
 ```js
 el.component = 'child'
@@ -3920,7 +3920,7 @@ if (getAndRemoveAttr(el, 'inline-template') != null) {
 }
 ```
 
-这段代码用来处理 `inline-template` 属性的，首先通过 `getAndRemoveAttr` 属性获取 `inline-template` 属性的值，如果获取成功，则将元素描述对象的 `el.inlineTemplate` 属性设置为 `true`，代表着该标签使用了 `inline-template` 属性。
+这段代码是用来处理 `inline-template` 属性的，首先通过 `getAndRemoveAttr` 属性获取 `inline-template` 属性的值，如果获取成功，则将元素描述对象的 `el.inlineTemplate` 属性设置为 `true`，代表着该标签使用了 `inline-template` 属性。
 
 以上就是 `processComponent` 函数所做的事情。
 
@@ -3946,7 +3946,7 @@ export function processElement (element: ASTElement, options: CompilerOptions) {
 }
 ```
 
-如上高亮代码所示，这段代码是一段 `for` 循环，用来遍历 `transforms` 数组，我们前面曾经遇到过对于 `preTransforms` 数组的遍历，我们当时说这是在应用“前置处理”，而 `transforms` 则可以成为“中置处理”，实际上还有“后置处理”，“后置处理”的代码存在于 `closeElement` 函数中，如下：
+如上高亮代码所示，这段代码是一段 `for` 循环，用来遍历 `transforms` 数组，我们前面曾经遇到过对于 `preTransforms` 数组的遍历，我们当时说这是在应用“前置处理”，而 `transforms` 则可以称为“中置处理”，实际上还有“后置处理”，“后置处理”的代码存在于 `closeElement` 函数中，如下：
 
 ```js {10-12}
 function closeElement (element) {
@@ -3968,5 +3968,5 @@ function closeElement (element) {
 
 无论是前置处理，中置处理还是后置处理，这些名词都是为了让大家更好理解而“杜撰”出来的，他们的作用等价于提供了对元素描述对象处理的钩子，让外界有能力参与不同阶段的元素描述对象的处理，这对于平台化是很重要的事情，不同平台能够通过这些处理钩子去处理那些特定平台下特有的元素或元素的属性。
 
-由于这套文章只关注 `web` 平台，所以后面会详细讲解 `web` 平台下都应用了那些前置处理，中置处理和后置处理，以及处理的目的。
+由于这套文章只关注 `web` 平台，所以后面会详细讲解 `web` 平台下都应用了哪些前置处理，中置处理和后置处理，以及处理的目的。
  
