@@ -1289,6 +1289,169 @@ if (!el.component &&
 
 实际上元素描述对象的 `el.attrs` 数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中使用 `setAttribute` 方法将属性添加到真实DOM元素上，而在火狐浏览器中存在无法通过DOM元素的 `setAttribute` 方法为 `video` 标签添加 `muted` 属性的问题，所以如上代码就是为了解决该问题的，其方案是如果一个属性的名字是 `muted` 并且该标签满足 [platformMustUseProp](../appendix/web-util.html#mustuseprop) 函数(`video` 标签满足)，则会额外调用 `addProp` 函数将属性添加到元素描述对象的 `el.props` 数组中。为什么这么做呢？这是因为元素描述对象的 `el.props` 数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中直接使用真实DOM对象添加，也就是说对于 `<video>` 标签的 `muted` 属性的添加方式为：`videoEl.muted = true`。另外如上代码的注释中已经提供了相应的 `issue` 号：`#6887`，感兴趣的同学可以去看一下。
 
+## preTransformNode 前置处理
+
+讲完了 `processAttrs` 函数之后，所有的 `process*` 类函数我们都讲解完毕了。另外大家不要忘了，目前我们所讲解的内容都是在 `parseHTML` 函数的 `start` 钩子中运行的代码，如下高亮的代码所示：
+
+```js {9-11}
+parseHTML(template, {
+  warn,
+  expectHTML: options.expectHTML,
+  isUnaryTag: options.isUnaryTag,
+  canBeLeftOpenTag: options.canBeLeftOpenTag,
+  shouldDecodeNewlines: options.shouldDecodeNewlines,
+  shouldDecodeNewlinesForHref: options.shouldDecodeNewlinesForHref,
+  shouldKeepComment: options.comments,
+  start (tag, attrs, unary) {
+    // 省略...
+  },
+  end () {
+    // 省略...
+  },
+  chars (text: string) {
+    // 省略...
+  },
+  comment (text: string) {
+    // 省略...
+  }
+})
+```
+
+也就是说我们现在讲解的内容都是在当解析器遇到开始标签时所做的工作，接下来我们要讲的内容就是 `start` 钩子函数中的如下这段代码：
+
+```js
+// apply pre-transforms
+for (let i = 0; i < preTransforms.length; i++) {
+  element = preTransforms[i](element, options) || element
+}
+```
+
+我们说过这段代码是在应用前置转换(或前置处理)，其中 `preTransforms` 变量是一个数组，这个数组中包含了所有前置处理的函数，如下代码所示：
+
+```js
+preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
+```
+
+由上代码可知 `preTransforms` 变量的值是使用 `pluckModuleFunction` 函数从 `options.modules` 编译器选项中读取 `preTransformNode` 字段筛选出来的。具体的筛选过程在前面的章节中我们已经讲解过了，这里就不再细说。
+
+我来说一说编译器选项中的 `modules`，在 [理解编译器代码的组织方式](./art/80vue-compiler-start.md#理解编译器代码的组织方式) 一节中我们我们知道编译器的选项来自于两部分，一部分是创建编译器时传递的基本选项(`baseOptions`)，另一部分则是在使用编辑器编译模板时传递的选项参数。如下是创建编译器时的基本选项：
+
+```js
+import { baseOptions } from './options'
+import { createCompiler } from 'compiler/index'
+
+const { compile, compileToFunctions } = createCompiler(baseOptions)
+```
+
+如上代码来自 `src/platforms/web/compiler/index.js` 文件，可以看到 `baseOptions` 导入自 `src/platforms/web/compiler/options.js` 文件，对于基本选项的解析我们在 [compile 的作用](./art/80vue-compiler-start.html#compile-的作用) 一节中做了详细的讲解，并且整理了 [附录/编译器选项](../appendix/compiler-options.html)，如果大家忘记了可以回头查看。
+
+最终我们了解到编译器选项的 `modules` 选项来 `src/platforms/web/compiler/modules/index.js` 文件导出的一个数组，如下：
+
+```js
+import klass from './class'
+import style from './style'
+import model from './model'
+
+export default [
+  klass,
+  style,
+  model
+]
+```
+
+如果把 `modules` 数组展开的话，它长成如下这个样子：
+
+```js
+[
+  // klass
+  {
+    staticKeys: ['staticClass'],
+    transformNode,
+    genData
+  },
+  // style
+  {
+    staticKeys: ['staticStyle'],
+    transformNode,
+    genData
+  },
+  // model
+  {
+    preTransformNode
+  }
+]
+```
+
+根据如上数组可以发现 `modules` 数组中的每一个元素都是一个对象，并且 `klass` 对象和 `style` 对象都拥有 `transformNode` 属性，而 `model` 对象中则有一个 `preTransformNode` 属性。我们打开 `src/compiler/parser/index.js` 文件，找到如下代码：
+
+```js
+preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
+```
+
+这时我们应该知道 `preTransforms` 变量应该是一个数组：
+
+```js
+preTransforms = [
+  preTransformNode
+]
+```
+
+并且数组中只有一个元素 `preTransformNode`，而这里的 `preTransformNode` 就是来自于 `src/platforms/web/compiler/modules/model.js` 文件中的 `preTransformNode` 函数。接下来我们要重点讲解的就是 `preTransformNode` 函数的作用，既然它是用来对元素描述对象做前置处理的，我们就看看它都做了哪些处理。
+
+:::tip
+为了方便描述，后续我们会把 `src/platforms/web/compiler/modules/model.js` 文件简称 `model.js` 文件（注意：此约定仅限当前章节）
+:::
+
+如下是 `preTransformNode` 函数的签名以及函数体内一开始的一段代码：
+
+```js
+function preTransformNode (el: ASTElement, options: CompilerOptions) {
+  if (el.tag === 'input') {
+    const map = el.attrsMap
+    if (!map['v-model']) {
+      return
+    }
+
+    // 省略...
+  }
+}
+```
+
+`preTransformNode` 函数接收两个参数，第一个参数是要预处理的元素描述对象，第二个参数则是透传过来的编译器的选项参数。在 `preTransformNode` 函数内，所有的代码都被包含在一个 `if` 条件语句中，该 `if` 语句的条件是：
+
+```js
+if (el.tag === 'input')
+```
+
+也就是说只要当前解析的标签是 `input` 的标签时才会执行预处理工作，看来 `preTransformNode` 函数是用来预处理 `input` 标签的。如果当前解析的元素是 `input` 标签，则会继续判断该 `input` 标签是否使用了 `v-model` 属性：
+
+```js
+const map = el.attrsMap
+if (!map['v-model']) {
+  return
+}
+```
+
+如果该 `input` 标签没有使用 `v-model` 属性，则函数直接返回，什么都不做。所以我们可以说 `preTransformNode` 函数要预处理的是**使用了 `v-model` 属性的 `input` 标签**，不过还没完，我们继续看如下代码
+
+
+
+
+那么要如何处理使用了 `v-model` 属性的 `input` 标签呢？来看一下 `model.js` 文件开头的一段注释：
+
+```js
+/**
+ * Expand input[v-model] with dyanmic type bindings into v-if-else chains
+ * Turn this:
+ *   <input v-model="data[type]" :type="type">
+ * into this:
+ *   <input v-if="type === 'checkbox'" type="checkbox" v-model="data[type]">
+ *   <input v-else-if="type === 'radio'" type="radio" v-model="data[type]">
+ *   <input v-else :type="type" v-model="data[type]">
+ */
+```
+
+
 ## 文本节点的元素描述对象
 ## parseText 函数解析字面量表达式
 ## 对结束标签的处理
