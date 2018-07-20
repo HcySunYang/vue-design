@@ -4,7 +4,8 @@ module.exports = {
   ga: 'UA-120533817-1',
   description: '逐行级别的 Vue 源码分析',
   head: [
-    ['script', { async: '', src: 'http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js' }]
+    ['script', { async: '', src: 'http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js' }],
+    ['link', { rel: 'icon', href: '/logo.png' }]
   ],
   markdown: {
     toc: {
