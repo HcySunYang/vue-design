@@ -76,7 +76,7 @@ function () {
 
 如上代码是使用作用域插槽的典型例子，我们知道这里的 `slotProps` 确实是变量，而非字符串。
 
-那如果使用 `getBindingAttr` 函数获取 `slot-scope` 属性的值会产生什么效果呢？由于 `slot-scope` 没有并非 `v-bind:slot-scope` 或 `:slot-scope`，所以在使用 `getBindingAttr` 函数获取 `slot-scope` 属性值的时候，将会得到使用 `JSON.stringify` 函数处理后的结果，即：
+那如果使用 `getBindingAttr` 函数获取 `slot-scope` 属性的值会产生什么效果呢？由于 `slot-scope` 并非 `v-bind:slot-scope` 或 `:slot-scope`，所以在使用 `getBindingAttr` 函数获取 `slot-scope` 属性值的时候，将会得到使用 `JSON.stringify` 函数处理后的结果，即：
 
 ```js
 JSON.stringify('slotProps')
@@ -102,7 +102,7 @@ function () {
 
 ## processAttrs 处理剩余属性
 
-`processAttrs` 函数是 `processElement` 函数中调用的最后一个 `process*` 函数，在这之前已经调用了很多其他的 `process*` 函数对元素进行了处理，并且每当处理一个属性时，都会将该属性从元素描述对象的 `el.attrsList` 数组中移除，但 `el.attrsList` 数组中仍然保存着剩余未被处理的属性，而 `processAttrs` 函数就是用来处理这些剩余属性的。
+`processAttrs` 函数是 `processElement` 函数中调用的最后一个 `process*` 系列函数，在这之前已经调用了很多其他的 `process*` 系列函数对元素进行了处理，并且每当处理一个属性时，都会将该属性从元素描述对象的 `el.attrsList` 数组中移除，但 `el.attrsList` 数组中仍然保存着剩余未被处理的属性，而 `processAttrs` 函数就是用来处理这些剩余属性的。
 
 既然 `processAttrs` 函数用来处理剩余未被处理的属性，那么我们首先要确定的是 `el.attrsList` 数组中都包含哪些剩余的属性，如下是前面已经处理过的属性：
 
@@ -119,9 +119,9 @@ function () {
 
 * `v-text`、`v-html`、`v-show`、`v-on`、`v-bind`、`v-model`、`v-cloak`
 
-除了这些指令之外，还有部分属性的处理我们也没讲到，比如 `class` 属性和 `style` 属性，这两个属性比较特殊，因为 `Vue` 对他们做了增强，实际上在“中置处理”(`transforms` 数组)中有有对于 `class` 属性和 `style` 属性的处理，这个我们后面会统一讲解。
+除了这些指令之外，还有部分属性的处理我们也没讲到，比如 `class` 属性和 `style` 属性，这两个属性比较特殊，因为 `Vue` 对他们做了增强，实际上在“中置处理”(`transforms` 数组)中有对于 `class` 属性和 `style` 属性的处理，这个我们后面会统一讲解。
 
-再有就是一些普通属性的处理了，如下 `html` 代码所示：
+还有就是一些普通属性的处理了，如下 `html` 代码所示：
 
 ```html
 <div :custom-prop="someVal" @custom-event="handleEvent" other-prop="static-prop"></div>
@@ -141,7 +141,7 @@ function processAttrs (el) {
 }
 ```
 
-可以看到在 `processAttrs` 函数内部，首先定义了 `list` 常量，它是 `el.attrsList` 数组的引用。接着有定义了一些列变量待使用，然后开启了一个 `for` 循环，循环的目的就是遍历 `el.attrsList` 数组，所以我们能够想到在循环内部就是逐个处理 `el.attrsList` 数组中那些剩余的属性的。
+可以看到在 `processAttrs` 函数内部，首先定义了 `list` 常量，它是 `el.attrsList` 数组的引用。接着又定义了一系列变量待使用，然后开启了一个 `for` 循环，循环的目的就是遍历 `el.attrsList` 数组，所以我们能够想到在循环内部就是逐个处理 `el.attrsList` 数组中那些剩余的属性。
 
 `for` 循环内部的代码被一个 `if...else` 语句块分成两部分，如下：
 
@@ -217,7 +217,7 @@ if (dirRE.test(name)) {
 }
 ```
 
-一个完整的指令包含指令的名称、指令的参数、指令的修饰符以及指令的值，以上高亮代码的作用是用来解析指令中的修饰符的。首先既然元素使用了指令，那么该指令的值就是表达式，既然是表达式那就涉及动态的内容，所以此时会在元素描述对象上添加 `el.hasBindings` 属性，并将其值设置为 `true`，标识着当前元素是一个动态的元素。接着执行了如下这句代码：
+一个完整的指令包含指令的名称、指令的参数、指令的修饰符以及指令的值，以上高亮代码的作用是用来解析指令中的修饰符。首先既然元素使用了指令，那么该指令的值就是表达式，既然是表达式那就涉及动态的内容，所以此时会在元素描述对象上添加 `el.hasBindings` 属性，并将其值设置为 `true`，标识着当前元素是一个动态的元素。接着执行了如下这句代码：
 
 ```js
 modifiers = parseModifiers(name)
@@ -236,7 +236,7 @@ function parseModifiers (name: string): Object | void {
 }
 ```
 
-在 `parseModifiers` 函数内部首先使用指令字符串的 `match` 方法匹配正则 `modifierRE`，`modifierRE` 正则我们在上一章讲过，它用来全局匹配字符串中字符 `.` 以及 `.` 后面的字符，也就是修饰符，举个例子，假设我们的指令字符串为：`'v-bind:some-prop.sync'`，则使用该字符串去匹配正则 `modifierRE` 最终将会得到一个数组：`[".sync"]`。一个指令有几个修饰符，则匹配的结果数组中就包含几个元素。如果匹配失败则会得到 `null`。回到上面的代码，定义了 `match` 常量，它保存着匹配结果。接着是一个 `if` 语句块，如果匹配成功则会执行 `if` 语句块内的代码，在 `if` 语句块内首先定义了 `ret` 常量，它是一个空对象，并且我们发现 `ret` 常量将作为匹配成功时的返回结果，`ret` 常量是什么呢？来看这句代码：
+在 `parseModifiers` 函数内部首先使用指令字符串的 `match` 方法匹配正则 `modifierRE`，`modifierRE` 正则我们在上一章讲过，它是用来全局匹配字符串中字符 `.` 以及 `.` 后面的字符，也就是修饰符，举个例子，假设我们的指令字符串为：`'v-bind:some-prop.sync'`，则使用该字符串去匹配正则 `modifierRE` 最终将会得到一个数组：`[".sync"]`。一个指令有几个修饰符，则匹配的结果数组中就包含几个元素。如果匹配失败则会得到 `null`。回到上面的代码，定义了 `match` 常量，它保存着匹配结果。接着是一个 `if` 语句块，如果匹配成功则会执行 `if` 语句块内的代码，在 `if` 语句块内首先定义了 `ret` 常量，它是一个空对象，并且我们发现 `ret` 常量将作为匹配成功时的返回结果，`ret` 常量是什么呢？来看这句代码：
 
 ```js
 match.forEach(m => { ret[m.slice(1)] = true })
@@ -283,7 +283,7 @@ if (modifiers) {
 }
 ```
 
-这句代码的作用很简单，就是讲修饰符从指令字符串中移除，也就是说此时的指令字符串 `name` 中已经不包含修饰符部分了。
+这句代码的作用很简单，就是将修饰符从指令字符串中移除，也就是说此时的指令字符串 `name` 中已经不包含修饰符部分了。
 
 ### 解析 v-bind 指令
 
@@ -329,11 +329,11 @@ if (bindRE.test(name)) { // v-bind
 }
 ```
 
-首先使用 `bindRE` 正则将指令字符串中的 `v-bind:` 或 `:` 去除掉，此时 `name` 字符串已经从一个完成的指令字符串变为绑定属性的名字了，举个例子，假如原本的指令字符串为 `'v-bind:some-prop.sync'`，由于之前已经把该字符串中修饰符的部分取出掉了，所以指令字符串将变为 `'v-bind:some-prop'`，接着如上第一句高亮的代码又将指令字符串中的 `v-bind:` 去掉，所以此时指令字符串将变为 `'some-prop'`，可以发现该字符串就是绑定属性的名字，或者说是 `v-bind` 指令的参数。
+首先使用 `bindRE` 正则将指令字符串中的 `v-bind:` 或 `:` 去除掉，此时 `name` 字符串已经从一个完成的指令字符串变为绑定属性的名字了，举个例子，假如原本的指令字符串为 `'v-bind:some-prop.sync'`，由于之前已经把该字符串中修饰符的部分去除掉了，所以指令字符串将变为 `'v-bind:some-prop'`，接着如上第一句高亮的代码又将指令字符串中的 `v-bind:` 去掉，所以此时指令字符串将变为 `'some-prop'`，可以发现该字符串就是绑定属性的名字，或者说是 `v-bind` 指令的参数。
 
 接着调用 `parseFilters` 函数处理绑定属性的值，我们知道 `parseFilters` 函数的作用是用来将表达式与过滤器整合在一起的，前面我们已经做了详细的讲解，但凡涉及到能够使用过滤器的地方都要使用 `parseFilters` 函数去解析，并将解析后的新表达式返回。如上第二句高亮的代码所示，使用 `parseFilters` 函数的返回值重新赋值 `value` 变量。
 
-第三句高亮的代码将 `isProp` 变量初始化为 `false`，`isProp` 变量标识着该绑定的属性是否是原生DOM对象属性，所谓原生DOM对象的属性就是能够通过DOM元素对象直接访问的有效API，比如 `innerHTML` 就是一个原生DOM对象属性。
+第三句高亮的代码将 `isProp` 变量初始化为 `false`，`isProp` 变量标识着该绑定的属性是否是原生DOM对象的属性，所谓原生DOM对象的属性就是能够通过DOM元素对象直接访问的有效API，比如 `innerHTML` 就是一个原生DOM对象的属性。
 
 再往下将进入一段 `if` 条件语句，该 `if` 语句块的作用是用来处理修饰符的：
 
@@ -367,7 +367,7 @@ if (modifiers.prop) {
 }
 ```
 
-这段 `if` 语句块的代码用来处理使用了 `prop` 修饰符的 `v-bind` 指令，既然使用了 `prop` 修饰符，则意味着该属性将被作为原生DOM对象的属性，所以首先会将 `isProp` 变量设置为 `true`，接着使用 `camelize` 函数将属性名驼峰化，最后还会检查驼峰化之后的属性名是否等于字符串 `'innerHtml'`，如果属性名全等于该字符串则将属性名重写为字符串 `'innerHTML'`，我们知道 `'innerHTML'` 是一个特例，它的 `HTML` 四个字符串全部为大写。以上就是对于使用了 `prop` 修饰符的 `v-bind` 指令的处理，如果一个绑定属性使用了 `prop` 修饰符则 `isProp` 变量会被设置为 `true`，并且会把属性名字驼峰化。那么为什么要将 `isProp` 变量设置为 `true` 呢？答案在如下代码中：
+这段 `if` 语句块的代码用来处理使用了 `prop` 修饰符的 `v-bind` 指令，既然使用了 `prop` 修饰符，则意味着该属性将被作为原生DOM对象的属性，所以首先会将 `isProp` 变量设置为 `true`，接着使用 `camelize` 函数将属性名驼峰化，最后还会检查驼峰化之后的属性名是否等于字符串 `'innerHtml'`，如果属性名全等于该字符串则将属性名重写为字符串 `'innerHTML'`，我们知道 `'innerHTML'` 是一个特例，它的 `HTML` 四个字符串全部为大写。以上就是对于使用了 `prop` 修饰符的 `v-bind` 指令的处理，如果一个绑定属性使用了 `prop` 修饰符则 `isProp` 变量会被设置为 `true`，并且会把属性名字驼峰化。那么为什么要将 `isProp` 变量设置为 `true` 呢？答案在如下代码中：
 
 ```js {13}
 if (bindRE.test(name)) { // v-bind
@@ -401,7 +401,7 @@ export function addProp (el: ASTElement, name: string, value: string) {
 }
 ```
 
-总之 `isProp` 变量是一个重要的标识，它的值将会影响一个属性被添加到元素描述对象的位置，从而影响后续的行为。另外这里在啰嗦一句：**元素描述对象的 `el.props` 数组中存储的并不是组件概念中的 `prop`，而是原生DOM对象的属性**。在后面的章节中我们会看到，组件概念中的 `prop` 其实是在 `el.attrs` 数组中。
+总之 `isProp` 变量是一个重要的标识，它的值将会影响一个属性被添加到元素描述对象的位置，从而影响后续的行为。另外这里再啰嗦一句：**元素描述对象的 `el.props` 数组中存储的并不是组件概念中的 `prop`，而是原生DOM对象的属性**。在后面的章节中我们会看到，组件概念中的 `prop` 其实是在 `el.attrs` 数组中。
 
 有点扯远了，我们回过头来，明白了 `prop` 修饰符和 `isProp` 变量的作用之后，我们再来看一下对于 `camel` 修饰符的处理，如下代码：
 
@@ -419,7 +419,7 @@ if (modifiers) {
 }
 ```
 
-如上高亮的代码所示，如果 `modifiers.camel` 为真，则说明该绑定的属性使用了 `camel` 修饰符，使用该修饰符的作用只有一个，那就是将绑定的属性驼峰化，如下代码如实：
+如上高亮的代码所示，如果 `modifiers.camel` 为真，则说明该绑定的属性使用了 `camel` 修饰符，使用该修饰符的作用只有一个，那就是将绑定的属性驼峰化，如下代码所示：
 
 ```html
 <svg :view-box.camel="viewBox"></svg>
@@ -563,7 +563,7 @@ if (modifiers.sync) {
 }
 ```
 
-如上高亮到吗所示，事件名称等于字符串 `'update:'` 加上驼峰化的绑定属性名称。另外我们注意到传递给 `addHandler` 函数的第三个参数，实际上 `addHandler` 函数的第三个参数就是当事件发生时的回调函数，而该回调函数是通过 `genAssignmentCode` 函数生成的。`genAssignmentCode` 函数来自 `src/compiler/directives/model.js` 文件，如下是其源码：
+如上高亮代码所示，事件名称等于字符串 `'update:'` 加上驼峰化的绑定属性名称。另外我们注意到传递给 `addHandler` 函数的第三个参数，实际上 `addHandler` 函数的第三个参数就是当事件发生时的回调函数，而该回调函数是通过 `genAssignmentCode` 函数生成的。`genAssignmentCode` 函数来自 `src/compiler/directives/model.js` 文件，如下是其源码：
 
 ```js
 export function genAssignmentCode (
@@ -579,7 +579,7 @@ export function genAssignmentCode (
 }
 ```
 
-要讲解 `genAssignmentCode` 函数将会牵扯很多东西，实际上 `genAssignmentCode` 函数也被用在 `v-model` 指令，因为本质上 `v-model` 指令与绑定属性加上 `sync` 修饰符几乎相同，所以我们会在讲解 `v-model` 指令时再来详细讲解 `genAssignmentCode` 函数。这里大家只要关注一下如上代码中 `genAssignmentCode` 的返回值即可，它返回的是一个代码字符串，可以看到如果这个代码字符串作为代码执行，其作用就是一个赋值工作。这样就免去了我们手工赋值的繁琐。
+要讲解 `genAssignmentCode` 函数将会牵扯到很多东西，实际上 `genAssignmentCode` 函数也被用在 `v-model` 指令，因为本质上 `v-model` 指令与绑定属性加上 `sync` 修饰符几乎相同，所以我们会在讲解 `v-model` 指令时再来详细讲解 `genAssignmentCode` 函数。这里大家只要关注一下如上代码中 `genAssignmentCode` 的返回值即可，它返回的是一个代码字符串，可以看到如果这个代码字符串作为代码执行，其作用就是一个赋值工作。这样就免去了我们手动赋值的繁琐。
 
 以上我们讲完了对于三个绑定属性可以使用的修饰符，接下来我们来看处理绑定属性的最后一段代码：
 
@@ -593,7 +593,7 @@ if (isProp || (
 }
 ```
 
-实际上这段代码我们已经简单过了，这里要强调的是 `if` 语句的判断条件：
+实际上这段代码我们已经讲到过了，这里要强调的是 `if` 语句的判断条件：
 
 ```js
 isProp || (!el.component && platformMustUseProp(el.tag, el.attrsMap.type, name))
