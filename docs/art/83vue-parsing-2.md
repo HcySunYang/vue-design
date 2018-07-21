@@ -660,7 +660,7 @@ export function addHandler (
 * `important`：可选参数，是一个布尔值，代表着添加的事件侦听函数的重要级别，如果为 `true`，则该侦听函数会被添加到该事件侦听函数数组的头部，否则会将其添加到尾部，
 * `warn`：打印警告信息的函数，是一个可选参数
 
-了解 `addHandler` 函数所需的参数，我们再来看一下解析 `v-on` 指令时调用 `addHandler` 函数所传递的参数，如下高亮代码所示：
+了解了 `addHandler` 函数所需的参数，我们再来看一下解析 `v-on` 指令时调用 `addHandler` 函数所传递的参数，如下高亮代码所示：
 
 ```js
 if (bindRE.test(name)) { // v-bind
@@ -690,9 +690,9 @@ if (
 }
 ```
 
-首先检测 `v-on` 指令的修饰符对象 `modifiers` 是否存在，如果在使用 `v-on` 指令时没有指定任何修饰符，则 `modifiers` 的值为 `undefined`，此时会使用冻结的空对象 `emptyObject` 作为代替。接着是一个 `if` 条件语句块，如果该 `if` 语句的判断条件成立，则说明开发者同时使用了 `prevent` 修饰符和 `passive` 修饰符，此时如果是在非生产环境下并且 `addHandler` 函数的第六个参数 `warn` 存在，则使用 `warn` 函数打印警告信息，提示开发者 `passive` 修饰符不能和 `prevent` 修饰符一起使用，这是因为在事件监听中 `passive` 选项参数就是用来告诉浏览器该事件监听函数是不会阻止默认行为的。
+首先检测 `v-on` 指令的修饰符对象 `modifiers` 是否存在，如果在使用 `v-on` 指令时没有指定任何修饰符，则 `modifiers` 的值为 `undefined`，此时会使用冻结的空对象 `emptyObject` 作为替代。接着是一个 `if` 条件语句块，如果该 `if` 语句的判断条件成立，则说明开发者同时使用了 `prevent` 修饰符和 `passive` 修饰符，此时如果是在非生产环境下并且 `addHandler` 函数的第六个参数 `warn` 存在，则使用 `warn` 函数打印警告信息，提示开发者 `passive` 修饰符不能和 `prevent` 修饰符一起使用，这是因为在事件监听中 `passive` 选项参数就是用来告诉浏览器该事件监听函数是不会阻止默认行为的。
 
-在往下是这样一段代码：
+再往下是这样一段代码：
 
 ```js
 // check capture modifier
@@ -711,7 +711,7 @@ if (modifiers.passive) {
 }
 ```
 
-这段代码由三个 `if` 条件语句块组成，如果事件指令中使用了 `capture` 修饰符，则第一个 `if` 语句块的内容将被卑职，可以到在第一个 `if` 语句块内首先将 `modifiers.capture` 选项移除，紧接着在原始事件名称之前添加一个字符 `!`。假设我们事件绑定代码如下：
+这段代码由三个 `if` 条件语句块组成，如果事件指令中使用了 `capture` 修饰符，则第一个 `if` 语句块的内容将被执行，可以看到在第一个 `if` 语句块内首先将 `modifiers.capture` 选项移除，紧接着在原始事件名称之前添加一个字符 `!`。假设我们事件绑定代码如下：
 
 ```html
 <div @click.capture="handleClick"></div>
@@ -719,7 +719,7 @@ if (modifiers.passive) {
 
 如上代码中点击事件使用了 `capture` 修饰符，所以在 `addHandler` 函数内部，会把事件名称 `'click'` 修改为 `'!click'`。
 
-与第一个 `if` 语句块类似，第二个和第三个 `if` 语句块分别用来处理当事件使用了 `once` 修饰符和 `passive` 修饰符的情况。可以看到如果事件使用了 `once` 修饰符，则会在事件名称的前面添加字符 `~`，如果事件使用了 `passive` 修饰符，则会在事件名称前面添加字符 `&`。也就是说如下两端代码是等价的：
+与第一个 `if` 语句块类似，第二个和第三个 `if` 语句块分别用来处理当事件使用了 `once` 修饰符和 `passive` 修饰符的情况。可以看到如果事件使用了 `once` 修饰符，则会在事件名称的前面添加字符 `~`，如果事件使用了 `passive` 修饰符，则会在事件名称前面添加字符 `&`。也就是说如下两段代码是等价的：
 
 ```html
 <div @click.once="handleClick"></div>
@@ -747,7 +747,7 @@ if (name === 'click') {
 }
 ```
 
-这段代码用来规范化“右击”事件和点击鼠标中间按钮的事件，我们知道在浏览器中点击右键一般会出来一个菜单，这本质上是触发了 `contextmenu` 事件。而 `Vue` 中定义“右击”事件的方式是为 `click` 事件添加 `right` 修饰符。所以如上代码中首先检查了事件名称是否是 `click`，如果事件名称是 `click` 并且使用了 `right` 修饰符，则会将事件名称重写为 `contextmenu`，同时使用 `delete` 操作符删除 `modifiers.right` 属性。类似的在 `Vue` 中定义点击滚轮事件的方式是为 `click` 事件指定 `middle` 修饰符，但我们知道鼠标本没有滚轮点击事件，一般我们区分用户点击的按钮是不是滚轮的方式是监听 `mouseup` 事件，然后通过事件对象的 `event.button` 属性值来判断，如果 `event.button === 1` 则说明用户点击的是滚轮按钮。
+这段代码用来规范化“右击”事件和点击鼠标中间按钮的事件，我们知道在浏览器中点击右键一般会出来一个菜单，这本质上是触发了 `contextmenu` 事件。而 `Vue` 中定义“右击”事件的方式是为 `click` 事件添加 `right` 修饰符。所以如上代码中首先检查了事件名称是否是 `click`，如果事件名称是 `click` 并且使用了 `right` 修饰符，则会将事件名称重写为 `contextmenu`，同时使用 `delete` 操作符删除 `modifiers.right` 属性。类似地在 `Vue` 中定义点击滚轮事件的方式是为 `click` 事件指定 `middle` 修饰符，但我们知道鼠标本没有滚轮点击事件，一般我们区分用户点击的按钮是不是滚轮的方式是监听 `mouseup` 事件，然后通过事件对象的 `event.button` 属性值来判断，如果 `event.button === 1` 则说明用户点击的是滚轮按钮。
 
 不过这里有一点需要提醒大家，我们知道如果 `click` 事件使用了 `once` 修饰符，则事件的名字会被修改为 `~click`，所以当程序执行到如上这段时，事件名字是永远不会等于字符串 `'click'` 的，换句话说，如果同时使用 `once` 修饰符和 `right` 修饰符，则右击事件不会被触发，如下代码所示：
 
@@ -761,7 +761,7 @@ if (name === 'click') {
 <div @contextmenu.once="handleClickRightOnce"></div>
 ```
 
-但其实从源码角度也是很好解决的，只需要把范化“右击”事件和点击鼠标中间按钮的事件的这段代码提前即可，关于这一点我提交了一个 [PR](https://github.com/vuejs/vue/pull/8492)，但实际上我认为还有更好的解决方案，那就是从 `mouseup` 事件入手，将 `contextmenu` 事件与“右击”事件完全分离处理，这里就不展开讨论了。
+但其实从源码角度也是很好解决的，只需要把规范化“右击”事件和点击鼠标中间按钮的事件的这段代码提前即可，关于这一点我提交了一个 [PR](https://github.com/vuejs/vue/pull/8492)，但实际上我认为还有更好的解决方案，那就是从 `mouseup` 事件入手，将 `contextmenu` 事件与“右击”事件完全分离处理，这里就不展开讨论了。
 
 我们回到 `addHandler` 函数继续看后面的代码，接下来我们要看的是如下这段代码：
 
@@ -775,7 +775,7 @@ if (modifiers.native) {
 }
 ```
 
-定义了 `events` 变量，然后判断是否存在 `native` 修饰符，如果 `native` 修饰符存在则会在元素描述对象上添加 `el.nativeEvents` 属性，初始值为一个空对象，并且 `events` 变量与 `el.nativeEvents` 属性具有相同的引用，另外大家注意如上代码中使用 `delete` 操作符删除了 `modifiers.native` 属性，到目前为止我们在讲解 `addHandler` 函数时以及遇到了很多次使用 `delete` 操作符删除修饰符对象属性的做法，那这么做的目的是什么呢？这是因为在代码生成阶段会使用 `for...in` 语句遍历修饰符对象，然后做一些相关的事情，所以在生成 `AST` 阶段把那些不希望被遍历的属性删除掉，更具体的内容我们会在代码生成中为大家详细讲解。回过头来，如果 `native` 属性不存在则会在元素描述对象上添加 `el.events` 属性，它的初始值也是一个空对象，此时 `events` 变量的引用将于 `el.events` 属性相同。
+定义了 `events` 变量，然后判断是否存在 `native` 修饰符，如果 `native` 修饰符存在则会在元素描述对象上添加 `el.nativeEvents` 属性，初始值为一个空对象，并且 `events` 变量与 `el.nativeEvents` 属性具有相同的引用，另外大家注意如上代码中使用 `delete` 操作符删除了 `modifiers.native` 属性，到目前为止我们在讲解 `addHandler` 函数时已经遇到了很多次使用 `delete` 操作符删除修饰符对象属性的做法，那这么做的目的是什么呢？这是因为在代码生成阶段会使用 `for...in` 语句遍历修饰符对象，然后做一些相关的事情，所以在生成 `AST` 阶段把那些不希望被遍历的属性删除掉，更具体的内容我们会在代码生成中为大家详细讲解。回过头来，如果 `native` 属性不存在则会在元素描述对象上添加 `el.events` 属性，它的初始值也是一个空对象，此时 `events` 变量的引用将与 `el.events` 属性相同。
 
 再往下是这样一段代码：
 
@@ -806,7 +806,7 @@ if (Array.isArray(handlers)) {
 el.plain = false
 ```
 
-首先定义了 `handlers` 常量，它的值是通过事件名称获取 `events` 对象下的对应的属性值得到的：`events[name]`，我们知道变量 `events` 要么是元素描述对象的 `el.nativeEvents` 属性的引用，要么就是元素描述对象 `el.events` 属性的引用。无论是谁的引用，在初始情况下 `events` 变量都是一个空对象，所以在第一次调用 `addHandler` 时 `handlers` 常量是 `undefined`，这件会导致接下来的代码中 `else` 语句块将被执行：
+首先定义了 `handlers` 常量，它的值是通过事件名称获取 `events` 对象下的对应的属性值得到的：`events[name]`，我们知道变量 `events` 要么是元素描述对象的 `el.nativeEvents` 属性的引用，要么就是元素描述对象 `el.events` 属性的引用。无论是谁的引用，在初始情况下 `events` 变量都是一个空对象，所以在第一次调用 `addHandler` 时 `handlers` 常量是 `undefined`，这就会导致接下来的代码中 `else` 语句块将被执行：
 
 ```js {6}
 if (Array.isArray(handlers)) {
@@ -833,7 +833,7 @@ newHandler = {
 }
 ```
 
-由因为使用了 `once` 修饰符，所以事件名称将变为字符串 `'~click'`，又因为在监听事件时没有使用 `native` 修饰符，所以 `events` 变量是元素描述对象的 `el.events` 属性的引用，所以调用 `addHandler` 函数的最终结果就是在元素描述对象的 `el.events` 对象中添加相应事件的处理结果：
+又因为使用了 `once` 修饰符，所以事件名称将变为字符串 `'~click'`，又因为在监听事件时没有使用 `native` 修饰符，所以 `events` 变量是元素描述对象的 `el.events` 属性的引用，所以调用 `addHandler` 函数的最终结果就是在元素描述对象的 `el.events` 对象中添加相应事件的处理结果：
 
 ```js
 el.events = {
@@ -844,7 +844,7 @@ el.events = {
 }
 ```
 
-现在我们来修改一个之前的模板，如下：
+现在我们来修改一下之前的模板，如下：
 
 ```html
 <div @click.prevent="handleClick1" @click="handleClick2"></div>
@@ -919,9 +919,9 @@ if (Array.isArray(handlers)) {
 el.plain = false
 ```
 
-如果一个标签存在事件侦听，无论如何都不会认为这个元素是“纯”的，所以这里直接将 `el.plain` 设置为 `false`。`el.plain` 属性会影响代码生成阶段，并间接导致程序的执行行为，我们后面会总结一个分关于 `el.plain` 的变更情况，让大家充分的理解。
+如果一个标签存在事件侦听，无论如何都不会认为这个元素是“纯”的，所以这里直接将 `el.plain` 设置为 `false`。`el.plain` 属性会影响代码生成阶段，并间接导致程序的执行行为，我们后面会总结一个关于 `el.plain` 的变更情况，让大家充分地理解。
 
-以上就是对于 `addHandler` 函数的讲解，我们发现 `addHandler` 函数对于元素描述对象的影响主要是在元素描述对象上添加了 `el.events` 属性和 `el.nativeEvents` 属性。对于 `el.events` 属性和 `el.nativeEvents` 属性的结构我们前面已经讲解得很细了，这里不再做总结。
+以上就是对于 `addHandler` 函数的讲解，我们发现 `addHandler` 函数对于元素描述对象的影响主要是在元素描述对象上添加了 `el.events` 属性和 `el.nativeEvents` 属性。对于 `el.events` 属性和 `el.nativeEvents` 属性的结构我们前面已经讲解得很详细了，这里不再做总结。
 
 最后我们回到 `src/compiler/parser/index.js` 文件中的 `processAttrs` 函数中，如下高亮代码所示：
 
@@ -936,7 +936,7 @@ if (bindRE.test(name)) { // v-bind
 }
 ```
 
-现在大家应该知道对于使用 `v-on` 指令绑定的时间，在解析阶段都做了哪些处理了吧。另外我们注意一下如上代码中调用 `addHandler` 函数时传递的第五个参数为 `false`，它实际上就是 `addHandler` 函数中名字为 `important` 的参数，它影响的是新添加的时间信息对象的顺序，由于上面代码中传递的 `important` 参数为 `false`，所以使用 `v-on` 添加的事件侦听函数将按照添加的顺序被先后执行。
+现在大家应该知道对于使用 `v-on` 指令绑定的事件，在解析阶段都做了哪些处理了吧。另外我们注意一下如上代码中调用 `addHandler` 函数时传递的第五个参数为 `false`，它实际上就是 `addHandler` 函数中名字为 `important` 的参数，它影响的是新添加的事件信息对象的顺序，由于上面代码中传递的 `important` 参数为 `false`，所以使用 `v-on` 添加的事件侦听函数将按照添加的顺序被先后执行。
 
 以上就是对于 `processAttrs` 函数中对于 `v-on` 指令的解析。
 
@@ -964,7 +964,7 @@ if (bindRE.test(name)) { // v-bind
 }
 ```
 
-如上高亮代码所示，如果一个指令既不是 `v-bind` 也不是 `v-on`，则如上 `else` 语句块的代码将被执行。这段代码的作用是用来处理除 `v-bind` 和 `v-on` 指令之外的其他指令，但这些指令中不包含 `v-once` 指令，因为 `v-once` 指令已经在 `processOnce` 函数中被处理了，同样的 `v-if/v-else-if/v-else` 等指令也不会被如上这段代码处理，下面是一个表格，表格中列出了所有 `Vue` 内置提供的指令与已经处理过的指令和剩余为处理指令的对照表格：
+如上高亮代码所示，如果一个指令既不是 `v-bind` 也不是 `v-on`，则如上 `else` 语句块的代码将被执行。这段代码的作用是用来处理除 `v-bind` 和 `v-on` 指令之外的其他指令，但这些指令中不包含 `v-once` 指令，因为 `v-once` 指令已经在 `processOnce` 函数中被处理了，同样的 `v-if/v-else-if/v-else` 等指令也不会被如上这段代码处理，下面是一个表格，表格中列出了所有 `Vue` 内置提供的指令与已经处理过的指令和剩余未处理指令的对照表格：
 
 | Vue 内置提供的所有指令  | 是否已经被解析 | 解析函数 |
 | ------------- | ------------- | ------------- |
@@ -982,7 +982,7 @@ if (bindRE.test(name)) { // v-bind
 | `v-cloak`  | 否  | 无  |
 | `v-model`  | 否  | 无  |
 
-通过如上表格可以看到到目前为止还有五个指令没有得到处理，分别是 `v-text`、`v-html`、`v-show`、`v-cloak` 以及 `v-model`，除了这五个 `Vue` 内置提供的指令之外，开发者还可以自定义指令，所以上面代码中 `else` 语句块内的代码就是用来处理剩余这五个内置指令和自定义指令的。
+通过如上表格可以看到，到目前为止还有五个指令没有得到处理，分别是 `v-text`、`v-html`、`v-show`、`v-cloak` 以及 `v-model`，除了这五个 `Vue` 内置提供的指令之外，开发者还可以自定义指令，所以上面代码中 `else` 语句块内的代码就是用来处理剩余的这五个内置指令和其他自定义指令的。
 
 我们回到 `else` 语句块内的代码，如下：
 
@@ -1015,7 +1015,7 @@ const argMatch = name.match(argRE)
 const arg = argMatch && argMatch[1]
 ```
 
-第一句代码使用 `argRE` 正则匹配变量 `name`，并将匹配结果保存在 `argMatch` 常量中，由于使用的是 `match` 方法，所以如果匹配成功则会返回一个结果数组，匹配失败则会得到 `null`。`argRE` 正则我们在上一章讲解过，它用来匹配指令字符串中的参数部分，并且拥有一个捕获组用来捕获参数字符串，假设现在 `name` 变量的值为 `custom:arg`，是最终 `argMatch` 常量将是一个数组：
+第一句代码使用 `argRE` 正则匹配变量 `name`，并将匹配结果保存在 `argMatch` 常量中，由于使用的是 `match` 方法，所以如果匹配成功则会返回一个结果数组，匹配失败则会得到 `null`。`argRE` 正则我们在上一章讲解过，它用来匹配指令字符串中的参数部分，并且拥有一个捕获组用来捕获参数字符串，假设现在 `name` 变量的值为 `custom:arg`，则最终 `argMatch` 常量将是一个数组：
 
 ```js
 const argMatch = [':arg', 'arg']
@@ -1023,7 +1023,7 @@ const argMatch = [':arg', 'arg']
 
 可以看到 `argMatch` 数组中索引为 `1` 的元素保存着参数字符串。有了 `argMatch` 数组后将会执行第二句代码，第二句代码首先检测了 `argMatch` 是否存在，如果存在则取 `argMatch` 数组中索引为 `1` 的元素作为常量 `arg` 的值，所以常量 `arg` 所保存的就是参数字符串。
 
-再我往下是一个 `if` 条件语句，如下：
+再往下是一个 `if` 条件语句，如下：
 
 ```js
 if (arg) {
@@ -1061,7 +1061,7 @@ export function addDirective (
 }
 ```
 
-可以看到 `addDirective` 函数接收六个参数，在 `addDirective` 函数体内，首先判断了元素描述对象的 `el.directives` 是否存在，如果不存在则先将其初始化一个空数组，然后在使用 `push` 方法添加一个指令信息对象到 `el.directives` 数组中，如果 `el.directives` 属性已经存在，则直接使用 `push` 方法将指令信息对象添加到 `el.directives` 数组中。我们一直说的**指令信息对象**实际上指的就是如上代码中传递给 `push` 方法的参数：
+可以看到 `addDirective` 函数接收六个参数，在 `addDirective` 函数体内，首先判断了元素描述对象的 `el.directives` 是否存在，如果不存在则先将其初始化一个空数组，然后再使用 `push` 方法添加一个指令信息对象到 `el.directives` 数组中，如果 `el.directives` 属性已经存在，则直接使用 `push` 方法将指令信息对象添加到 `el.directives` 数组中。我们一直说的**指令信息对象**实际上指的就是如上代码中传递给 `push` 方法的参数：
 
 ```js
 { name, rawName, value, arg, modifiers }
@@ -1111,7 +1111,7 @@ function checkForAliasModel (el, value) {
 }
 ```
 
-`checkForAliasModel` 函数的作用就是以使用了 `v-model` 指令的标签开始，逐层向上遍历父级标签的元素描述对象，知道根元素为止。并且在遍历的过程中一旦发现这些标签的元素描述对象中存在满足条件：`_el.for && _el.alias === value` 的情况，则会打印警告信息。我们先来看如下条件：
+`checkForAliasModel` 函数的作用就是从使用了 `v-model` 指令的标签开始，逐层向上遍历父级标签的元素描述对象，直到根元素为止。并且在遍历的过程中一旦发现这些标签的元素描述对象中存在满足条件：`_el.for && _el.alias === value` 的情况，就会打印警告信息。我们先来看如下条件：
 
 ```js
 if (_el.for && _el.alias === value)
@@ -1131,7 +1131,7 @@ if (_el.for && _el.alias === value)
 [1, 2, 3]
 ```
 
-此时将会渲染三个输入框，但是当我们修改输入框的值时，这个变更是不会提现到 `list` 数组的，换句话说如上代码中的 `v-model` 指令无效，为什么无效呢？这与 `v-for` 指令的实现有关，如上代码中的 `v-model` 指令所执行的修改操作等价于修改了函数的局部变量，这当然不会影响到真正的数据。为了解决这个问题，`Vue` 也给了我们一个方案，那就是使用对象数组替代基本类型值的数组，并在 `v-model` 指令中绑定对象的属性，我们修改一下上例并使其生效：
+此时将会渲染三个输入框，但是当我们修改输入框的值时，这个变更是不会体现到 `list` 数组的，换句话说如上代码中的 `v-model` 指令无效，为什么无效呢？这与 `v-for` 指令的实现有关，如上代码中的 `v-model` 指令所执行的修改操作等价于修改了函数的局部变量，这当然不会影响到真正的数据。为了解决这个问题，`Vue` 也给了我们一个方案，那就是使用对象数组替代基本类型值的数组，并在 `v-model` 指令中绑定对象的属性，我们修改一下上例并使其生效：
 
 ```html
 <div v-for="obj of list">
@@ -1187,7 +1187,7 @@ function processAttrs (el) {
 }
 ```
 
-如上高亮的代码所示，这个 `else` 语句块内代码的作用就是用来处理非指令属性的，如下列出的非指令属性是我们在之前的讲解中已经讲过的指令：
+如上高亮的代码所示，这个 `else` 语句块内代码的作用就是用来处理非指令属性的，如下列出的非指令属性是我们在之前的讲解中已经讲过的属性：
 
 * `key`
 * `ref`
@@ -1255,13 +1255,13 @@ if (process.env.NODE_ENV !== 'production') {
 }
 ```
 
-可以看到，在非生产环境下才会执行该 `if` 语句块内的代码，在改 `if` 语句块内首先调用了 `parseText` 函数，这个函数来自于 `src/compiler/parser/text-parser.js` 文件，`parseText` 函数的作用是用来解析字面量表达式的，什么是字面量表达式呢？如下模板代码所示：
+可以看到，在非生产环境下才会执行该 `if` 语句块内的代码，在该 `if` 语句块内首先调用了 `parseText` 函数，这个函数来自于 `src/compiler/parser/text-parser.js` 文件，`parseText` 函数的作用是用来解析字面量表达式的，什么是字面量表达式呢？如下模板代码所示：
 
 ```html
 <div id="{{ isTrue ? 'a' : 'b' }}"></div>
 ```
 
-其中字符串 `"{{ isTrue ? 'a' : 'b' }}"` 就称为字面量表达式，此时就会使用 `parseText` 函数来解析这段字符串。至于 `parseText` 函数是如何对这段字符串进行解析的，我们会在后面讲解处理文本节点时再来详细说明。这里大家只需要执行，如果使用 `parseText` 函数能够成功解析某个非指令属性的属性值字符串，则说明该非指令属性的属性值使用了字面量表达式，就如同上面的模板中的 `id` 属性一样。此时将会打印警告信息，提示开发者使用绑定属性作为替代，如下：
+其中字符串 `"{{ isTrue ? 'a' : 'b' }}"` 就称为字面量表达式，此时就会使用 `parseText` 函数来解析这段字符串。至于 `parseText` 函数是如何对这段字符串进行解析的，我们会在后面讲解处理文本节点时再来详细说明。这里大家只需要知道，如果使用 `parseText` 函数能够成功解析某个非指令属性的属性值字符串，则说明该非指令属性的属性值使用了字面量表达式，就如同上面的模板中的 `id` 属性一样。此时将会打印警告信息，提示开发者使用绑定属性作为替代，如下：
 
 ```html
 <div :id="isTrue ? 'a' : 'b'"></div>
@@ -1291,7 +1291,7 @@ if (!el.component &&
 
 ## preTransformNode 前置处理
 
-讲完了 `processAttrs` 函数之后，所有的 `process*` 类函数我们都讲解完毕了。另外大家不要忘了，目前我们所讲解的内容都是在 `parseHTML` 函数的 `start` 钩子中运行的代码，如下高亮的代码所示：
+讲完了 `processAttrs` 函数之后，所有的 `process*` 系列函数我们都讲解完毕了。另外大家不要忘了，目前我们所讲解的内容都是在 `parseHTML` 函数的 `start` 钩子中运行的代码，如下高亮的代码所示：
 
 ```js {9-11}
 parseHTML(template, {
@@ -1334,7 +1334,7 @@ preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
 
 由上代码可知 `preTransforms` 变量的值是使用 `pluckModuleFunction` 函数从 `options.modules` 编译器选项中读取 `preTransformNode` 字段筛选出来的。具体的筛选过程在前面的章节中我们已经讲解过了，这里就不再细说。
 
-我来说一说编译器选项中的 `modules`，在 [理解编译器代码的组织方式](./art/80vue-compiler-start.md#理解编译器代码的组织方式) 一节中我们我们知道编译器的选项来自于两部分，一部分是创建编译器时传递的基本选项(`baseOptions`)，另一部分则是在使用编辑器编译模板时传递的选项参数。如下是创建编译器时的基本选项：
+我来说一说编译器选项中的 `modules`，在 [理解编译器代码的组织方式](./art/80vue-compiler-start.md#理解编译器代码的组织方式) 一节中我们知道编译器的选项来自于两部分，一部分是创建编译器时传递的基本选项(`baseOptions`)，另一部分则是在使用编辑器编译模板时传递的选项参数。如下是创建编译器时的基本选项：
 
 ```js
 import { baseOptions } from './options'
@@ -1423,7 +1423,7 @@ function preTransformNode (el: ASTElement, options: CompilerOptions) {
 if (el.tag === 'input')
 ```
 
-也就是说只要当前解析的标签是 `input` 的标签时才会执行预处理工作，看来 `preTransformNode` 函数是用来预处理 `input` 标签的。如果当前解析的元素是 `input` 标签，则会继续判断该 `input` 标签是否使用了 `v-model` 属性：
+也就是说只有当前解析的标签是 `input` 标签时才会执行预处理工作，看来 `preTransformNode` 函数是用来预处理 `input` 标签的。如果当前解析的元素是 `input` 标签，则会继续判断该 `input` 标签是否使用了 `v-model` 属性：
 
 ```js
 const map = el.attrsMap
