@@ -1256,6 +1256,7 @@ new Vue({
 const data = {}
 Object.defineProperty(data, 'getterProp', {
   enumerable: true,
+  configurable: true,
   get: () => {
     return {
       a: 1
