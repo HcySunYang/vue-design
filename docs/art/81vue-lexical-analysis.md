@@ -206,7 +206,7 @@ console.log('disabled'.match(attribute))  // 测试无属性值
 ```js
 // 对于单引号的情况
 [
-    'class="some-class"',
+    "class='some-class'",
     'class',
     '=',
     undefined,
@@ -215,7 +215,7 @@ console.log('disabled'.match(attribute))  // 测试无属性值
 ]
 // 对于没有引号
 [
-    'class="some-class"',
+    'class=some-class',
     'class',
     '=',
     undefined,
