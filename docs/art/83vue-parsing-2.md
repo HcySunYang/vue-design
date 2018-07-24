@@ -1434,10 +1434,63 @@ if (!map['v-model']) {
 
 如果该 `input` 标签没有使用 `v-model` 属性，则函数直接返回，什么都不做。所以我们可以说 `preTransformNode` 函数要预处理的是**使用了 `v-model` 属性的 `input` 标签**，不过还没完，我们继续看如下代码
 
+```js {9}
+let typeBinding
+if (map[':type'] || map['v-bind:type']) {
+  typeBinding = getBindingAttr(el, 'type')
+}
+if (!map.type && !typeBinding && map['v-bind']) {
+  typeBinding = `(${map['v-bind']}).type`
+}
 
+if (typeBinding) {
+  // 省略...
+}
+```
 
+上面这段代码是 `preTransformNode` 函数中剩余的所有代码，只不过我们省略了最后一个 `if` 语句块内的代码。我们注意如上代码中高亮的 `if` 语句的条件，可以发现只有当 `typeBinding` 变量为真的情况下才会执行该 `if` 语句块内的代码，而该 `if` 语句块内的代码才是用来完成主要工作的代码。那么 `typeBinding` 变量是什么呢？实际上 `typeBinding` 变量保存的是该 `input` 标签上绑定的 `type` 属性的值，举个例子，假如有如下模板：
 
-那么要如何处理使用了 `v-model` 属性的 `input` 标签呢？来看一下 `model.js` 文件开头的一段注释：
+```html
+<input v-model="val" :type="inputType" />
+```
+
+则 `typeBinding` 变量的值为字符串 `'inputType'`。我们来看源码的实现，首先是如下这段代码：
+
+```js
+if (map[':type'] || map['v-bind:type']) {
+  typeBinding = getBindingAttr(el, 'type')
+}
+```
+
+由于开发者在绑定属性的时候可以选择 `v-bind:` 或其缩写 `:` 两种方式，所以如上代码中分别获取了通过这两种方式绑定的 `type` 属性，如果存在其一，则使用 `getBindingAttr` 函数获取绑定的 `type` 属性的值。如果开发者没有这两种方式绑定 `type` 属性，则代码会继续执行，来到如下这段 `if` 条件语句：
+
+```js
+if (!map.type && !typeBinding && map['v-bind']) {
+  typeBinding = `(${map['v-bind']}).type`
+}
+```
+
+如果该 `if` 条件语句的判断条件成立，则说明该 `input` 标签没有使用非绑定的 `type` 属性，并且也没有使用 `v-bind:` 或 `:` 绑定 `type` 属性，并且开发者使用了 `v-bind`。这里大家要注意了，开发者即使没有使用 `v-bind:` 或 `:` 绑定 `type` 属性，但仍然可以通过如下方式绑定属性：
+
+```html
+<input v-model="val" v-bind="{ type: inputType }" />
+```
+
+此时就需要通过读取绑定对象的 `type` 属性来获取绑定的属性值，即：
+
+```js
+typeBinding = `(${map['v-bind']}).type`
+```
+
+如上这句代码相当于：
+
+```js
+typeBinding = `({ type: inputType }).type`
+```
+
+总之我们要想方设法获取到绑定的 `type` 属性的值，如果获取不到则说明该 `input` 标签的类型是固定不变的，因为它是非绑定的。只有当一个 `input` 表单拥有绑定的 `type` 属性时才会执行真正的预处理代码，所以现在我们可以进一步的总结：**`preTransformNode` 函数要预处理的是使用了 `v-model` 属性并且使用了绑定的 `type` 属性的 `input` 标签**。
+
+那么要如何处理使用了 `v-model` 属性并且使用了绑定的 `type` 属性的 `input` 标签呢？来看一下 `model.js` 文件开头的一段注释：
 
 ```js
 /**
@@ -1450,6 +1503,24 @@ if (!map['v-model']) {
  *   <input v-else :type="type" v-model="data[type]">
  */
 ```
+
+根据如上注释可知 `preTransformNode` 函数会将形如：
+
+```html
+<input v-model="data[type]" :type="type">
+```
+
+这样的 `input` 标签扩展为如下三种 `input` 标签：
+
+```html
+<input v-if="type === 'checkbox'" type="checkbox" v-model="data[type]">
+<input v-else-if="type === 'radio'" type="radio" v-model="data[type]">
+<input v-else :type="type" v-model="data[type]">
+```
+
+我们知道在 `AST` 中一个标签对应一个元素描述对象，所以从结果上看，`preTransformNode` 函数将一个 `input` 元素描述对象扩展为三个 `input` 标签的元素描述对象。但是由于扩展后的标签由 `v-if`、`v-else-if` 和 `v-else` 三个条件指令组成，我们在前面的分析中得知，对于使用了 `v-else-if` 和 `v-else` 指令的标签，其元素描述对象是会被添加到那个使用 `v-if` 指令的元素描述对象的 `el.ifConditions` 数组中的。所以虽然把一个 `input` 标签扩展成了三个，但实际上并不会影响 `AST` 的结构，并且从渲染结果上看，也是一致的。
+
+但为什么要将一个 `input` 标签扩展为三个呢？这里有一个重要因素，由于使用了绑定的 `type` 属性，所以该 `input` 标签的类型是不确定的，我们知道同样是 `input` 标签，但类型为 `checkbox` 的 `input` 标签与类型为 `radio` 的 `input` 标签的行为是不一样的。到代码生成的阶段大家会看到正是因为这里将 `input` 标签类型做了区分，才使得代码生成时能根据三种不同情况生成三种对应的代码，从而实现三种不同的功能。有的同学就会问了，这里不做区分可不可以？答案是可以的，但是假如这里不做区分，那么当你在代码生成时是不可能知道目标 `input` 元素的类型是什么的，为了保证实现所有类型 `input` 标签的功能可用，所以你必须保证生成的代码能完成所有类型标签的工作。换句话说你要么选择在编译阶段区分类型，要么就在运行时阶段区分类型。而 `Vue` 选择了在变异阶段就将类型区分开来，这么做的好处是运行时的代码在针对某种特定类型的 `input` 标签时所执行的代码是很单一职责的。当我们后面分析代码生成时你同样能够看到，在编译阶段区分类型使得代码编写更加容易。
 
 
 ## 文本节点的元素描述对象
