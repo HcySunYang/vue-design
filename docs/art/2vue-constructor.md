@@ -65,8 +65,11 @@ import Vue from './runtime/index'
 ```js
 import Vue from 'core/index'
 ```
-
-同样的道理，这说明 `runtime/index.js` 文件也不是 `Vue` 的“出生地”，你应该继续顺藤摸瓜打开 `core/index.js` 文件，在 `scripts/alias.js` 的配置中，`core` 指向的是 `src/core`，打开 `src/core/index.js` 你能看到这样一句：
+同样的道理，这说明 `runtime/index.js` 文件也不是 `Vue` 的“出生地”，你应该继续顺藤摸瓜打开 `core/index.js` 文件，在 `scripts/alias.js` 的配置中，`core` 指向的是 `src/core`，这里 import Vue from 'core/index' 之所以能找到能找到src/core是因为使用了 rollup-plugin-alias 插件
+```js
+alias(Object.assign({}, aliases, opts.alias))
+```
+打开 `src/core/index.js` 你能看到这样一句：
 
 ```js
 import Vue from './instance/index'
