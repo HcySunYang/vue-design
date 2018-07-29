@@ -827,7 +827,7 @@ function mergeHook (
 整个函数体由三组*三目运算符*组成，有一点值得大家学习的就是这里写三目运算符的方式，是不是感觉非常地清晰易读？那么这段代码的分析我们同样使用与上面代码相同的格式来写：
 
 ```js
-retrun (是否有 childVal，即判断组件的选项中是否有对应名字的生命周期钩子函数)
+return (是否有 childVal，即判断组件的选项中是否有对应名字的生命周期钩子函数)
   ? 如果有 childVal 则判断是否有 parentVal
     ? 如果有 parentVal 则使用 concat 方法将二者合并为一个数组
     : 如果没有 parentVal 则判断 childVal 是不是一个数组
