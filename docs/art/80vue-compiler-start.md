@@ -1006,4 +1006,4 @@ const { render, staticRenderFns } = compileToFunctions(template, {
 const { compile, compileToFunctions } = createCompiler(baseOptions)
 ```
 
-所以看到这里，你应该知道的是：**在创建编译器的时候传递了基本编译器选项参数，当真正使用编译器变异模板时，依然可以传递编译器选项，并且新的选项和基本选项会以合适的方式融合或覆盖**。
+所以看到这里，你应该知道的是：**在创建编译器的时候传递了基本编译器选项参数，当真正使用编译器编译模板时，依然可以传递编译器选项，并且新的选项和基本选项会以合适的方式融合或覆盖**。
