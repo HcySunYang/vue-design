@@ -913,7 +913,7 @@ const otherCompiler = createCompilerCreator(function baseCompile (template, opti
 })
 ```
 
-看到这里相信聪明的你已经明白了为什么会有 `src/compiler/create-compiler.js` 文件的存在，已经它的作用，实际上该文件中的 `createCompilerCreator` 函数与我们如上例子中的 `createCompilerCreator` 函数作用一致。
+看到这里相信聪明的你已经明白了为什么会有 `src/compiler/create-compiler.js` 文件的存在，以及它的作用，实际上该文件中的 `createCompilerCreator` 函数与我们如上例子中的 `createCompilerCreator` 函数作用一致。
 
 现在我们再来看 `src/compiler/index.js` 文件中的如下这段代码：
 
