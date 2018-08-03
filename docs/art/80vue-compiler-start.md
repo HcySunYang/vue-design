@@ -424,7 +424,7 @@ if (process.env.NODE_ENV !== 'production') {
 * 1、缓存编译结果，通过 `createCompileToFunctionFn` 函数内声明的 `cache` 常量实现。
 * 2、调用 `compile` 函数将模板字符串转成渲染函数字符串
 * 3、调用 `createFunction` 函数将渲染函数字符串转成真正的渲染函数
-* 4、打印编译错误，包括：模板字符串 -> 渲染函数字符 以及 渲染函数字符串 -> 渲染函数 这两个阶段的错误
+* 4、打印编译错误，包括：模板字符串 -> 渲染函数字符串 以及 渲染函数字符串 -> 渲染函数 这两个阶段的错误
 
 最后，真正的 `模板字符串` 到 `渲染函数字符串` 的编译工作实际上是通过调用 `compile` 函数来完成的，所以接下来我们的任务就是弄清楚 `compile` 函数。
 
@@ -913,7 +913,7 @@ const otherCompiler = createCompilerCreator(function baseCompile (template, opti
 })
 ```
 
-看到这里相信聪明的你已经明白了为什么会有 `src/compiler/create-compiler.js` 文件的存在，已经它的作用，实际上该文件中的 `createCompilerCreator` 函数与我们如上例子中的 `createCompilerCreator` 函数作用一致。
+看到这里相信聪明的你已经明白了为什么会有 `src/compiler/create-compiler.js` 文件的存在，以及它的作用，实际上该文件中的 `createCompilerCreator` 函数与我们如上例子中的 `createCompilerCreator` 函数作用一致。
 
 现在我们再来看 `src/compiler/index.js` 文件中的如下这段代码：
 
@@ -1006,4 +1006,4 @@ const { render, staticRenderFns } = compileToFunctions(template, {
 const { compile, compileToFunctions } = createCompiler(baseOptions)
 ```
 
-所以看到这里，你应该知道的是：**在创建编译器的时候传递了基本编译器选项参数，当真正使用编译器变异模板时，依然可以传递编译器选项，并且新的选项和基本选项会以合适的方式融合或覆盖**。
+所以看到这里，你应该知道的是：**在创建编译器的时候传递了基本编译器选项参数，当真正使用编译器编译模板时，依然可以传递编译器选项，并且新的选项和基本选项会以合适的方式融合或覆盖**。
