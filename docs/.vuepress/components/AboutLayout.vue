@@ -9,7 +9,7 @@
       <div class="desc-text">
         <p><span>大名：</span>HcySunYang</p>
         <p><span>小名：</span>人柱力</p>
-        <p><span>职业：</span>美团智障前端工程师</p>
+        <p><span>职业：</span>无业游民</p>
         <p><a href="https://github.com/HcySunYang">Github</a><a href="http://hcysun.me">Blog</a><a href="https://www.zhihu.com/people/huo-chun-yang-77/activities">知乎</a><a href="http://weibo.com/5316956357">微博</a></p>
       </div>
     </div>
