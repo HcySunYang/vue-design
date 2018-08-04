@@ -32,6 +32,10 @@ module.exports = {
         link: '/more/'
       },
       {
+        text: '辅助工具',
+        link: '/tools/'
+      },
+      {
         text: '人之初',
         link: '/donate/'
       },
