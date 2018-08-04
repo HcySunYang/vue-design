@@ -13,7 +13,7 @@
 当我们执行 `npm run dev` 时，根据 `scripts/config.js` 文件中的配置：
 
 ```js
-// Runtime+compiler development build (Browser)
+  // Runtime+compiler development build (Browser)
   'web-full-dev': {
     entry: resolve('web/entry-runtime-with-compiler.js'),
     dest: resolve('dist/vue.js'),
@@ -60,13 +60,13 @@ web: resolve('src/platforms/web')
 import Vue from './runtime/index'
 ```
 
-这说明：这个文件并不是 Vue 构造函数的“出生地”，这个文件中的 `Vue` 是从 `./runtime/index` 导入进来的，于是我们就打开当前目录的 `runtime` 目录下的 `index.js` 看一下，你同样能够发现这样一句话：
+这说明：这个文件并不是 `Vue` 构造函数的“出生地”，这个文件中的 `Vue` 是从 `./runtime/index` 导入进来的，于是我们就打开当前目录的 `runtime` 目录下的 `index.js` 看一下，你同样能够发现这样一句话：
 
 ```js
 import Vue from 'core/index'
 ```
 
-同样的道理，这说明 `runtime/index.js` 文件也不是 `Vue` 的“出生地”，你应该继续顺藤摸瓜打开 `core/index.js` 文件，在 `scripts/alias.js` 的配置中，`core` 指向的是 `src/core`，打开 `src/core/index.js` 你能看到这样一句：
+同样的道理，这说明 `runtime/index.js` 文件也不是 `Vue` 构造函数的“出生地”，你应该继续顺藤摸瓜打开 `core/index.js` 文件，在 `scripts/alias.js` 的配置中，`core` 指向的是 `src/core`，打开 `src/core/index.js` 你能看到这样一句：
 
 ```js
 import Vue from './instance/index'
@@ -184,7 +184,7 @@ propsDef.get = function () { return this._props }
   }
 ```
 
-这三个方法分别是：`$set`、`$delete` 以及 `$watch`，实际上这些东西你都见过的，在这里：
+这三个方法分别是：`$set`、`$delete` 以及 `$watch`，实际上这些东西你都见过，在这里：
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-09-04-093014.jpg)
 
@@ -227,9 +227,9 @@ export function installRenderHelpers (target: any) {
 }
 ```
 
-以上代码就是 `installRenderHelpers` 函数的源码，可以发现，这个函数的作用就是在 `Vue.prototype` 上添加一系列方法的，那么这些方法的作用大家还不需要关心，后面都会讲解到。
+以上代码就是 `installRenderHelpers` 函数的源码，可以发现，这个函数的作用就是在 `Vue.prototype` 上添加一系列方法，这些方法的作用大家暂时还不需要关心，后面都会讲解到。
 
-`renderMixin` 方法在执行完 `installRenderHelpers` 函数之后，又在 `Vue.prototype` 上添加了两个方法，分别是：`$nextTick` 和 `_render`，最终经过 `renderMixin` 之后，`Vue.prototype` 将又被添加了如下方法：
+`renderMixin` 方法在执行完 `installRenderHelpers` 函数之后，又在 `Vue.prototype` 上添加了两个方法，分别是：`$nextTick` 和 `_render`，最终经过 `renderMixin` 之后，`Vue.prototype` 又被添加了如下方法：
 
 ```js
 // installRenderHelpers 函数中
@@ -252,11 +252,11 @@ Vue.prototype._g = bindObjectListeners
 Vue.prototype.$nextTick = function (fn: Function) {}
 Vue.prototype._render = function (): VNode {}
 ```
-至此，`instance/index.js` 文件中的代码就运行完毕了（注意：所谓的运行，是指执行 `npm run dev` 命令时构建的运行）。我们大概清楚每个 `*Mixin` 方法的作用其实就是包装 `Vue.prototype`，在其上挂载一些属性和方法，下面我们要做一件很重要的事情，就是将上面的内容集中合并起来，放到一个单独的地方，便于以后查看，我将它们整理到了这里：[附录/Vue 构造函数整理-原型](../appendix/vue-prototype.md)，这样当我们在后面详细讲解的时候，提到某个方法你就可以迅速定位它的位置，便于我们思路的清晰。
+至此，`instance/index.js` 文件中的代码就运行完毕了（注意：所谓的运行，是指执行 `npm run dev` 命令时构建的运行）。我们大概了解了每个 `*Mixin` 方法的作用其实就是包装 `Vue.prototype`，在其上挂载一些属性和方法，下面我们要做一件很重要的事情，就是将上面的内容集中合并起来，放到一个单独的地方，便于以后查看，我将它们整理到了这里：[附录/Vue 构造函数整理-原型](../appendix/vue-prototype.md)，这样当我们在后面详细讲解的时候，提到某个方法你就可以迅速定位它的位置，以便于保持我们思路的清晰。
 
 ## Vue 构造函数的静态属性和方法（全局API）
 
-到目前为止，`core/instance/index.js` 文件，也就是 `Vue` 的出生文件的代码我们就看完了，按照之前我们寻找Vue构造函数时的文件路径回溯，下一个我们要看的文件应该就是 `core/index.js` 文件，这个文件将 `Vue` 从 `core/instance/index.js` 文件中导入了进来，我们打开 `core/index.js` 文件，下面是其全部的代码，同样很简短易看：
+到目前为止，`core/instance/index.js` 文件，也就是 `Vue` 的出生文件的代码我们就看完了，按照之前我们寻找 `Vue` 构造函数时的文件路径回溯，下一个我们要看的文件应该就是 `core/index.js` 文件，这个文件将 `Vue` 从 `core/instance/index.js` 文件中导入了进来，我们打开 `core/index.js` 文件，下面是其全部的代码，同样很简短易看：
 
 ```js
 // 从 Vue 的出生文件导入 Vue
@@ -311,7 +311,7 @@ initGlobalAPI(Vue)
 
 最后，在 `Vue` 构造函数上添加了一个静态属性 `version`，存储了当前 `Vue` 的版本值，但是这里的 `'__VERSION__'` 是什么鬼？打开 `scripts/config.js` 文件，找到 `genConfig` 方法，其中有这么一句话：`__VERSION__: version`。这句话被写在了 `rollup` 的 `replace` 插件中，也就是说，`__VERSION__` 最终将被 `version` 的值替换，而 `version` 的值就是 `Vue` 的版本号。
 
-我们在回过头来看看这句话：
+我们再回过头来看看这句代码：
 
 ```js
 initGlobalAPI(Vue)
@@ -322,7 +322,7 @@ initGlobalAPI(Vue)
 首先是这样一段代码：
 
 ```js
-// config
+  // config
   const configDef = {}
   configDef.get = () => config
   if (process.env.NODE_ENV !== 'production') {
@@ -428,7 +428,7 @@ Vue.options = {
 extend(Vue.options.components, builtInComponents)
 ```
 
-`extend` 来自于 `shared/util.js` 文件，可以在 [附录/shared/util.js 文件工具方法全解](../appendix/shared-util.md) 中查看其作用，总之这句话的意思就是将 `builtInComponents` 的属性混合到 `Vue.options.components` 中，其中 `builtInComponents` 来自于 `core/components/index.js` 文件，该文件如下：
+`extend` 来自于 `shared/util.js` 文件，可以在 [附录/shared/util.js 文件工具方法全解](../appendix/shared-util.md) 中查看其作用，总之这句代码的意思就是将 `builtInComponents` 的属性混合到 `Vue.options.components` 中，其中 `builtInComponents` 来自于 `core/components/index.js` 文件，该文件如下：
 
 ```js
 import KeepAlive from './keep-alive'
@@ -468,7 +468,7 @@ initExtend(Vue)
 initAssetRegisters(Vue)
 ```
 
-这四个方法从上至下分别来自于 `global-api/use.js`、`global-api/mixin.js`、`global-api/extend.js` 以及 `global-api/assets.js` 这四个文件，我们不着急，一个一个慢慢的看，先打开 `global-api/use.js` 文件，我们发现这个文件只有一个 `initUse` 方法，如下：
+这四个方法从上至下分别来自于 `global-api/use.js`、`global-api/mixin.js`、`global-api/extend.js` 以及 `global-api/assets.js` 这四个文件，我们不着急，一个一个慢慢地看，先打开 `global-api/use.js` 文件，我们发现这个文件只有一个 `initUse` 方法，如下：
 
 ```js
 /* @flow */
@@ -482,7 +482,7 @@ export function initUse (Vue: GlobalAPI) {
 }
 ```
 
-该方法的作用是在 `Vue` 构造函数上添加 `use` 方法，也就是传说中的 `Vue.use` 这个全局API，这个方法大家应该不会陌生，用来安装 Vue 插件。
+该方法的作用是在 `Vue` 构造函数上添加 `use` 方法，也就是传说中的 `Vue.use` 这个全局API，这个方法大家应该不会陌生，用来安装 `Vue` 插件。
 
 再打开 `global-api/mixin.js` 文件，这个文件更简单，全部代码如下：
 
@@ -552,7 +552,7 @@ export const ASSET_TYPES = [
 ]
 ```
 
-所以，最终经过 `initAssetRegisters` 方法，`Vue` 将又多了三个静态方法：
+所以，最终经过 `initAssetRegisters` 方法，`Vue` 又多了三个静态方法：
 
 ```js
 Vue.component
@@ -562,9 +562,9 @@ Vue.filter
 
 这三个静态方法大家都不陌生，分别用来全局注册组件，指令和过滤器。
 
-这样，`initGlobalAPI` 方法的全部功能我们就介绍完毕了，它的作用就像它的名字一样，是在 `Vue` 构造函数上添加全局的API，类似整理 `Vue.prototype` 上的属性和方法一样，我们同样对 `Vue` 静态属性和方法做一个整理，将他放到 [附录/Vue 构造函数整理-全局API](../appendix/vue-global-api.md) 中，便于以后查阅。
+这样，`initGlobalAPI` 方法的全部功能我们就介绍完毕了，它的作用就像它的名字一样，是在 `Vue` 构造函数上添加全局的API，类似整理 `Vue.prototype` 上的属性和方法一样，我们同样对 `Vue` 静态属性和方法做一个整理，将它放到 [附录/Vue 构造函数整理-全局API](../appendix/vue-global-api.md) 中，便于以后查阅。
 
-至此，对于 `core/index.js` 文件的作用我们也大概清楚了，在这个文件里，它首先将核心的 `Vue`，也就是在 `core/instance/index.js` 文件中的 `Vue`，也可以说是原型被包装(添加属性和方法)后的 `Vue` 导出，然后使用 `initGlobalAPI` 方法给 `Vue` 添加静态方法和属性，除此之外，在这里文件里，也对原型进行了修改，为其添加了两个属性：`$isServer` 和 `$ssrContext`，最后添加了 `Vue.version` 属性并导出了 `Vue`。
+至此，对于 `core/index.js` 文件的作用我们也大概清楚了，在这个文件里，它首先将核心的 `Vue`，也就是在 `core/instance/index.js` 文件中的 `Vue`，也可以说是原型被包装(添加属性和方法)后的 `Vue` 导入，然后使用 `initGlobalAPI` 方法给 `Vue` 添加静态方法和属性，除此之外，在这个文件里，也对原型进行了修改，为其添加了两个属性：`$isServer` 和 `$ssrContext`，最后添加了 `Vue.version` 属性并导出了 `Vue`。
 
 ## Vue 平台化的包装
 
