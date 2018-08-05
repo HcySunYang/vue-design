@@ -35,9 +35,9 @@ export function query (el: string | Element): Element {
 
 * 源码分析：
 
-如果参数是字符串，那么将该字符串作为 `css` 选择符并使用 `document.querySelector()` 函数查询元素，如果查找到该元素则返回该元素，否则在非生产环境下回打印警告信息并返回一个新创建的 `div`。
+如果参数是字符串，那么将该字符串作为 `css` 选择符并使用 `document.querySelector()` 函数查询元素，如果查找到该元素则返回该元素，否则在非生产环境下会打印警告信息并返回一个新创建的 `div`。
 
-如果参数不是一个字符串，则原封不动的返回参数。
+如果参数不是一个字符串，则原封不动地返回参数。
 
 ## attrs.js 文件
 
@@ -84,7 +84,7 @@ el.innerHTML  // 这里的 el.innerHTML 属性就是元素对象的属性
     * `{String} type` 标签的 `type` 属性，多用于如 `<input type="button"/>`
     * `{String} attr` 属性名
 
-* 返回值：如果给定的属性 `attr` 在标签 `tag` 中要使用元素对象原生的 `prop` 进行绑定，那么就返回 `true`，否则 `false`。
+* 返回值：如果给定的属性 `attr` 在标签 `tag` 中要使用元素对象原生的 `prop` 进行绑定，那么就返回 `true`，否则返回 `false`。
 
 * 源码分析：
 
@@ -105,7 +105,7 @@ return (
 )
 ```
 
-总结为：属于以下几种情况之一的，应该改使用元素对象的原生 `prop` 绑定：
+总结为：属于以下几种情况之一的，应该使用元素对象的原生 `prop` 绑定：
 
 * `input,textarea,option,select,progress` 这些标签的 `value` 属性都应该使用元素对象的原生的 `prop` 绑定（除了 `type === 'button'` 之外）
 * `option` 标签的 `selected` 属性应该使用元素对象的原生的 `prop` 绑定
@@ -136,7 +136,7 @@ export const shouldDecodeNewlines = inBrowser ? getShouldDecode(false) : false
 export const shouldDecodeNewlinesForHref = inBrowser ? getShouldDecode(true) : false
 ```
 
-该文件主要导出两个变量，分别是 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref`，这两个变量都是布尔值，那么这两个变量是干嘛的呢？我们看一个例子就知道了，假设我们有如下 DOM：
+该文件主要导出两个变量，分别是 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref`，这两个变量都是布尔值，那么这两个变量是干嘛的呢？我们看一个例子就知道了，假设我们有如下 `DOM`：
 
 ```html
 <div id="link-box">
@@ -148,7 +148,7 @@ export const shouldDecodeNewlinesForHref = inBrowser ? getShouldDecode(true) : f
 </div>
 ```
 
-上面的 DOM 看上去貌似没有什么奇特地方，关键点在于 `<a>` 标签的 `href` 属性，我们在第一个 `<a>` 标签的 `href` 属性值后面添加了换行符，在第二个 `<a>` 标签的 `href` 属性值后面添加了制表符。那么这么做会有什么影响呢？执行下面的代码就显而易见了：
+上面的 `DOM` 看上去貌似没有什么奇特的地方，关键点在于 `<a>` 标签的 `href` 属性，我们在第一个 `<a>` 标签的 `href` 属性值后面添加了换行符，在第二个 `<a>` 标签的 `href` 属性值后面添加了制表符。那么这么做会有什么影响呢？执行下面的代码就显而易见了：
 
 ```js
 console.log(document.getElementById('link-box').innerHTML)
@@ -177,7 +177,7 @@ function getShouldDecode (href: boolean): boolean {
 * 2、设置这个 `div` 的 `innerHTML` 为 `<a href="\n"/>` 或者 `<div a="\n"/>`
 * 3、获取该 `div` 的 `innerHTML` 并检测换行符是否被编码
 
-`getShouldDecode` 接受一个布尔值参数 `href`，如果该参数为 `true` 意味着要监测的是 `a` 标签的 `href` 属性，否则检测任意属性。
+`getShouldDecode` 接收一个布尔值参数 `href`，如果该参数为 `true` 意味着要监测的是 `a` 标签的 `href` 属性，否则检测任意属性。
 
 有了上面的函数再实现 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个变量就容易多了：
 
@@ -188,7 +188,7 @@ export const shouldDecodeNewlinesForHref = inBrowser ? getShouldDecode(true) : f
 
 最终如果 `shouldDecodeNewlines` 为 `true`，意味着 `Vue` 在编译模板的时候，要对属性值中的换行符或制表符做兼容处理。而 `shouldDecodeNewlinesForHref` 为 `true` 意味着 `Vue` 在编译模板的时候，要对 `a` 标签的 `href` 属性值中的换行符或制表符做兼容处理。当然，一切都是以在浏览器中为前提的，因为上面的代码中存在一个 `inBrowser` 的判断。
 
-最后再啰嗦一句，为什么只在浏览器中才需要判断是否需要做此兼容处理呢？那是因为，只有完整版(包括编译器)的 `Vue`才会遇到这个问题，因为只有完整版的 `Vue` 才会在浏览器中对模板就行编译，才有可能在获取模板的时候使用 `innerHTML` 获取模板内容。
+最后再啰嗦一句，为什么只在浏览器中才需要判断是否需要做此兼容处理呢？那是因为，只有完整版(包括编译器)的 `Vue`才会遇到这个问题，因为只有完整版的 `Vue` 才会在浏览器中对模板进行编译，才有可能在获取模板的时候使用 `innerHTML` 获取模板内容。
 
 ## element.js 文件
 
@@ -216,7 +216,7 @@ export const isHTMLTag = makeMap(
 
 * 源码分析
 
-`isHTMLTag` 是一个使用 `makeMap` 生成的函数，可以在 [shared/util.js 文件工具方法全解](../shared-util) 中查看 `makeMap` 方法。
+`isHTMLTag` 是一个使用 `makeMap` 生成的函数，可以在 [shared/util.js 文件工具方法全解](./shared-util) 中查看 `makeMap` 方法。
 
 ### isSVG
 
@@ -237,7 +237,7 @@ export const isSVG = makeMap(
 
 * 源码分析
 
-`isSVG` 是一个使用 `makeMap` 生成的函数，可以在 [shared/util.js 文件工具方法全解](../shared-util) 中查看 `makeMap` 方法。
+`isSVG` 是一个使用 `makeMap` 生成的函数，可以在 [shared/util.js 文件工具方法全解](./shared-util) 中查看 `makeMap` 方法。
 
 ### isPreTag
 
@@ -273,7 +273,7 @@ export const isReservedTag = (tag: string): ?boolean => {
 isHTMLTag(tag) || isSVG(tag)
 ```
 
-判断一个标签是否是保留标签，我们可以知道，如果一个标签是 `html` 标签，或者是 `svg` 标签，那么这个标签即使保留标签。
+判断一个标签是否是保留标签，我们可以知道，如果一个标签是 `html` 标签，或者是 `svg` 标签，那么这个标签即是保留标签。
 
 ### getTagNamespace
 

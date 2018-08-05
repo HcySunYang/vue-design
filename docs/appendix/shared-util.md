@@ -10,7 +10,7 @@ export const emptyObject = Object.freeze({})
 
 * 描述：创建一个空的冻结对象 `emptyObject`，这意味着 `emptyObject` 是不可扩展、不可配置、不可写的。
 
-* 源码分析：通过以空 `json` 对象 `{}` 为参数调用 `Object.freeze` 函数实现。
+* 源码分析：通过以字面量形式创建的空对象 `{}` 为参数调用 `Object.freeze` 函数实现。
 
 ## isUndef
 
@@ -103,7 +103,7 @@ export function isObject (obj: mixed): boolean %checks {
 }
 ```
 
-* 描述：当值为 JSON-compliant 类型时，用于区分对象和原始值，返回 `boolean` 值。
+* 描述：当值为 `JSON-compliant` 类型时，用于区分对象和原始值，返回 `boolean` 值。
 
 * 参数：
   * `{mixed} obj` 混合类型
@@ -419,7 +419,7 @@ export function cached<F: Function> (fn: F): F {
 const cache = Object.create(null)
 ```
 
-随即便返回一个函数：
+随后返回一个函数：
 
 ```js
 return (function cachedFn (str: string) {
@@ -532,14 +532,14 @@ export function toArray (list: any, start?: number): Array<any> {
 }
 ```
 
-* 描述：将类数组的对象转换为数组。
+* 描述：将类数组对象转换为数组。
 
 * 参数：
   * `{any} list` 类数组list
   * `{number} start` 开始转换索引
 
 * 源码分析：
-`toArray` 接受2个参数，分别为类数组 `list` 和开始转换索引 `start`（默认从0开始）。通过`new Array()` 创建长度为 `i` 的新数组，`while` 循环对 `ret` 每一项赋值，最后返回转换后的新数组 `ret`。
+`toArray` 接收2个参数，分别为类数组 `list` 和开始转换索引 `start`（默认从0开始）。通过`new Array()` 创建长度为 `i` 的新数组，`while` 循环对 `ret` 每一项赋值，最后返回转换后的新数组 `ret`。
 
 ## extend
 
@@ -820,11 +820,11 @@ export function once (fn: Function): Function {
 
 * 源码分析：
 
-`once` 函数以 `fn` 作为参数并返回一个新函数。`called` 作为一个回调标识符，仅当值为false 时调用
+`once` 函数以 `fn` 作为参数并返回一个新函数。`called` 作为一个回调标识符，仅当值为 `false` 时调用
 ```js
 if (!called) {
   called = true
   fn.apply(this, arguments)
 }
 ```
-且将 `called` 值修改为 true。再次调用将不再执行。
+且将 `called` 值修改为 `true`。再次调用将不再执行。

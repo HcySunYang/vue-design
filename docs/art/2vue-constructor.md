@@ -568,9 +568,9 @@ Vue.filter
 
 ## Vue 平台化的包装
 
-现在，在我们弄清 `Vue` 构造函数的过程中已经看了两个主要的文件，分别是：`core/instance/index.js` 文件以及 `core/index.js` 文件，前者是 `Vue` 构造函数的定义文件，我们一直都叫其 `Vue` 的出生文件，主要作用是定义 `Vue` 构造函数，并对其原型添加属性和方法，即实例属性和实例方法。后者的主要作用是，为 `Vue` 添加全局的API，也就是静态的方法和属性。这两个文件有个共同点，就是它们都在 `core` 目录下，我们在介绍 `Vue` 项目目录结构的时候说过：`core` 目录存放的是平台无关的代码，所以无论是 `core/instance/index.js` 文件还是 `core/index.js` 文件，它们都在包装核心的 `Vue`，且这些包装是平台无关的。但是，`Vue` 是一个 `Multi-platform` 的项目（web和weex），不同平台可能会内置不同的组件、指令，或者一些平台特有的功能等等，那么这就需要对 `Vue` 根据不同的平台进行平台化的包装，这就是接下来我们要看的文件，这个文件也出现在我们寻找 `Vue` 构造函数的路线上，他就是：`platforms/web/runtime/index.js` 文件。
+现在，在我们弄清 `Vue` 构造函数的过程中已经看了两个主要的文件，分别是：`core/instance/index.js` 文件以及 `core/index.js` 文件，前者是 `Vue` 构造函数的定义文件，我们一直都叫其 `Vue` 的出生文件，主要作用是定义 `Vue` 构造函数，并对其原型添加属性和方法，即实例属性和实例方法。后者的主要作用是，为 `Vue` 添加全局的API，也就是静态的方法和属性。这两个文件有个共同点，就是它们都在 `core` 目录下，我们在介绍 `Vue` 项目目录结构的时候说过：`core` 目录存放的是与平台无关的代码，所以无论是 `core/instance/index.js` 文件还是 `core/index.js` 文件，它们都在包装核心的 `Vue`，且这些包装是与平台无关的。但是，`Vue` 是一个 `Multi-platform` 的项目（web和weex），不同平台可能会内置不同的组件、指令，或者一些平台特有的功能等等，那么这就需要对 `Vue` 根据不同的平台进行平台化地包装，这就是接下来我们要看的文件，这个文件也出现在我们寻找 `Vue` 构造函数的路线上，它就是：`platforms/web/runtime/index.js` 文件。
 
-在看这个文件之前，大家可以先打开 `platforms` 目录，可以发现有两个子目录 `web` 和 `weex`。这两个子目录的作用就是分别为相应的平台对核心的 `Vue` 进行包装的。而我们所要研究的 web 平台，就在 `web` 这个目录里。
+在看这个文件之前，大家可以先打开 `platforms` 目录，可以发现有两个子目录 `web` 和 `weex`。这两个子目录的作用就是分别为相应的平台对核心的 `Vue` 进行包装的。而我们所要研究的 `web` 平台，就在 `web` 这个目录里。
 
 接下来，我们就打开 `platforms/web/runtime/index.js` 文件，看一看里面的代码，这个文件的一开始，是一大堆 `import` 语句，其中就包括从 `core/index.js` 文件导入 `Vue` 的那句。
 
@@ -608,11 +608,11 @@ Vue.config = {
 }
 ```
 
-我们可以看到，从 `core/config.js` 文件导出的 `config` 对象，大部分都是初始化了一个初始值，并且我们在 `core/config.js` 文件中能看到很多这样的注释，如下图：
+我们可以看到，从 `core/config.js` 文件导出的 `config` 对象，大部分属性都是初始化了一个初始值，并且我们在 `core/config.js` 文件中能看到很多这样的注释，如下图：
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-09-06-090635.jpg)
 
-`This is platform-dependent and may be overwritten.`，这句话的意思是，这个配置的是与平台有关的，很可能被覆盖掉。这个时候我们在回看这段代码：
+`This is platform-dependent and may be overwritten.`，这句话的意思是，这个配置是与平台有关的，很可能会被覆盖掉。这个时候我们再回来看这段代码：
 
 ```js
 // install platform specific utils
@@ -765,7 +765,7 @@ Vue.prototype.$mount = function (
 
 再往下的一段代码是 `vue-devtools` 的全局钩子，它被包裹在 `setTimeout` 中，最后导出了 `Vue`。
 
-现在我们就看完了 `platforms/web/runtime/index.js` 文件，该文件的作用是对 `Vue` 进行平台化的包装：
+现在我们就看完了 `platforms/web/runtime/index.js` 文件，该文件的作用是对 `Vue` 进行平台化地包装：
 
 * 设置平台化的 `Vue.config`。
 * 在 `Vue.options` 上混合了两个指令(`directives`)，分别是 `model` 和 `show`。
@@ -784,7 +784,7 @@ import Vue from './runtime/index'
 export default Vue
 ```
 
-可以发现，`运行时` 的入口文件，导出的 `Vue` 就到 `./runtime/index.js` 文件为止。然而我们所选择的并不仅仅是运行时，而是完整版的 `Vue`，入口文件是 `entry-runtime-with-compiler.js`，我们知道完整版和运行时版的区别就在于 `compiler`，所以其实在我们看这个文件的代码之前也能够知道这个文件的作用：*就是在运行时的基础上添加 `compiler`*，对没错，这个文件就是干这个的，接下来我们就看看它是怎么做的，打开 `entry-runtime-with-compiler.js` 文件：
+可以发现，`运行时` 版的入口文件，导出的 `Vue` 就到 `./runtime/index.js` 文件为止。然而我们所选择的并不仅仅是运行时版，而是完整版的 `Vue`，入口文件是 `entry-runtime-with-compiler.js`，我们知道完整版和运行时版的区别就在于 `compiler`，所以其实在我们看这个文件的代码之前也能够知道这个文件的作用：*就是在运行时版的基础上添加 `compiler`*，对没错，这个文件就是干这个的，接下来我们就看看它是怎么做的，打开 `entry-runtime-with-compiler.js` 文件：
 
 ```js
 // ... 其他 import 语句
@@ -837,41 +837,10 @@ export default Vue
 
 然后定义了一个函数 `idToTemplate`，这个函数的作用是：获取拥有指定 `id` 属性的元素的 `innerHTML`。
 
-之后缓存了运行时Vue的 `Vue.prototype.$mount` 方法，并且进行了重写。
+之后缓存了运行时版 `Vue` 的 `Vue.prototype.$mount` 方法，并且进行了重写。
 
 接下来又定义了 `getOuterHTML` 函数，用来获取一个元素的 `outerHTML`。
 
 这个文件运行下来，对 `Vue` 的影响有两个，第一个影响是它重写了 `Vue.prototype.$mount` 方法；第二个影响是添加了 `Vue.compile` 全局API，目前我们只需要获取这些信息就足够了，我们把这些影响同样更新到 `附录` 对应的文件中，也都可以查看的到。
 
 到这里，`Vue` 神秘面具下真实的样子基本已经展现出来了。现在深呼吸，继续我们的探索吧！
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
