@@ -1429,7 +1429,7 @@ if (pos >= 0) {
 }
 ```
 
-上面的代码是 `parseEndTag` 函数剩余的全部代码，有三部分组成，即 `if...else if...else if`。首先我们查看 `if` 语句块，当 `pos >= 0` 的时候就会走 `if` 语句块。在 `if` 语句块内开启一个 `for` 循环，同样是从后向前遍历 `stack` 数组，如果发现 `stack` 数组中存在索引大于 `pos` 的元素，那么该元素一定是缺少闭合标签的，这个时候如果是在非生产环境那么 `Vue` 便会打印一句警告，告诉你缺少闭合标签。除了打印一句警告之外，随后会调用 `options.end(stack[i].tag, start, end)` 立即将其闭合，这是为了保证解析结果的正确性。最后更新 `stack` 栈以及 `lastTag`：
+上面的代码是 `parseEndTag` 函数剩余的全部代码，由三部分组成，即 `if...else if...else if`。首先我们查看 `if` 语句块，当 `pos >= 0` 的时候就会走 `if` 语句块。在 `if` 语句块内开启一个 `for` 循环，同样是从后向前遍历 `stack` 数组，如果发现 `stack` 数组中存在索引大于 `pos` 的元素，那么该元素一定是缺少闭合标签的，这个时候如果是在非生产环境那么 `Vue` 便会打印一句警告，告诉你缺少闭合标签。除了打印一句警告之外，随后会调用 `options.end(stack[i].tag, start, end)` 立即将其闭合，这是为了保证解析结果的正确性。最后更新 `stack` 栈以及 `lastTag`：
 
 ```js
 // Remove the open elements from the stack
@@ -1492,7 +1492,7 @@ else if (lowerCasedTagName === 'p')
 
 可以发现对于 `</br>` 和 `</p>` 标签浏览器可以将其正常解析为 `<br>` 以及 `<p></p>`，而对于 `</div>` 浏览器会将其忽略。所以 `Vue` 的 `parser` 与浏览器的行为是一致的。
 
-现在我们还剩一个问题没有讲解，即 `parseEndTag` 是如何处理 `stack` 栈中剩余未处理的标签的。其实就是调用 `parseEndTag()` 函数时不传递任何参数，也就是说此时 `tagName` 参数也不存在。这个时我们再次查看下面的代码：
+现在我们还剩一个问题没有讲解，即 `parseEndTag` 是如何处理 `stack` 栈中剩余未处理的标签的。其实就是调用 `parseEndTag()` 函数时不传递任何参数，也就是说此时 `tagName` 参数也不存在。这个时候我们再次查看下面的代码：
 
 ```js
 if (tagName) {
