@@ -2603,7 +2603,7 @@ export function processElement (element: ASTElement, options: CompilerOptions) {
 }
 ```
 
-如上是 `processElement` 函数的全部代码，可以看到在 `processElement` 函数内确实调用了很多其他的 `process*` 函数，除此之外在 `processComponent` 函数与 `processAttrs` 函数之间应用了 `transforms` 数组中的转换函数，我们不着急一点点来分析，首先来看 `processElement` 函数内执行的第一个函数，即 `processKey` 函数，如下是 `processKey` 函数的源码：
+如上是 `processElement` 函数的全部代码，可以看到在 `processElement` 函数内确实调用了很多其他的 `process*` 函数，除此之外在 `processComponent` 函数与 `processAttrs` 函数之间应用了 `transforms` 数组中的转换函数，我们不着急, 一点点来分析，首先来看 `processElement` 函数内执行的第一个函数，即 `processKey` 函数，如下是 `processKey` 函数的源码：
 
 ```js
 function processKey (el) {
@@ -2630,7 +2630,7 @@ if (process.env.NODE_ENV !== 'production' && el.tag === 'template') {
 以下是对使用了 `key` 属性的标签的解析总结：
 
 * 1、`key` 属性不能被应用到 `<template>` 标签。
-* 2、使用了 `key` 属性的标签，其元素描述对象的 `el.key` 属性保存在 `key` 属性的值。
+* 2、使用了 `key` 属性的标签，其元素描述对象的 `el.key` 属性保存着 `key` 属性的值。
 
 ## 获取绑定的属性值以及过滤器的解析
 
@@ -2656,7 +2656,7 @@ export function getBindingAttr (
 }
 ```
 
-大家观察一下如上代码，可以发现在 `getBindingAttr` 函数内部多次调用了 `getAndRemoveAttr` 函数。实际上 `getBindingAttr` 函数的作用就像它的名字一样，用来获取绑定属性的值。什么是绑定属性呢？绑定属性就是通过 `v-bind` 执行或其缩写 `:` 所定义的属性。`getBindingAttr` 函数接收三个参数，前两个参数与 `getAndRemoveAttr` 函数的参数前两个参数相同，分别是元素的描述对象和要获取的属性的名字。在 `getBindingAttr` 函数内部首先执行的是如下这段代码：
+大家观察一下如上代码，可以发现在 `getBindingAttr` 函数内部多次调用了 `getAndRemoveAttr` 函数。实际上 `getBindingAttr` 函数的作用就像它的名字一样，用来获取绑定属性的值。什么是绑定属性呢？绑定属性就是通过 `v-bind:` 或其缩写 `:` 所定义的属性。`getBindingAttr` 函数接收三个参数，前两个参数与 `getAndRemoveAttr` 函数相同，分别是元素的描述对象和要获取的属性的名字。在 `getBindingAttr` 函数内部首先执行的是如下这段代码：
 
 ```js
 const dynamicValue =
@@ -2664,7 +2664,7 @@ const dynamicValue =
   getAndRemoveAttr(el, 'v-bind:' + name)
 ```
 
-可以看到这段代码首先通过 `getAndRemoveAttr` 函数获取名字为 `':' + name` 的属性值，如果传递给 `getBindingAttr` 函数的第二个参数为字符串 `'key'`，则表达式 `':' + name` 的值就是 `':key'`，如果获取不到属性名为 `:key` 的属性的值，则会继续使用 `getAndRemoveAttr` 获取 `v-bind:key` 属性的值，这是因为你没法保证开发者到底通过 `v-bind` 还是通过其缩写 `:` 来绑定属性，所以两种方式都要尝试。最后将获取到的属性值赋值给 `dynamicValue` 常量。
+可以看到这段代码首先通过 `getAndRemoveAttr` 函数获取名字为 `':' + name` 的属性值，如果传递给 `getBindingAttr` 函数的第二个参数为字符串 `'key'`，则表达式 `':' + name` 的值就是 `':key'`，如果获取不到属性名为 `:key` 的属性的值，则会继续使用 `getAndRemoveAttr` 获取 `v-bind:key` 属性的值，这是因为你没法保证开发者到底通过 `v-bind:` 还是通过其缩写 `:` 来绑定属性，所以两种方式都要尝试。最后将获取到的属性值赋值给 `dynamicValue` 常量。
 
 获取到了绑定的属性值之后，将会执行如下代码：
 
@@ -2683,7 +2683,7 @@ if (dynamicValue != null) {
 
 假设成功得到了获取绑定的属性值，那么 `if` 语句块内的代码将被执行，可以看到在 `if` 语句块内直接调用了 `parseFilters` 函数并将该函数的返回值作为 `getBindingAttr` 函数的返回值。其中 `parseFilters` 函数是我们接下来将要重点讲解的函数，不过现在我们仍需要将目光聚焦在 `getBindingAttr` 函数上。
 
-如果获取绑定的值失败，则会执行 `elseif` 分支的判断，可以看到 `elseif` 分支检测了 `getBindingAttr` 函数的第三个参数 `getStatic` 是否与 `false` 全等，这里的关键是一定要全等才行，也就是说如果调用 `getBindingAttr` 函数时不传递第三个参数，则参数 `getStatic` 的值为 `undefined`，它不全等于 `false`，所以可以理解为当不传递第三个参数时 `elseif` 分支的条件默认成立。`elseif` 语句块内代码的作用是用来获取非绑定的属性值，因为代码既然执行到了 `elseif` 分支，则说明此时获取绑定的属性值失败，我们知道当我们为元素或组件添加属性时，这个属性可以是绑定的也可以是非绑定的，所以当获取绑定的属性失败时，我们不能够武断的认为开发者没有编写该属性，而是应该继续尝试获取非绑定的属性值，如下高亮的代码所示：
+如果获取绑定的值失败，则会执行 `elseif` 分支的判断，可以看到 `elseif` 分支检测了 `getBindingAttr` 函数的第三个参数 `getStatic` 是否与 `false` 不全等，这里的关键是一定要不全等才行，也就是说如果调用 `getBindingAttr` 函数时不传递第三个参数，则参数 `getStatic` 的值为 `undefined`，它不全等于 `false`，所以可以理解为当不传递第三个参数时 `elseif` 分支的条件默认成立。`elseif` 语句块内代码的作用是用来获取非绑定的属性值，因为代码既然执行到了 `elseif` 分支，则说明此时获取绑定的属性值失败，我们知道当我们为元素或组件添加属性时，这个属性可以是绑定的也可以是非绑定的，所以当获取绑定的属性失败时，我们不能够武断的认为开发者没有编写该属性，而是应该继续尝试获取非绑定的属性值，如下高亮的代码所示：
 
 ```js {4}
 if (dynamicValue != null) {
@@ -2696,7 +2696,7 @@ if (dynamicValue != null) {
 }
 ```
 
-非绑定属性值的获取方式同样是使用 `getAndRemoveAttr` 函数，只不过此时传递给该函数的第二个参数是原始的属性名字，不带有 `v-bind` 或 `:`。同时将获取结果保存在 `staticValue` 常量中，接着进入一个条件判断，如果开发者属性存在则使用 `JSON.stringify` 函数对属性值进行处理后将其返回。
+非绑定属性值的获取方式同样是使用 `getAndRemoveAttr` 函数，只不过此时传递给该函数的第二个参数是原始的属性名字，不带有 `v-bind:` 或 `:`。同时将获取结果保存在 `staticValue` 常量中，接着进入一个条件判断，如果属性值存在则使用 `JSON.stringify` 函数对属性值进行处理后将其返回。
 
 大家注意 `JSON.stringify` 函数对属性值的处理至关重要，这么做能够保证对于非绑定的属性来讲，总是会将该属性的值作为字符串处理。为了让大家更好地理解，我们举个例子。我们知道编译器所生成的渲染函数其实是字符串形式的渲染函数，该字符串要通过 `new Function(str)` 之后才能变成真正的函数，对比如下代码：
 
@@ -2708,7 +2708,7 @@ const fn1 = new Function('console.log(1)')
 const fn2 = new Function(JSON.stringify('console.log(1)'))
 ```
 
-当你执行 `f1()` 函数时，在控制台会得到输出数字 `1`，而当你执行 `fn2` 函数是则不会得到任何输出，实际上下面的代码与如上代码等价：
+当你执行 `f1()` 函数时，在控制台会得到输出数字 `1`，而当你执行 `fn2` 函数时则不会得到任何输出，实际上下面的代码与如上代码等价：
 
 ```js
 // 代码一
@@ -2787,7 +2787,7 @@ if (dynamicValue != null) {
 那是不是排除了以上四种情况就能确定一个管道符是过滤器的分界线了呢？不是，大家不要忘了最常见的一种情况，如下代码所示：
 
 ```html
-<div :key="id || featId"></div>  <!-- 模板字符串内的管道符 -->
+<div :key="id || featId"></div>  <!-- 逻辑或运算符内的管道符 -->
 ```
 
 如上代码所示，绑定属性 `key` 的属性值是一个表达式，该表达式里的 `||` 符号代表的是逻辑或运算符，而逻辑或运算符是由两个管道符 `|` 组成的，所以我们不能把这两个管道符中的任何一个作为过滤器的分界线。
@@ -2808,7 +2808,7 @@ if (dynamicValue != null) {
 <div :key="/id|featId/.test(id).toString()"></div>  <!-- 正则表达式内的管道符 -->
 ```
 
-这种情况会比较复杂，因为我们要有能力识别出管道符是否存在于正则表达中才行，难点在就于如何识别正则表达式，我们知道正则表达式由斜杠(`/`)开头，并以斜杠(`/`)结尾，但不要忘了斜杠在 `js` 这门语言中还被用作除法运算符。所以归根结底难点在于我们需要识别一个斜杠它所代表的意义到底是除法还是正则。
+这种情况会比较复杂，因为我们要有能力识别出管道符是否存在于正则表达中才行，难点就在于如何识别正则表达式，我们知道正则表达式由斜杠(`/`)开头，并以斜杠(`/`)结尾，但不要忘了斜杠在 `js` 这门语言中还被用作除法运算符。所以归根结底难点在于我们需要识别一个斜杠它所代表的意义到底是除法还是正则。
 
 实际上这是一个相当复杂的事情，引用 [ECMA 规范](http://www.ecma-international.org/ecma-262/9.0/index.html#sec-ecmascript-language-lexical-grammar) 中的一段例子：
 
@@ -3195,7 +3195,7 @@ function pushFilter () {
 
 ![](http://7xlolm.com1.z0.glb.clouddn.com/2018-07-08-153103.png)
 
-其中 `lastFilterIndex` 指向的是管道符后面的空值，这里大家需要注意的是变量 `i` 指向的既不是字符 `d` 也不是引号 `"`，而是字符 `d` 后面的字符，这个字符是不存在的。知道了这些，我们就可以知道如下表达式的值：
+其中 `lastFilterIndex` 指向的是管道符后面的空格，这里大家需要注意的是变量 `i` 指向的既不是字符 `d` 也不是引号 `"`，而是字符 `d` 后面的字符，这个字符是不存在的。知道了这些，我们就可以知道如下表达式的值：
 
 ```js
 exp.slice(lastFilterIndex, i).trim()
