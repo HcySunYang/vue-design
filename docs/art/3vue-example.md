@@ -62,7 +62,7 @@ function Vue (options) {
 }
 ```
 
-一目了然，当我们使用 `new` 操作符调用 `Vue` 的时候，第一句执行的代码就是 `this._init(options)` 方法，其中 `options` 是我们调用 `Vue` 构造函数时透传过来的，也就是说：
+一目了然，当我们使用 `new` 操作符调用 `Vue` 的时候，第一句执行的代码就是 `this._init(options)` 方法，其中 `options` 是我们调用 `Vue` 构造函数时候传过来的，也就是说：
 
 ```js
 options = {
