@@ -1470,7 +1470,7 @@ new Vue ({
 // created:instance
 ```
 
-这是因为 `mergeOptions` 函数在处理 `mixins` 选项的时候递归调用了 `mergeOptions` 函数将 `minxis` 合并到了 `parent` 中，并将合并后生成的新对象作为新的 `parent`：
+这是因为 `mergeOptions` 函数在处理 `mixins` 选项的时候递归调用了 `mergeOptions` 函数将 `mixins` 合并到了 `parent` 中，并将合并后生成的新对象作为新的 `parent`：
 
 ```js
 if (child.mixins) {
