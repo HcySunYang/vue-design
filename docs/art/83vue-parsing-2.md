@@ -2122,7 +2122,290 @@ function closeElement (element) {
 该 `for` 循环遍历了 `postTransforms` 数组，但实际上 `postTransforms` 是一个空数组，因为目前还没有任何后置处理的钩子函数。这里只是暂时提供一个用于后置处理的出口，当有需要的时候可以使用。
 
 ## 文本节点的元素描述对象
+
+接下来我们主要讲解当解析器遇到一个文本节点时会如何为文本节点创建元素描述对象，又会如何对文本节点做哪些特殊的处理。我们打开 `src/compiler/parser/index.js` 文件找到 `parseHTML` 函数的 `chars` 钩子函数选项，如下高亮代码所示：
+
+```js {3-5}
+parseHTML(template, {
+    // 省略...
+    chars (text: string) {
+      // 省略...
+    },
+    // 省略...
+  })
+  return root
+}
+```
+
+当解析器遇到文本节点时，如上代码中的 `chars` 钩子函数就会被调用，并且接收该文本节点的文本内容作为参数。我们来看 `chars` 钩子函数最开始的这段代码：
+
+```js
+if (!currentParent) {
+  if (process.env.NODE_ENV !== 'production') {
+    if (text === template) {
+      warnOnce(
+        'Component template requires a root element, rather than just text.'
+      )
+    } else if ((text = text.trim())) {
+      warnOnce(
+        `text "${text}" outside root element will be ignored.`
+      )
+    }
+  }
+  return
+}
+```
+
+这段代码是连续的几个 `if` 条件语句，首先判断了 `currentParent` 变量是否存在，我们知道 `currentParent` 变量指向的是当前节点的父节点，如果父节点不存在才会执行该 `if` 条件语句里面的代码。大家思考一下，如果 `currentParent` 变量不存在说明什么问题？我们知道如果代码执行到了这里，那么当前节点必然是文本节点，并且该文本节点没有父级节点。什么情况下回出现一个文本节点没有父级节点呢？有两种情况：
+
+* 第一：模板中只有文本节点
+
+```html
+<template>
+  我是文本节点
+</template>
+```
+
+如上模板中没有根元素，只有一个文本节点。由于没有元素节点，所以 `currentParent` 变量是肯定不存在值的，而 `Vue` 的模板要求必须要有一个根元素节点才行。当解析器在解析如上模板时，由于模板只有一个文本节点，所以在解析过程中只会调用一次 `chars` 钩子函数，同时将文本节点的内容作为参数传递，此时就会出现一种情况，即：“整个模板的内容与文本节点的内容完全一致”，换句话说 `text === template` 条件成立，这时解析器会打印警告信息提示模板不能只是文本，必须有一个元素节点才行。
+
+* 第二：文本节点在根元素的外面
+
+```html
+<template>
+  <div>根元素内的文本节点</div>根元素外的文本节点
+</template>
+```
+
+我们知道 `currentParent` 变量始终保存的是当前解析节点的父节点，当解析器解析如上模板并遇到根元素外的文本节点时，`currentParent` 变量是不存在的，但是此时条件 `text === template` 是不成立的，这时如下代码会被执行：
+
+```js
+else if ((text = text.trim())) {
+  warnOnce(
+    `text "${text}" outside root element will be ignored.`
+  )
+}
+```
+
+即如果 `text` 是非空的字符串则打印警告信息提示开发者根元素外的文本将会被忽略。
+
+如果模板不符合以上要求则此时 `chars` 钩子函数会立即 `return`，不会继续做后续的工作，如果模板符合要求则将会继续执行如下代码：
+
+```js
+// IE textarea placeholder bug
+/* istanbul ignore if */
+if (isIE &&
+  currentParent.tag === 'textarea' &&
+  currentParent.attrsMap.placeholder === text
+) {
+  return
+}
+```
+
+这段代码是用来解决 IE 浏览器中渲染 `<textarea>` 标签的 `placeholder` 属性时存在的 bug 的。具体的问题大家可以点击这个 [issue](https://github.com/vuejs/vue/issues/4098) 查看。为了让大家更好理解，我们举个例子，如下 `html` 代码所示：
+
+```html
+<div id="box">
+  <textarea placeholder="some placeholder..."></textarea>
+</div>
+```
+
+如上 `html` 片段是存在一个 `<textarea>` 标签，该标签拥有 `placeholder` 属性，但却没有真实的文本内容，假如我们使用如下代码获取字符串内容：
+
+```js
+document.getElementById('box').innerHTML
+```
+
+在 IE 浏览器中将得到如下字符串：
+
+```js
+'<textarea placeholder="some placeholder...">some placeholder...</textarea>'
+```
+
+可以看到 `<textarea>` 标签的 `placeholder` 属性的属性值被设置成了 `<textarea>` 的真实文本内容，为了解决这个问题，所以产生了如下代码：
+
+```js
+// IE textarea placeholder bug
+/* istanbul ignore if */
+if (isIE &&
+  currentParent.tag === 'textarea' &&
+  currentParent.attrsMap.placeholder === text
+) {
+  return
+}
+```
+
+如果当前文本节点的父元素是 `<textarea>` 标签，并且文本元素的内容和 `<textarea>` 标签的 `placeholder` 属性值相同，则说明此时遇到了 IE 的 bug，由于只有当 `<textarea>` 标签没有真实文本内容时才存在这个 bug，所以这说明当前解析的文本节点原本就是不存在的，这时 `chars` 钩子函数会直接 `return`，不做后续处理。
+
+再往下是这样一段代码：
+
+```js
+const children = currentParent.children
+text = inPre || text.trim()
+  ? isTextTag(currentParent) ? text : decodeHTMLCached(text)
+  // only preserve whitespace if its not right after a starting tag
+  : preserveWhitespace && children.length ? ' ' : ''
+```
+
+这段代码首先定义了 `children` 常量，它是 `currentParent.children` 的引用。接着判断了条件 `inPre || text.trim()` 的真假，我们一点点来看，假设此时 `inPre` 变量为真，那么如上代码等价于：
+
+```js
+text = isTextTag(currentParent) ? text : decodeHTMLCached(text)
+```
+
+如上代码中首先使用 `isTextTag` 函数检测当前文本节点的父节点是否是文本标签(即 `<script>` 标签或 `<style>` 标签)，如果当前文本节点的父节点是文本标签，那么则原封不动的保留原始文本，否则使用 `decodeHTMLCached` 函数对文本进行解码，其中关键点在于一定要使用 `decodeHTMLCached` 函数解码文本才行，为什么呢？来看如下代码：
+
+```js
+<pre>
+  &lt;div&gt;我是一个DIV&lt;/div&gt;
+</pre>
+```
+
+我们通常会使用 `<pre>` 标签展示源码，所以通常会书写 `html` 实体，假如不对如上 `html` 实体进行解码，那么最终展示在页面上的内容就是字符串 `'&lt;div&gt;我是一个DIV&lt;/div&gt;'` 而非 `'<div>我是一个DIV</div>'`，这是因为 `Vue` 在创建文本节点时使用的是 `document.createTextNode` 函数，这不同于将如上模板直接交给浏览器解析并渲染，所以需要解码后将字符串 `'<div>我是一个DIV</div>'` 作为一个文本节点创建才行。
+
+我们再回头来看一下这段代码：
+
+```js
+text = isTextTag(currentParent) ? text : decodeHTMLCached(text)
+```
+
+这段代码还使用 `isTextTag` 函数检测了当前文本节点的父节点是否是文本标签，如果是文本标签则直接使用原始文本，而不会使用 `decodeHTMLCached` 函数对文本进行解码。这时我们考虑的就不应该是 `inPre` 变量为真的情况了，而是 `text.trim()` 这个条件为真的情况，当 `text.trim()` 为真时说明当前文本节点的内容不是空白，只要不是空白的文本并且该文本存在于文本标签之内，那么该文本就不需要进行解码操作，比如存在于 `<script>` 标签或 `<style>` 标签之内的文本。
+
+我们再来看如下高亮代码：
+
+```js {4}
+text = inPre || text.trim()
+  ? isTextTag(currentParent) ? text : decodeHTMLCached(text)
+  // only preserve whitespace if its not right after a starting tag
+  : preserveWhitespace && children.length ? ' ' : ''
+```
+
+如果条件 `inPre || text.trim()` 为假，则会执行如上代码中高亮的部分，那么如上代码相当于：
+
+```js
+text = preserveWhitespace && children.length ? ' ' : ''
+```
+
+首先我们要明确的是当条件 `inPre || text.trim()` 为假时代表什么，我们对该条件取反：`!inPre && !text.trim()`，取反后的条件很容易理解，用一句话描述就是**不存在于 `<pre>` 标签的空白符**，有的同学可能会有疑问，此时 `text` 一定是空白符吗？难道不可能是空字符串吗？当然不可能是空字符串，因为如果 `text` 是空字符串则代码是不会执行 `chars` 钩子函数的。那么对于不存在于 `<pre>` 标签内的空白符要如何处理呢？我们来看如下代码：
+
+```js
+text = preserveWhitespace && children.length ? ' ' : ''
+```
+
+如上代码是一个三元运算符，如果 `preserveWhitespace` 常量为真并且当前文本节点的父节点有子元素存在，则将 `text` 变量设置为空格字符(`' '`)，否则将 `text` 变量设置为空字符串。其中 `preserveWhitespace` 常量是一个布尔值代表着是否保留空格，只有它为真的情况下才会保留空格。但即使 `preserveWhitespace` 常量的值为真，如果当前节点的父节点没有子元素则也不会保留空格，换句话说，编译器只会保留那些**不存在于开始标签之后的空格**。而这也体现在了编译器源码的注释中，如下：
+
+```js {3}
+text = inPre || text.trim()
+  ? isTextTag(currentParent) ? text : decodeHTMLCached(text)
+  // only preserve whitespace if its not right after a starting tag
+  : preserveWhitespace && children.length ? ' ' : ''
+```
+
+默认情况下编译器是会保留空格的，除非你显示的指定编译器选项 `preserveWhitespace` 的值为 `false` 时才会不保留空格。
+
+我们来做一下总结：
+
+* 1、如果文本节点是非空白符，无论其在不在 `<pre>` 标签之内，只要其不在文本标签内则就会对文本进行解码，否则不会解码。
+* 2、如果文本节点是空白符
+  * 2.1、空白符存在于 `<pre>` 标签之内，则完全保留
+  * 2.2、空白符不存在于 `<pre>` 标签之内，则根据编译器选项配置来决定是否保留空白，并且只会保留那些不存在于开始标签之后的空白符。
+
+再往下我们将来到 `chars` 钩子函数的最后一段代码：
+
+```js
+if (text) {
+  // 省略...
+}
+```
+
+这是一个 `if` 条件语句，可以看到该条件语句块内的代码只有当 `text` 变量存在时才会执行，所以当编译器选项 `preserveWhitespace` 的值为 `false` 时，所有空白符都会被忽略，从而导致不会执行如上这段 `html` 代码，所以也就没有空白符节点被创建。我们来看一下该 `if` 条件语句块内的代码，如下：
+
+```js
+let res
+if (!inVPre && text !== ' ' && (res = parseText(text, delimiters))) {
+  children.push({
+    type: 2,
+    expression: res.expression,
+    tokens: res.tokens,
+    text
+  })
+} else if (text !== ' ' || !children.length || children[children.length - 1].text !== ' ') {
+  children.push({
+    type: 3,
+    text
+  })
+}
+```
+
+我们首先来看一下如上代码中 `if` 语句的判断条件：
+
+```js
+if (!inVPre && text !== ' ' && (res = parseText(text, delimiters)))
+```
+
+如果上面的 `if` 语句的判断条件为真则说明：
+
+* 1、当前文本节点不存在于使用 `v-pre` 指令的标签之内
+* 2、当前文本节点不是空格字符
+* 3、使用 `parseText` 函数成功解析当前文本节点的内容
+
+对于前两个条件很好理解，关键在于 `parseText` 函数能够成功解析文本节点的内容说明了什么，如下模板所示：
+
+```html
+<div>我的名字是：{{ name }}</div>
+```
+
+如上模板中存在一个文本节点，该节点的文本内容是字符串：`'我的名字是：{{ name }}'`，这个字符串并不是普通的字符串，它包含了 `Vue` 语法中的字面量表达式，而 `parseText` 函数的作用就是用来解析这段包含了字面量表达式的文本的，如果解析成功则说明该文本节点的内容确实包含字面量表达式，所以此时会执行以下代码创建一个类型为2(`type = 2`)的元素描述对象：
+
+```js
+if (!inVPre && text !== ' ' && (res = parseText(text, delimiters))) {
+  children.push({
+    type: 2,
+    expression: res.expression,
+    tokens: res.tokens,
+    text
+  })
+}
+```
+
+并将该文本节点的元素描述对象添加到父级的子节点中，另外我们注意到类型为 `2` 的元素描述对象拥有三个特殊的属性，分别是 `expression`、`tokens` 以及 `text`，其中 `text` 就是原始的文本内容，而 `expression` 和 `tokens` 的值是通过 `parseText` 函数解析的结果中读取的。至于 `parseText` 函数的具体实现我们会在下一小节中讲解。
+
+如果 `if` 语句的判断条件失败，则有三种可能：
+
+* 1、文本节点存在于使用了 `v-pre` 指令的标签之内
+* 2、文本节点是空格字符
+* 3、文本节点的文本内容通过 `parseText` 函数解析失败
+
+只要以上三种情况中，有一种情况出现则代码会来到 `else...if` 分支的判断，如下：
+
+```js
+else if (text !== ' ' || !children.length || children[children.length - 1].text !== ' ') {
+  children.push({
+    type: 3,
+    text
+  })
+}
+```
+
+如果 `else...if` 语句的判断条件成立，则有以下几种可能：
+
+* 1、文本内容不是空格，即 `text !== ' '`
+* 2、如果文本内容是空格，但是该文本节点的父节点还没有子节点(即 `!children.length`)，这说明当前文本内容就是父节点的第一个子节点
+* 3、如果文本内容是空格，并且该文本节点的父节点有子节点，但最后一个子节点不是空格，此时也会执行 `else...if` 语句块内的代码
+
+当文本满足以上条件，就会被当做普通文本节点对待，此时会创建类型为3(`type = 3`)的元素描述对象，并将其添加到父级节点的子节点中。
+
+实际上以上分析并不足以让大家理解这么做的目的，但是我们综合思考就会容易得出如下结论：
+
+* 1、如果文本节点存在于 `v-pre` 标签中，则会被作为普通文本节点对象
+* 2、`<pre>` 标签内的空白会被保留
+* 3、`preserveWhitespace` 只会保留那些不在开始标签之后的空格(说空白也没问题)
+* 4、普通文本节点的元素描述对象的类型为 3，即 `type = 3`
+* 5、包含字面量表达式的文本节点不会被作为普通的文本节点对待，而是会使用 `parseText` 函数解析它们，并创建一个类型为 2，即 `type = 2` 的元素描述对象
+
 ## parseText 函数解析字面量表达式
+
+
+
 ## 对结束标签的处理
 ## 注释节点的元素描述对象
 ## 对元素描述对象的总结
