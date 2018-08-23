@@ -1,6 +1,7 @@
 node_modules
 *.log
 dist
+docx
 .history
 .DS_Store
 .vscode

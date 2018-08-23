@@ -2404,6 +2404,281 @@ else if (text !== ' ' || !children.length || children[children.length - 1].text 
 
 ## parseText 函数解析字面量表达式
 
+在上一小节的讲解中我们了解到文本节点的内容是需要通过 `parseText` 函数解析的，为什么要使用 `parseText` 函数解析文本节点呢？这是因为文本节点中很可能包含字面量表达式，我们所说的字面量表达式指的是使用花括号(`{{}}`)或自定义模板符号所定义的表达式，例如如下 `<p>` 标签内的文本：
+
+```html
+<p>我的名字叫：{{name}}</p>
+```
+
+如上 `<p>` 标签内的文本在解析阶段会被当做一个普通的文本节点，是该文本节点却包含了 `Vue` 的模板语法，所以需要使用 `parseText` 对其进行解析，为了让大家更好的理解 `parseText` 函数的作用，我们需要先了解 `parseText` 函数的最终目的。我们知道模板最终会被编译器编译为渲染函数，而如上文本节点被编译后将以如下表达式存在于渲染函数中：
+
+```js
+"我的名字叫："+_s(name)
+```
+
+可以看到编译的结果分为两部分，第一部分是普通文本：`"我的名字叫："`，另外一部分是把字面量表达式中的表达式提取出来并作为 `_s` 函数的参数，这里大家暂时把 `_s` 函数理解成与 `toString` 函数的功能类似即可，并没有什么特别之处。看到这里相信你已经明白 `parseText` 函数的作用了，没错它的作用就是用来识别一段文本节点内容中的普通文本和字面量表达式并把他们按顺序拼接起来的。
+
+接下来我们打开 `src/compiler/parser/text-parser.js` 文件，可以看到该文件指导出了一个 `parseText` 函数，所以这个文件的所有内容都服务于 `parseText` 函数，既然 `parseText` 函数会识别字面量表达式，那么自然需要一种识别机制，最容易想到的办法就是使用正则表达式，我们在 `src/compiler/parser/text-parser.js` 文件中能够看到如下正则常量：
+
+```js
+const defaultTagRE = /\{\{((?:.|\n)+?)\}\}/g
+```
+
+`defaultTagRE` 常量是一个正则，这个正则很简单，用来惰性匹配 `{{}}` 里的内容，并捕获 `{{}}` 里的内容。根据 `defaultTagRE` 常量的名字我们能够知道这是一个默认的正则，大家都知道我们在使用 `Vue` 的时候可以通过 `delimiters` 选项自定义字面量表达式的分隔符，比如我们可以将其配置成 `delimiters: ['${', '}']`，正是由于这个原因，所以我们不能一味的使用 `defaultTagRE` 正则去识别字面量表达式，我们需要根据开发者对 `delimiters` 选项的配置自动生成一个新的正则表达式，并用其匹配文本。我们在 `text-parser.js` 文件中能够看到如下这段代码：
+
+```js
+const buildRegex = cached(delimiters => {
+  const open = delimiters[0].replace(regexEscapeRE, '\\$&')
+  const close = delimiters[1].replace(regexEscapeRE, '\\$&')
+  return new RegExp(open + '((?:.|\\n)+?)' + close, 'g')
+})
+```
+
+这段代码定义了 `buildRegex` 函数，该函数接收 `delimiters` 选项的值作为参数，并返回一个新的正则表达式。我们观察新的正则表达式：
+
+```js
+return new RegExp(open + '((?:.|\\n)+?)' + close, 'g')
+```
+
+可以发现，新的正则表达式与 `defaultTagRE` 正则中间的部分是一样的，唯一不同的是新的正则使用 `open` 和 `close` 常量的内容替换掉用了默认的 `{{}}`，我们以 `open` 常量为例讲解该常量的值，如下：
+
+```js
+const open = delimiters[0].replace(regexEscapeRE, '\\$&')
+```
+
+假如开发者指定 `delimiters` 选项的值为 `['${', '}']`，如上代码相当于：
+
+```js
+const open = '${'.replace(regexEscapeRE, '\\$&')
+```
+
+另外如上代码中存在另外一个正则常量 `regexEscapeRE`，它的内容如下：
+
+```js
+const regexEscapeRE = /[-.*+?^${}()|[\]\/\\]/g
+```
+
+可以看到该正则所匹配的字符都是那些在正则表达式中具有特殊意义的字符，正式因为这些字符在正则表达式中具有特殊意义，所以才需要使用 `replace` 方法将匹配到的具有特殊意义的字符进行转义，转义的结果就是在具有特殊意义的字符前面添加字符 `\`，所以最终 `open` 常量的值将为：`'\$\{'`。这里简单说明一下，字符串的 `replace` 方法的第二个参数可以是一个字符串，即要替换的文本，如果第二个参数是字符串，则可以使用特殊的字符序列：
+
+* $$ =====> $
+* $& =====> 匹配整个模式的字符串，与RegExp.lastMatch的值相同
+* $' =====> 匹配的子字符串之后的子字符串，与RegExp.rightContext的值相同
+* $` =====> 匹配的子字符串之前的子字符串，与RegExp.leftContext的值相同
+* $n =====> 匹配第n(0 ~ 9)个捕获组的子字符串，如果正则表达式中没有捕获组，则使用空字符串
+* $nn =====> 匹配第nn(01 ~ 99)个捕获组的子字符串，如果正则表达式中没有捕获组，则使用空字符串
+
+最终 `buildRegex` 函数将会构建一个全新的正则：
+
+```js
+new RegExp(open + '((?:.|\\n)+?)' + close, 'g')
+```
+
+等价于：
+
+```js
+new RegExp('\$\{((?:.|\\n)+?)\}', 'g')
+```
+
+也就等价于：
+
+```js
+/\$\{((?:.|\\n)+?)\}/g
+```
+
+如上正则与 `defaultTagRE` 正则相比，仅仅是分隔符部分发生了变换，仅此而已。
+
+接下来我们将正式进入 `parseText` 函数的讲解，如下是 `parseText` 函数的签名：
+
+```js
+export function parseText (
+  text: string,
+  delimiters?: [string, string]
+): TextParseResult | void {
+  // 省略...
+}
+```
+
+该函数接收两个参数，分别是要解析的文本内容以及 `delimiters` 选项的值，在 `parseText` 函数的开头是这样一段代码：
+
+```js
+const tagRE = delimiters ? buildRegex(delimiters) : defaultTagRE
+if (!tagRE.test(text)) {
+  return
+}
+```
+
+这段代码定义了 `tagRE` 常量，这个常量就是最终用来匹配文本的正则，可以看到如果 `delimiters` 选项存在则使用 `buildRegex` 函数构建的新正则去匹配文本，否则使用默认的 `defaultTagRE` 正则。接着是一段 `if` 条件语句，使用 `tagRE.test(text)` 对文本内容进行测试，如果测试失败则说明文本中不包含字面量表达式，此时 `parseText` 函数会直接返回，因为什么都不需要做。如果测试成功，则代码继续执行，将来到如下这段代码：
+
+```js
+const tokens = []
+const rawTokens = []
+let lastIndex = tagRE.lastIndex = 0
+let match, index, tokenValue
+while ((match = tagRE.exec(text))) {
+  index = match.index
+  // push text token
+  if (index > lastIndex) {
+    rawTokens.push(tokenValue = text.slice(lastIndex, index))
+    tokens.push(JSON.stringify(tokenValue))
+  }
+  // tag token
+  const exp = parseFilters(match[1].trim())
+  tokens.push(`_s(${exp})`)
+  rawTokens.push({ '@binding': exp })
+  lastIndex = index + match[0].length
+}
+```
+
+上面这段代码是一段 `while` 循环语句，在 `while` 循环语句之前定义了一些常量和变量，这些常量和变量将会在 `while` 循环内使用。我们观察 `while` 循环的判断条件：
+
+```js
+(match = tagRE.exec(text))
+```
+
+这里使用 `tagRE` 正则匹配文本内容，并将匹配结果保存在 `match` 变量中，直到匹配失败循环才会终止，这时意味着所有的字面量表达式都已经处理完毕了。那么匹配结果 `match` 变量中保存着什么值呢？如果匹配成功则 `match` 变量将会是一个数组，该数组的第一个元素为整个匹配的字符串，第二个元素是正则 `tagRE` 捕获组所匹配的内容，假设我们的文本为 `'{{name}}'`，则匹配成功后 `match` 数组的值为：
+
+```js
+match = ['{{name}}', 'name']
+```
+
+但 `match` 并不是一个普通的数组，它还包含 `match.index` 属性，该属性的值代表着匹配的字符串在整个字符串中的位置，假设我们有这样一段文本：`'abc{{name}}'`，则匹配成功后 `match.index` 的值为 `3`，因为第一个做花括号(`{`)在整个字符串中的索引是 `3`。明白了这些我们就可以继续看 `while` 循环内的代码了，在 `while` 循环内的开头是如下这段代码：
+
+```js
+index = match.index
+// push text token
+if (index > lastIndex) {
+  rawTokens.push(tokenValue = text.slice(lastIndex, index))
+  tokens.push(JSON.stringify(tokenValue))
+}
+```
+
+这段代码首先使用 `index` 变量保存了 `match.index` 属性的值，接着是一个 `if` 条件语句，它判断了变量 `index` 的值是否大于 `lastIndex` 变量的值，大家思考一下什么情况下会出现变量 `index` 的值大于 `lastIndex` 变量的值的情况？我们知道 `lastIndex` 变量的初始值是 `0`，所以只要 `index` 变量大于 `0` 即可，换句话说只要 `match.index` 变量的值大于 `0` 即可，我们还是以这段文本为例：`'abc{{name}}'`，我们知道当匹配这段文本时，`match.index` 的值将会为 `3`，它大于 `0`，所以此时如上 `if` 条件语句的判断条件满足，此时将会执行 `if` 语句块内的代码，在 `if` 语句块内有这样一句话，如下：
+
+```js
+rawTokens.push(tokenValue = text.slice(lastIndex, index))
+```
+
+如上这句代码中有这样一句代码：
+
+```js
+tokenValue = text.slice(lastIndex, index)
+```
+
+这句代码使用字符串的 `slice` 方法对文本进行截取，假如我们还拿上例来说，则如上这句代码相当于：
+
+```js
+tokenValue = 'abc{{name}}'.slice(0, 3)
+```
+
+可以看到这句代码的最终结果就是将原始文本中的 `'abc'` 字符片段截取了出来，并保存在变量 `tokenValue` 中，我们发现截取出来的字符片段就是字面量表达式前的普通文本，这段普通文本的文本内容除了会保存在 `tokenValue` 变量中外还会被 `push` 到 `rawTokens` 数组中。另外我们注意到在这段 `if` 条件语句中还有如下这句代码：
+
+```js
+tokens.push(JSON.stringify(tokenValue))
+```
+
+可以看到这段代码使用 `JSON.stringify` 对截取出来的字符片段处理之后将其 `push` 到了 `tokens` 数组中。所以经过了这一系列处理之后，`rawTokens` 数组和 `tokens` 数组分别拥有了一个元素：
+
+```js
+rawTokens = ['abc']
+tokens = ["'abc'"]
+```
+
+普通文本已经截取了出来，接下来该处理字面量表达式了，我们继续看 `while` 循环内的代码，如下：
+
+```js {2}
+// tag token
+const exp = parseFilters(match[1].trim())
+tokens.push(`_s(${exp})`)
+rawTokens.push({ '@binding': exp })
+lastIndex = index + match[0].length
+```
+
+如上高亮代码所示，这段代码首先使用 `parseFilters` 函数对匹配结果的捕获内容进行解析，假设文本内容为 `'abc{{name | someFilter}}'`，则 `match[1]` 的值为字符串 `'name'`，所以如上高亮的这句代码相当于：
+
+```js
+const exp = parseFilters('name | someFilter')
+```
+
+我们在前面的章节中已经讲解过了 `parseFilters` 函数的作用，如上代码中最终 `exp` 常量的值为字符串 `"_f('someFilter')(name)"`。接着会执行如下这两句代码：
+
+```js
+tokens.push(`_s(${exp})`)
+rawTokens.push({ '@binding': exp })
+```
+
+这两句代码分别向 `tokens` 数组和 `rawTokens` 数组中添加了新的元素，假设我们的文本内容为 `'abc{{name | someFilter}}'`，则此时 `tokens` 数组和 `rawTokens` 数组的值已经为：
+
+```js
+tokens = ["'abc'", '_s(_f("someFilter")(name))']
+rawTokens = [
+  'abc',
+  {
+    '@binding': "_f('someFilter')(name)"
+  }
+]
+```
+
+最后还有一句代码需要执行，这句代码也是 `while` 循环的最后一句代码，如下：
+
+```js
+lastIndex = index + match[0].length
+```
+
+这句代码使用的作用是更新 `lastIndex` 变量的值，可以看到 `lastIndex` 变量的值等于 `index` 变量的值加上匹配的字符串的长度，我们以字符串 `'abc{{name}}def'` 为例，此时 `lastIndex` 变量的初始值为 `0`；`index` 变量的值为 `3`，指向第一左花括号(`{`)；`match[0].length` 的值为匹配的字符串 `'{{name}}'` 的长度，所以 `match[0].length` 的值为 `8`，最终：
+
+```js
+lastIndex = 3 + 8 // lastIndex = 11
+```
+
+可以看到此时的 `lastIndex` 变量的值被更新为 `11`，恰好指向原始字符串中字符 `'d'` 的位置，为下一次 `while` 循环做准备。
+
+在 `while` 循环的后面是如下这段代码：
+
+```js
+if (lastIndex < text.length) {
+  rawTokens.push(tokenValue = text.slice(lastIndex))
+  tokens.push(JSON.stringify(tokenValue))
+}
+```
+
+这是一段 `if` 条件语句，其对比了 `lastIndex` 变量的值和原始文本长度(`text.length`)的大小，当 `lastIndex` 变量的值小于原始文本长度时该 `if` 条件语句内的代码将被执行。那么什么情况下 `lastIndex` 变量的值小于原始文本长度呢？我们知道每当 `while` 循环结束之前都会更新 `lastIndex` 变量的值并开始下一次循环，我们假设原始文本为 `'abc{{name}}def'`，当第一次 `while` 循环结束之前会更新 `lastIndex` 变量的值，使其指向字符 `'d'`，所以此时 `lastIndex` 变量的值为 `11`。然后开始下一次 `while` 循环，但大家不要忘了 `while` 循环的判断条件是：`(match = tagRE.exec(text))`，由于第二次 `while` 循环将会从字符 `'d'` 开始向后匹配，即匹配剩余的字符串 `'def'`，很明显该字符串中不在包含字面量表达式，所以 `while` 循环的判断条件会失败，循环终止。最终 `lastIndex` 变量的值停留在 `11`，而整个原始字符串的长度为 `14`，此时满足 `lastIndex` 变量的值小于原始字符串的长度，如上 `if` 条件语句内的代码将被执行。很明显，如上代码的目的是为了截取剩余的普通文本并将其添加到 `rawTokens` 和 `tokens` 数组中。当原始字符串 `'abc{{name}}def'` 被解析完毕后，`rawTokens` 和 `tokens` 数组的值将是：
+
+```js
+tokens = ["'abc'", '_s(name)', "'def'"]
+rawTokens = [
+  'abc',
+  {
+    '@binding': '_s(name)'
+  },
+  'def'
+]
+```
+
+最后 `parseText` 函数将返回一个对象，如下代码所示：
+
+```js
+return {
+  expression: tokens.join('+'),
+  tokens: rawTokens
+}
+```
+
+该对象包含两个属性，即 `expression` 和 `tokens`，拿上例来说，最后 `parseText` 函数的返回值将是：
+
+```js
+return {
+  expression: "'abc'+_s(name)+'def'",
+  tokens: [
+    'abc',
+    {
+      '@binding': '_s(name)'
+    },
+    'def'
+  ]
+}
+```
+
+在如上这个返回值对象中，`expression` 属性的值就是最终出现在渲染函数中的代码片段。
 
 
 ## 对结束标签的处理
