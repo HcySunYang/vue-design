@@ -2680,7 +2680,101 @@ return {
 
 在如上这个返回值对象中，`expression` 属性的值就是最终出现在渲染函数中的代码片段。
 
-
 ## 对结束标签的处理
+
+接下来我们讲解一下当解析器遇到结束标签的时候，都会做哪些事情，如下代码所示：
+
+```js
+end () {
+  // remove trailing whitespace
+  const element = stack[stack.length - 1]
+  const lastNode = element.children[element.children.length - 1]
+  if (lastNode && lastNode.type === 3 && lastNode.text === ' ' && !inPre) {
+    element.children.pop()
+  }
+  // pop stack
+  stack.length -= 1
+  currentParent = stack[stack.length - 1]
+  closeElement(element)
+}
+```
+
+如上这段代码是 `parseHTML` 函数的 `end` 钩子函数，当解析 `html` 字符串遇到结束标签的时候，会调用该钩子函数并传递三个参数，不过我们发现在如上代码中并没有使用到 `end` 钩子函数的任何参数，这是因为当遇到结束标签时的处理逻辑根本用不到这些参数。那么在 `end` 钩子函数中都需要做哪些事情呢？关于这个问题在之前章节中的讲解中我们多少都提到过了，我们知道每当解析器遇到非一元标签的开始标签时，会将该标签的元素描述对象设置给 `currentParent` 变量，代表后续解析过程中遇到的所有标签都应该是 `currentParent` 变量所代表的标签的子节点，同时还会将该标签的元素描述对象添加到 `stack` 栈中。而当遇到结束标签的时候则意味着 `currentParent` 变量所代表的标签以及其子节点全部解析完毕了，此时我们应该把 `currentParent` 变量的引用修改为当前标签的父标签，这样我们就将作用域还原给了上层节点，以保证解析过程中正确的父子关系。如下这段代码就是用来完成这些工作的：
+
+```js
+// pop stack
+stack.length -= 1
+currentParent = stack[stack.length - 1]
+```
+
+首先将当前节点出栈：`stack.length -= 1`，接着读取出栈后 `stack` 栈中的最后一个元素作为 `currentParent` 变量的值。另外我们注意到有这样一句代码：
+
+```js
+closeElement(element)
+```
+
+调用了 `closeElement` 函数，`closeElement` 函数的调用时机有两个，当遇到一元标签或非一元标签的结束标签时都会调用 `closeElement` 函数，该函数的源码如下：
+
+```js
+function closeElement (element) {
+  // check pre state
+  if (element.pre) {
+    inVPre = false
+  }
+  if (platformIsPreTag(element.tag)) {
+    inPre = false
+  }
+  // apply post-transforms
+  for (let i = 0; i < postTransforms.length; i++) {
+    postTransforms[i](element, options)
+  }
+}
+```
+
+它的工作由两个，第一个是对数据状态的还原，我们知道每当遇到 `<pre>` 标签的开始标签时，解析器会将 `inPre` 变量设置为 `true`，这代表着后续解析所遇到的标签都存在于 `<pre>` 标签中，一旦 `<pre>` 标签内的所有内容解析完毕后，解析器将会遇到 `<pre>` 标签的结束标签，此时 `platformIsPreTag(element.tag)` 将会为真，如上代码所示，会将 `inPre` 变量的值重置为 `false`。同样的道理，如果需要的话还会重置 `inVPre` 变量的值。`closeElement` 函数的第二个作用是调用后置处理转换钩子函数，即如上代码中的 `for` 循环部分，这段代码我们在前面的章节中中已经讲解过了，这里不再细说。
+
+我们回到 `end` 钩子函数，注意如下高亮的代码：
+
+```js {3-7}
+end () {
+  // remove trailing whitespace
+  const element = stack[stack.length - 1]
+  const lastNode = element.children[element.children.length - 1]
+  if (lastNode && lastNode.type === 3 && lastNode.text === ' ' && !inPre) {
+    element.children.pop()
+  }
+  // pop stack
+  stack.length -= 1
+  currentParent = stack[stack.length - 1]
+  closeElement(element)
+}
+```
+
+这段高亮代码的作用是去除当前元素最后一个空白子节点的，我们在讲解 `chars` 钩子函数时了解到：**`preserveWhitespace` 只会保留那些不在开始标签之后的空格(说空白也没问题)**，所以当空白作为标签的最后一个子节点存在时，也会被保留，如下代码所示：
+
+```html
+<div><span>test</span> <!-- 空白占位 -->  </div>
+```
+
+如上代码中 `<span>` 标签的结束标签与 `<div>` 标签的结束标签之间存在一段空白，这段空白将会被保留。但是这段空白的保留对于我们编写代码并没有什么益处，我们在编写 `html` 代码的时候经常会为了可读性将代码格式化为多行，如果这段空白被保留那么就可能对布局产生影响，尤其是对行内元素的影响。为了消除这些影响带来的问题，好的做法是将它们去掉，而如上 `end` 钩子函数中高亮的代码就是用来完成这个工作的。
+
 ## 注释节点的元素描述对象
+
+解析器是否会解析并保留注释节点，是由 `shouldKeepComment` 编译器选项决定的，开发者可以在创建 `Vue` 实例的时候通过设置 `comments` 选项的值来控制编译器的 `shouldKeepComment` 选项。没人情况 `comments` 选项的值为 `false`，即不保留注释，假如将其设置为 `true`，则当计息期遇到注释节点时会保留该注释节点，此时 `parseHTML` 函数的 `comment` 钩子函数会被调用，如下：
+
+```js
+comment (text: string) {
+  currentParent.children.push({
+    type: 3,
+    text,
+    isComment: true
+  })
+}
+```
+
+`comment` 钩子函数接收注释节点的内容作为参数，在 `comment` 钩子函数内所做的事情很简单，就是为当前注释节点创建一个类型为 `3` 并且 `isComment` 属性为 `true` 的元素描述对象，并将其添加到父节点元素描述对象的 `children` 数组内。
+
+大家需要注意的是，普通文本节点与注释节点的元素描述对象的类型是一样的，都是 `3`，不同的是注释节点的元素描述对象拥有 `isComment` 属性，并且该属性的值为 `true`，目的就是用来与普通文本节点做区分的。
+
 ## 对元素描述对象的总结
+
