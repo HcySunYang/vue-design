@@ -145,7 +145,7 @@ if (template) {
 
 经过以上逻辑的处理之后，理想状态下此时 `template` 变量应该是一个模板字符串，将来用于渲染函数的生成。但这个 `template` 存在为空字符串的情况，所以即便经过上述逻辑的处理，后续还需要对其进行判断。
 
-另外在上面的代码中使用到了两个工具函数，分别是 `idToTemplate` 和 `getOuterHTML`，这两个函数都定义当前文件。其中 `idToTemplate` 函数的源码如下：
+另外在上面的代码中使用到了两个工具函数，分别是 `idToTemplate` 和 `getOuterHTML`，这两个函数都定义在当前文件。其中 `idToTemplate` 函数的源码如下：
 
 ```js
 const idToTemplate = cached(id => {
@@ -542,7 +542,7 @@ this.depIds = new Set()
 this.newDepIds = new Set()
 ```
 
-这四个属性两两一组，`this.deps` 与 `this.depIds` 为一组，`this.newDeps` 与 `this.newDepIds` 为一组。那么这两组属性的作用是什么呢？其实它们就用传说中用来实现避免收集重复依赖，且移除无用依赖的功能也依赖于它们，后面我们会详细讲解，现在大家注意一下这四个属性的数据结构，其中 `this.deps` 与 `this.newDeps` 被初始化为空数组，而 `this.depIds` 与 `this.newDepIds` 被初始化为 `Set` 实例对象。
+这四个属性两两一组，`this.deps` 与 `this.depIds` 为一组，`this.newDeps` 与 `this.newDepIds` 为一组。那么这两组属性的作用是什么呢？其实它们就是传说中用来实现避免收集重复依赖，且移除无用依赖的功能也依赖于它们，后面我们会详细讲解，现在大家注意一下这四个属性的数据结构，其中 `this.deps` 与 `this.newDeps` 被初始化为空数组，而 `this.depIds` 与 `this.newDepIds` 被初始化为 `Set` 实例对象。
 
 再往下是这句代码：
 
@@ -1232,7 +1232,7 @@ if (this.user) {
 
 ![](http://7xlolm.com1.z0.glb.clouddn.com/2018-05-25-103029.jpg)
 
-上图描述了异步更新的过程，与同步更新的不同之处在于，每次修改属性的值之后并没有立即重新求值，而是将需要执行更新操作的观察者放入一个队列中。当我们修改 `name` 属性值时，由于 `name` 属性收集了渲染函数的观察者(后面我们称其为 `renderWatcher`)作为依赖，所以此时 `renderWatcher` 会被添加到队列中，接着我们修改了 `age` 属性的值，由于 `age` 属性也收集了 `renderWatcher` 作为依赖，所以此时也会尝试将 `renderWatcher` 添加到队列中，但是由于 `renderWatcher` 已经存在于队列中了，所以并不会重复添加，这样队列中将只会存在一个 `renderWatcher`。当所有的突变完成之后，在一次性的执行队列中所有观察者的更新方法，同时清空队列，这样就达到了优化的目的。
+上图描述了异步更新的过程，与同步更新的不同之处在于，每次修改属性的值之后并没有立即重新求值，而是将需要执行更新操作的观察者放入一个队列中。当我们修改 `name` 属性值时，由于 `name` 属性收集了渲染函数的观察者(后面我们称其为 `renderWatcher`)作为依赖，所以此时 `renderWatcher` 会被添加到队列中，接着我们修改了 `age` 属性的值，由于 `age` 属性也收集了 `renderWatcher` 作为依赖，所以此时也会尝试将 `renderWatcher` 添加到队列中，但是由于 `renderWatcher` 已经存在于队列中了，所以并不会重复添加，这样队列中将只会存在一个 `renderWatcher`。当所有的突变完成之后，再一次性的执行队列中所有观察者的更新方法，同时清空队列，这样就达到了优化的目的。
 
 接下来我们就从具体代码入手，看一看其具体实现，我们知道当修改一个属性的值时，会通过执行该属性所收集的所有观察者对象的 `update` 方法进行更新，那么我们就找到观察者对象的 `update` 方法，如下：
 
@@ -1665,7 +1665,7 @@ callbacks = [
 ]
 ```
 
-同时会注册将 `flushCallbacks` 函数注册为 `microtask`，所以此时 `microtask` 队列如下：
+同时会将 `flushCallbacks` 函数注册为 `microtask`，所以此时 `microtask` 队列如下：
 
 ```js
 // microtask 队列
@@ -1805,7 +1805,7 @@ if (isPlainObject(cb)) {
 }
 ```
 
-定义了 `vm` 常量，它是当前组件实例对象，接着检测传递给 `$watch` 的第三个参数是否是纯对象，由于我们现在假设参数 `cb` 是一个函数，所以这段 `if` 语句块内的代码不会执行。再往下是这段代码：
+定义了 `vm` 常量，它是当前组件实例对象，接着检测传递给 `$watch` 的第二个参数是否是纯对象，由于我们现在假设参数 `cb` 是一个函数，所以这段 `if` 语句块内的代码不会执行。再往下是这段代码：
 
 ```js
 options = options || {}
@@ -2713,7 +2713,7 @@ depend () {
 
 此时我们已经知道了 `this.dep` 属性是一个 `Dep` 实例对象，所以 `this.dep.depend()` 这句代码的作用就是用来收集依赖。那么它收集到的东西是什么呢？这就要看 `Dep.target` 属性的值是什么了，我们回想一下整个过程：首先渲染函数的执行会读取计算属性 `compA` 的值，从而触发计算属性 `compA` 的 `get` 拦截器函数，最终调用了 `this.dep.depend()` 方法收集依赖。这个过程中的关键一步就是渲染函数的执行，我们知道在渲染函数执行之前 `Dep.target` 的值必然是**渲染函数的观察者对象**。所以计算属性观察者对象的 `this.dep` 属性中所收集的就是渲染函数的观察者对象。
 
-记得此时计算属性观察者对象的 `this.dep` 中所收集的是渲染函数观察者对象，假设我们把渲染函数观察者对象成为 `renderWatcher`，那么：
+记得此时计算属性观察者对象的 `this.dep` 中所收集的是渲染函数观察者对象，假设我们把渲染函数观察者对象称为 `renderWatcher`，那么：
 
 ```js
 this.dep.subs = [renderWatcher]
