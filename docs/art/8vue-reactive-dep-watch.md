@@ -1014,7 +1014,7 @@ set: function reactiveSetter (newVal) {
 
 如上高亮代码所示，可以看到当属性值变化时确实通过 `set` 拦截器函数调用了 `Dep` 实例对象的 `notify` 方法，这个方法就是用来通知变化的，我们找到 `Dep` 类的 `notify` 方法，如下：
 
-```js {6,15}
+```js {6,21}
 export default class Dep {
   // 省略...
 
@@ -1028,11 +1028,40 @@ export default class Dep {
   notify () {
     // stabilize the subscriber list first
     const subs = this.subs.slice()
+    if (process.env.NODE_ENV !== 'production' && !config.async) {
+      // subs aren't sorted in scheduler if not running async
+      // we need to sort them now to make sure they fire in correct
+      // order
+      subs.sort((a, b) => a.id - b.id)
+    }
     for (let i = 0, l = subs.length; i < l; i++) {
       subs[i].update()
     }
   }
 }
+```
+
+大家观察 `notify` 函数可以发现其中包含如下这段 `if` 条件语句块：
+
+```js
+if (process.env.NODE_ENV !== 'production' && !config.async) {
+  // subs aren't sorted in scheduler if not running async
+  // we need to sort them now to make sure they fire in correct
+  // order
+  subs.sort((a, b) => a.id - b.id)
+}
+```
+
+对于这段代码的作用，我们会在本章的 [同步执行观察者](#同步执行观察者) 一节中对象详细讲解，现在大家可以完全忽略，这并不影响我们对代码的理解。如果我们去掉如上这段代码，那么 `notify` 函数将变为：
+
+```js
+notify () {
+    // stabilize the subscriber list first
+    const subs = this.subs.slice()
+    for (let i = 0, l = subs.length; i < l; i++) {
+      subs[i].update()
+    }
+  }
 ```
 
 `notify` 方法只做了一件事，就是遍历当前 `Dep` 实例对象的 `subs` 属性中所保存的所有观察者对象，并逐个调用观察者对象的 `update` 方法，这就是触发响应的实现机制，那么大家应该也猜到了，重新求值的操作应该是在 `update` 方法中进行的，那我们就找到观察者对象的 `update` 方法，看看它做了什么事情，如下：
@@ -1243,6 +1272,11 @@ export function queueWatcher (watcher: Watcher) {
     // queue the flush
     if (!waiting) {
       waiting = true
+
+      if (process.env.NODE_ENV !== 'production' && !config.async) {
+        flushSchedulerQueue()
+        return
+      }
       nextTick(flushSchedulerQueue)
     }
   }
@@ -1323,7 +1357,7 @@ export function queueWatcher (watcher: Watcher) {
 
 接着我们再来看如下代码：
 
-```js {7-10}
+```js {7-15}
 export function queueWatcher (watcher: Watcher) {
   const id = watcher.id
   if (has[id] == null) {
@@ -1332,13 +1366,29 @@ export function queueWatcher (watcher: Watcher) {
     // queue the flush
     if (!waiting) {
       waiting = true
+
+      if (process.env.NODE_ENV !== 'production' && !config.async) {
+        flushSchedulerQueue()
+        return
+      }
       nextTick(flushSchedulerQueue)
     }
   }
 }
 ```
 
-这段代码是一个 `if` 语句块，其中变量 `waiting` 同样是一个标志，它也定义在 `scheduler.js` 文件头部，初始值为 `false`：
+大家观察如上代码中有这样一段 `if` 条件语句：
+
+```js
+if (process.env.NODE_ENV !== 'production' && !config.async) {
+  flushSchedulerQueue()
+  return
+}
+```
+
+在接下来的讲解中我们将会忽略这段代码，并在 [同步执行观察者](#同步执行观察者) 一节中补充讲解，
+
+我们回到那段高亮的代码，这段代码是一个 `if` 语句块，其中变量 `waiting` 同样是一个标志，它也定义在 `scheduler.js` 文件头部，初始值为 `false`：
 
 ```js
 let waiting = false
@@ -1355,6 +1405,11 @@ export function queueWatcher (watcher: Watcher) {
     // queue the flush
     if (!waiting) {
       waiting = true
+
+      if (process.env.NODE_ENV !== 'production' && !config.async) {
+        flushSchedulerQueue()
+        return
+      }
       setTimeout(flushSchedulerQueue, 0)
     }
   }
@@ -2788,5 +2843,80 @@ update () {
 
 ![](http://7xlolm.com1.z0.glb.clouddn.com/2018-06-10-080745.png)
 
+## 同步执行观察者
+
+通常情况下当数据状态发生改变时，所有 `Watcher` 都为异步执行，这么做的目的是处于对性能的考虑。但在某些场景下我们仍需要同步执行的观察者，我们可以使用 `sync` 选项定义同步执行的观察者，如下：
+
+```js
+new Vue({
+  watch: {
+    someWatch: {
+      handler () {/* ... */},
+      sync: true
+    }
+  }
+})
+```
+
+如上代码所示，我们在定义一个观察者时使用 `sync` 选项，并将其设置为 `true`，此时当数据状态发生变化时该观察者将以同步的方式执行。这么做当然没有问题，因为我们仅仅定义了一个观察者而已。
+
+`Vue` 官方推出了 [vue-test-utils](https://github.com/vuejs/vue-test-utils) 测试工具库，这个库的一个特点是，当你使用它去辅助测试 `Vue` 单文件组件时，数据变更将会以同步的方式触发组件变更，这对于测试而言会提供很大帮助。大家思考一下 [vue-test-utils](https://github.com/vuejs/vue-test-utils) 库是如何实现这个功能的？我们知道开发者在开发组件的时候基本不太可能手动的指定一个观察者为同步的，所以 [vue-test-utils](https://github.com/vuejs/vue-test-utils) 库需要有能力拿到组件的定义并人为的把组件中定义的所有观察者都转换为同步的，这是一个繁琐并容易引起 `bug` 的工作，为了解决这个问题，`Vue` 提供了 `Vue.config.async` 全局配置，它的默认值为 `true`，我们可以在 `src/core/config.js` 文件中看到这样一句代码，如下：
+
+```js {8}
+export default ({
+  // 省略...
+
+  /**
+   * Perform updates asynchronously. Intended to be used by Vue Test Utils
+   * This will significantly reduce performance if set to false.
+   */
+  async: true,
+
+  // 省略...
+}: Config)
+```
+
+这个全局配置将决定 `Vue` 中的观察者以何种方式执行，默认是异步执行的，当我们将其修改为 `Vue.config.async = false` 时，所有观察者都将会同步执行。其实现方式很简单，我们打开 `src/core/observer/scheduler.js` 文件，找到 `queueWatcher` 函数：
+
+```js {9-12}
+export function queueWatcher (watcher: Watcher) {
+  const id = watcher.id
+  if (has[id] == null) {
+    // 省略...
+    // queue the flush
+    if (!waiting) {
+      waiting = true
+
+      if (process.env.NODE_ENV !== 'production' && !config.async) {
+        flushSchedulerQueue()
+        return
+      }
+      nextTick(flushSchedulerQueue)
+    }
+  }
+}
+```
+
+如上高亮代码所示，在非生产环境下如何 `!config.async` 为真，则说明开发者配置了 `Vue.config.async = false`，这意味着所有观察者需要同步执行，所以只需要把原本通过 `nextTick` 包装的 `flushSchedulerQueue` 函数单独拿出来执行即可。另外通过如上高亮的代码我们也能够明白一件事儿，那就是 `Vue.config.async` 这个配置项只会在非生产环境生效。
+
+为了实现同步执行的观察者，除了把 `flushSchedulerQueue` 函数从 `nextTick` 中提取出来之外，还需要做一件事儿，我们打开 `src/core/observer/dep.js` 文件，找到 `notify` 方法，如下：
+
+```js {4-9}
+notify () {
+  // stabilize the subscriber list first
+  const subs = this.subs.slice()
+  if (process.env.NODE_ENV !== 'production' && !config.async) {
+    // subs aren't sorted in scheduler if not running async
+    // we need to sort them now to make sure they fire in correct
+    // order
+    subs.sort((a, b) => a.id - b.id)
+  }
+  for (let i = 0, l = subs.length; i < l; i++) {
+    subs[i].update()
+  }
+}
+```
+
+在异步执行观察者的时候，当数据状态方式改变时，会通过如上 `notify` 函数通知变化，从而把执行所有观察者的 `update` 方法，在 `update` 方法内会将所有即将被执行的观察者都添加到观察者队列中，并在 `flushSchedulerQueue` 函数内对观察者回调的执行顺序进行排序。但是当同步执行的观察者时，由于 `flushSchedulerQueue` 函数是立即执行的，它不会等待所有观察者入队之后再去执行，这就没有办法保证观察者回调的正确更新顺序，这时就需要如上高亮的代码，其实现方式是在执行观察者对象的 `update` 更新方法之前就对观察者进行排序，从而保证正确的更新顺序。
 
 
