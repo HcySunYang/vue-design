@@ -80,7 +80,8 @@ module.exports = {
             'core-util',
             'web-util',
             'shared-util',
-            'compiler-options'
+            'compiler-options',
+            'ast'
           ]
         }
       ],
