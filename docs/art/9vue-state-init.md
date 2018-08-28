@@ -218,7 +218,7 @@ const value = validateProp(key, propsOptions, propsData, vm)
 
 首先将 `prop` 的名字(`key`)添加到 `keys` 数组中，我们知道常量 `keys` 与 `vm.$options._propKeys` 属性具有相同的引用，所以这等价于将 `key` 添加到 `vm.$options._propKeys` 属性中，至于为什么添加到 `vm.$options._propKeys` 属性，我们会在后面讲到。
 
-接着定义了 `value` 常量，该常量的值为 `validateProp` 函数的返回值。一句话概括 `validateProp` 函数的作用：用来校验名字给定的 `prop` 数据是否符合预期的类型，并返回相应 `prop` 的值(或默认值)。至于 `validateProp` 函数的具体实现我们放到后面讲，现在大家只需要知道 `validateProp` 函数会返回给定名字的 `prop` 的值即可，也就是说常量 `value` 中保存着 `prop` 的值。
+接着定义了 `value` 常量，该常量的值为 `validateProp` 函数的返回值。一句话概括 `validateProp` 函数的作用：用来校验名字(`key`)给定的 `prop` 数据是否符合预期的类型，并返回相应 `prop` 的值(或默认值)。至于 `validateProp` 函数的具体实现我们放到后面讲，现在大家只需要知道 `validateProp` 函数会返回给定名字的 `prop` 的值即可，也就是说常量 `value` 中保存着 `prop` 的值。
 
 接着是一个 `if...else` 语句块：
 
@@ -554,7 +554,7 @@ someData instanceof Array
 
 这种方式的问题就在于，不同 `iframes` 之间的 `Array` 构造函数本身都是不相等的。所以以上判断方法只适用于在同一个 `iframes` 环境下。
 
-同理，为了做到更严谨的判断，我们需要使用 `getType` 函数，如下：
+同理，为了做到更严谨地判断，我们需要使用 `getType` 函数，如下：
 
 ```js
 function getType (fn) {
@@ -710,7 +710,7 @@ stringIndex < 0 || booleanIndex < stringIndex
 <some-comp prop1="" />
 <!-- 等价于 -->
 <some-comp prop1 />
-``` 
+```
 
 最后我们再来回顾一下 `validateProp` 函数中的这段代码：
 
@@ -841,7 +841,7 @@ if (vm && vm.$options.propsData &&
 vm.$options.propsData[key] === undefined
 ```
 
-大家别忘了我们目前讲解的代码是 `getPropDefaultValue` 函数中的代码，代码既然已经执行到了 `getPropDefaultValue` 函数那么说明外界没有向组件传递该 `prop` 数据，那也就是说 `vm.$options.propsData[key]` 很显然的应该是 `undefined`。为什么还需要如上判断呢？实际上事情并非像我们想象的那样。这是因为**组件第一次创建与后续的更新走的是两套不太一致的逻辑**。为了证明这一点，我们需要打开 `src/core/instance/lifecycle.js` 文件找到 `updateChildComponent` 函数，大家现在只需要知道组件的更新是由 `updateChildComponent` 函数来完成的即可，在 `updateChildComponent` 函数内有这样一段代码：
+大家别忘了我们目前讲解的代码是 `getPropDefaultValue` 函数中的代码，代码既然已经执行到了 `getPropDefaultValue` 函数那么说明外界没有向组件传递该 `prop` 数据，那也就是说 `vm.$options.propsData[key]` 很显然的应该是 `undefined`。为什么还需要如上判断呢？实际上事情并非像我们想象的那样。这是因为 **组件第一次创建与后续的更新走的是两套不太一致的逻辑**。为了证明这一点，我们需要打开 `src/core/instance/lifecycle.js` 文件找到 `updateChildComponent` 函数，大家现在只需要知道组件的更新是由 `updateChildComponent` 函数来完成的即可，在 `updateChildComponent` 函数内有这样一段代码：
 
 ```js {8}
 if (propsData && vm.$options.props) {
@@ -1170,7 +1170,7 @@ if (!valid && t === 'object')
 * 1、期望的类型是这五种类型之一：`'String'`、`'Number'`、`'Boolean'`、`'Function'` 以及 `'Symbol'`
 * 2、并且通过 `typeof` 操作符取到的该 `prop` 值的类型为 `object`
 
-这时我们能够否定 `prop` 的值不符合预期吗？答案是不能的，因为在 `javascript` 有个概念叫做**基本包装类型**，比如可以这样定义一个字符串：
+这时我们能够否定 `prop` 的值不符合预期吗？答案是不能的，因为在 `javascript` 有个概念叫做 **基本包装类型**，比如可以这样定义一个字符串：
 
 ```js
 const str = new String('基本包装类型')
@@ -1288,7 +1288,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 ```
 
-这段代码用来检测该方法是否真正的有定义，如果没有定义则打印警告信息，提示开发者是否正确的引用了函数。
+这段代码用来检测该方法是否真正的有定义，如果没有定义则打印警告信息，提示开发者是否正确地引用了函数。
 
 接着是如下这段检测代码：
 
@@ -1334,7 +1334,7 @@ methods: {
 
 ## provide 选项的初始化及实现
 
-再往下我们将研究最后两个选项的初始化工作，即 `provide` 选项以及 `inject` 选项。在这之前我们来回顾一下这两个选项的作用，实际上 `Vue` 的官方文档已经明确告诉我们这两个选项主要是用来辅助测试的，在真正的业务代码中是不推荐使用的，一般情况下我们也不需要使用这两个选项。
+再往下我们将研究最后两个选项的初始化工作，即 `provide` 选项和 `inject` 选项。在这之前我们来回顾一下这两个选项的作用，实际上 `Vue` 的官方文档已经明确告诉我们这两个选项主要是用来辅助测试的，在真正的业务代码中是不推荐使用的，一般情况下我们也不需要使用这两个选项。
 
 如果一个组件使用了 `provide` 选项，那么该选项指定的数据将会被注入到该组件的所有后代组件中，在后代组件中可以使用 `inject` 选项选择性注入，这样后代组件就拿到了祖先组件提供的数据，这么做的好处是方便了为高阶组件提供数据并测试。
 
@@ -1490,7 +1490,7 @@ const keys = hasSymbol
   : Object.keys(inject)
 ```
 
-现在我们知道 `keys` 常量中保存 `inject` 选项对象的每一个键名，但我们注意到这里有一个对 [hasSymbol](../appendix/core-util.html#hassymbol) 的判断，其目的是保证 `Symbol` 类型与 `Reflect.ownKeys` 可用且为宿主环境原生提供，如果 `hasSymbol` 为真，则说明可用，此时会使用 `Reflect.ownKeys` 获取 `inject` 对象中所有可枚举的键名，否则使用 `Object.keys` 作为降级处理。实际上 `Reflect.ownKeys` 配合可枚举过滤等价于 `Object.keys` 与 `Object.getOwnPropertySymbols` 配合可枚举过滤之和，其好处是支持 `Symbol` 类型作为键名，当然了这一切都建立在宿主环境的支持之上，所以 `Vue` 官网中提到了**`inject` 选项对象的属性可以使用 `ES2015 Symbols` 作为 `key`，但是只在原生支持 `Symbol` 和 `Reflect.ownKeys` 的环境下可工作**。
+现在我们知道 `keys` 常量中保存 `inject` 选项对象的每一个键名，但我们注意到这里有一个对 [hasSymbol](../appendix/core-util.md#hassymbol) 的判断，其目的是保证 `Symbol` 类型与 `Reflect.ownKeys` 可用且为宿主环境原生提供，如果 `hasSymbol` 为真，则说明可用，此时会使用 `Reflect.ownKeys` 获取 `inject` 对象中所有可枚举的键名，否则使用 `Object.keys` 作为降级处理。实际上 `Reflect.ownKeys` 配合可枚举过滤等价于 `Object.keys` 与 `Object.getOwnPropertySymbols` 配合可枚举过滤之和，其好处是支持 `Symbol` 类型作为键名，当然了这一切都建立在宿主环境的支持之上，所以 `Vue` 官网中提到了**`inject` 选项对象的属性可以使用 `ES2015 Symbols` 作为 `key`，但是只在原生支持 `Symbol` 和 `Reflect.ownKeys` 的环境下可工作**。
 
 回过头来继续看 `resolveInject` 函数的代码，接下来的代码使用 `for` 循环，用来遍历刚刚获取到的 `keys` 数组：
 
@@ -1592,6 +1592,6 @@ toggleObserving(true)
 
 另外大家也注意到了在使用 `defineReactive` 函数为组件实例对象定义属性之前，调用了 `toggleObserving(false)` 函数关闭了响应式定义的开关，之后又将开关开启：`toggleObserving(true)`。前面我们已经讲到了类似的情况，这么做将会导致使用 `defineReactive` 定义属性时不会将该属性的值转换为响应式的，所以 `Vue` 文档中提到了：
 
->提示：provide 和 inject 绑定并不是可响应的。这是刻意为之的。然而，如果你传入了一个可监听的对象，那么其对象的属性还是可响应的。
+> 提示：provide 和 inject 绑定并不是可响应的。这是刻意为之的。然而，如果你传入了一个可监听的对象，那么其对象的属性还是可响应的。
 
 当然啦，如果父代组件提供的数据本身就是响应式的，即使 `defineReactive` 不转，那么最终这个数据也还是响应式的。
