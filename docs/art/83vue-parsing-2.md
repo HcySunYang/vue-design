@@ -605,7 +605,7 @@ isProp || (!el.component && platformMustUseProp(el.tag, el.attrsMap.type, name))
 !el.component && platformMustUseProp(el.tag, el.attrsMap.type, name)
 ```
 
-首先 `el.component` 必须为假，这个条件能够保证什么呢？我们知道 `el.component` 属性保存的是标签 `is` 属性的值，如果 `el.component` 属性为假就能够保证标签没有使用 `is` 属性。那么为什么需要这个保证呢？这是因为后边的 [platformMustUseProp](../appendix/web-util.html#mustuseprop) 函数，该函数的讲解可以在附录中查看，总结如下：
+首先 `el.component` 必须为假，这个条件能够保证什么呢？我们知道 `el.component` 属性保存的是标签 `is` 属性的值，如果 `el.component` 属性为假就能够保证标签没有使用 `is` 属性。那么为什么需要这个保证呢？这是因为后边的 [platformMustUseProp](../appendix/web-util.md#mustuseprop) 函数，该函数的讲解可以在附录中查看，总结如下：
 
 * `input,textarea,option,select,progress` 这些标签的 `value` 属性都应该使用元素对象的原生的 `prop` 绑定（除了 `type === 'button'` 之外）
 * `option` 标签的 `selected` 属性应该使用元素对象的原生的 `prop` 绑定
@@ -1061,7 +1061,7 @@ export function addDirective (
 }
 ```
 
-可以看到 `addDirective` 函数接收六个参数，在 `addDirective` 函数体内，首先判断了元素描述对象的 `el.directives` 是否存在，如果不存在则先将其初始化一个空数组，然后再使用 `push` 方法添加一个指令信息对象到 `el.directives` 数组中，如果 `el.directives` 属性已经存在，则直接使用 `push` 方法将指令信息对象添加到 `el.directives` 数组中。我们一直说的**指令信息对象**实际上指的就是如上代码中传递给 `push` 方法的参数：
+可以看到 `addDirective` 函数接收六个参数，在 `addDirective` 函数体内，首先判断了元素描述对象的 `el.directives` 是否存在，如果不存在则先将其初始化一个空数组，然后再使用 `push` 方法添加一个指令信息对象到 `el.directives` 数组中，如果 `el.directives` 属性已经存在，则直接使用 `push` 方法将指令信息对象添加到 `el.directives` 数组中。我们一直说的 **指令信息对象** 实际上指的就是如上代码中传递给 `push` 方法的参数：
 
 ```js
 { name, rawName, value, arg, modifiers }
@@ -1287,7 +1287,7 @@ if (!el.component &&
 }
 ```
 
-实际上元素描述对象的 `el.attrs` 数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中使用 `setAttribute` 方法将属性添加到真实DOM元素上，而在火狐浏览器中存在无法通过DOM元素的 `setAttribute` 方法为 `video` 标签添加 `muted` 属性的问题，所以如上代码就是为了解决该问题的，其方案是如果一个属性的名字是 `muted` 并且该标签满足 [platformMustUseProp](../appendix/web-util.html#mustuseprop) 函数(`video` 标签满足)，则会额外调用 `addProp` 函数将属性添加到元素描述对象的 `el.props` 数组中。为什么这么做呢？这是因为元素描述对象的 `el.props` 数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中直接使用真实DOM对象添加，也就是说对于 `<video>` 标签的 `muted` 属性的添加方式为：`videoEl.muted = true`。另外如上代码的注释中已经提供了相应的 `issue` 号：`#6887`，感兴趣的同学可以去看一下。
+实际上元素描述对象的 `el.attrs` 数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中使用 `setAttribute` 方法将属性添加到真实DOM元素上，而在火狐浏览器中存在无法通过DOM元素的 `setAttribute` 方法为 `video` 标签添加 `muted` 属性的问题，所以如上代码就是为了解决该问题的，其方案是如果一个属性的名字是 `muted` 并且该标签满足 [platformMustUseProp](../appendix/web-util.md#mustuseprop) 函数(`video` 标签满足)，则会额外调用 `addProp` 函数将属性添加到元素描述对象的 `el.props` 数组中。为什么这么做呢？这是因为元素描述对象的 `el.props` 数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中直接使用真实DOM对象添加，也就是说对于 `<video>` 标签的 `muted` 属性的添加方式为：`videoEl.muted = true`。另外如上代码的注释中已经提供了相应的 `issue` 号：`#6887`，感兴趣的同学可以去看一下。
 
 ## preTransformNode 前置处理
 
@@ -1334,7 +1334,7 @@ preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
 
 由上代码可知 `preTransforms` 变量的值是使用 `pluckModuleFunction` 函数从 `options.modules` 编译器选项中读取 `preTransformNode` 字段筛选出来的。具体的筛选过程在前面的章节中我们已经讲解过了，这里就不再细说。
 
-我来说一说编译器选项中的 `modules`，在 [理解编译器代码的组织方式](./art/80vue-compiler-start.md#理解编译器代码的组织方式) 一节中我们知道编译器的选项来自于两部分，一部分是创建编译器时传递的基本选项(`baseOptions`)，另一部分则是在使用编辑器编译模板时传递的选项参数。如下是创建编译器时的基本选项：
+我来说一说编译器选项中的 `modules`，在 [理解编译器代码的组织方式](./80vue-compiler-start.md#理解编译器代码的组织方式) 一节中我们知道编译器的选项来自于两部分，一部分是创建编译器时传递的基本选项(`baseOptions`)，另一部分则是在使用编辑器编译模板时传递的选项参数。如下是创建编译器时的基本选项：
 
 ```js
 import { baseOptions } from './options'
@@ -1343,7 +1343,7 @@ import { createCompiler } from 'compiler/index'
 const { compile, compileToFunctions } = createCompiler(baseOptions)
 ```
 
-如上代码来自 `src/platforms/web/compiler/index.js` 文件，可以看到 `baseOptions` 导入自 `src/platforms/web/compiler/options.js` 文件，对于基本选项的解析我们在 [compile 的作用](./art/80vue-compiler-start.html#compile-的作用) 一节中做了详细的讲解，并且整理了 [附录/编译器选项](../appendix/compiler-options.html)，如果大家忘记了可以回头查看。
+如上代码来自 `src/platforms/web/compiler/index.js` 文件，可以看到 `baseOptions` 导入自 `src/platforms/web/compiler/options.js` 文件，对于基本选项的解析我们在 [compile 的作用](./80vue-compiler-start.md#compile-的作用) 一节中做了详细的讲解，并且整理了 [附录/编译器选项](../appendix/compiler-options.md)，如果大家忘记了可以回头查看。
 
 最终我们了解到编译器选项的 `modules` 选项来 `src/platforms/web/compiler/modules/index.js` 文件导出的一个数组，如下：
 
@@ -1432,7 +1432,7 @@ if (!map['v-model']) {
 }
 ```
 
-如果该 `input` 标签没有使用 `v-model` 属性，则函数直接返回，什么都不做。所以我们可以说 `preTransformNode` 函数要预处理的是**使用了 `v-model` 属性的 `input` 标签**，不过还没完，我们继续看如下代码
+如果该 `input` 标签没有使用 `v-model` 属性，则函数直接返回，什么都不做。所以我们可以说 `preTransformNode` 函数要预处理的是 **使用了 `v-model` 属性的 `input` 标签**，不过还没完，我们继续看如下代码
 
 ```js {9}
 let typeBinding
@@ -2021,7 +2021,7 @@ export const parseStyleText = cached(function (cssText) {
 })
 ```
 
-由上代码可以 `parseStyleText` 函数是由 `cached` 函数创建的高阶函数，`parseStyleText` 接收内联样式字符串作为参数并返回解析后的对象。在 `parseStyleText` 函数内部首先定义了 `res` 常量，该常量就会作为 `parseStyleText` 函数的返回值，其初始值是一个空对象，接着定义了两个正则常量 `listDelimiter` 和 `propertyDelimiter`，其实把一个内两样式字符串解析为对象的思路很简单，首先我们要找到样式字符串的规则，如下：
+由以上代码可知 `parseStyleText` 函数是由 `cached` 函数创建的高阶函数，`parseStyleText` 接收内联样式字符串作为参数并返回解析后的对象。在 `parseStyleText` 函数内部首先定义了 `res` 常量，该常量就会作为 `parseStyleText` 函数的返回值，其初始值是一个空对象，接着定义了两个正则常量 `listDelimiter` 和 `propertyDelimiter`，其实把一个内联样式字符串解析为对象的思路很简单，首先我们要找到样式字符串的规则，如下：
 
 ```js
 <div style="color: red; background: green;"></div>
@@ -2046,13 +2046,13 @@ export const parseStyleText = cached(function (cssText) {
 const listDelimiter = /;(?![^(]*\))/g
 ```
 
-该正则表达式使用了**正向否定查找(`(?!`)**，什么是正向否定查找呢？举个例子，正则表达式 `/a(?!b)/`用来匹配后面没有跟字符 `'b'` 的字符 `'a'`。所以如上正则表达式用来全局匹配字符串中的分号(`;`)，但是该分号必须满足一个条件，即**该分号的后面不能跟左圆括号(`)`)，除非有一个相应的右圆括号(`(`)存在**，说起来有点抽象，我们还是举例说明，如下模板所示：
+该正则表达式使用了 **正向否定查找(`(?!`)**，什么是正向否定查找呢？举个例子，正则表达式 `/a(?!b)/`用来匹配后面没有跟字符 `'b'` 的字符 `'a'`。所以如上正则表达式用来全局匹配字符串中的分号(`;`)，但是该分号必须满足一个条件，即 **该分号的后面不能跟左圆括号(`)`)，除非有一个相应的右圆括号(`(`)存在**，说起来有点抽象，我们还是举例说明，如下模板所示：
 
 ```html
 <div style="color: red; background: url(www.xxx.com?a=1&amp;copy=3);"></div>
 ```
 
-大家仔细观察如上 `div` 标签的 `style` 属性值中存在几个分号？答案是三个分号，但只有其中两个分号才是真正的样式规则分割，而字符串 `'url(www.xxx.com?a=1&amp;copy=3)'` 中的分号则是不能作为样式规则分割的，正则常量 `listDelimiter` 正是为了实现这个功能而设计的。有的同学可能会问为什么 `url` 中会带有分号(`;`)，实际上正如上面的例子所示，我们知道内联样式是写在 `html` 文件中的，而在 `html` 规范中存在一个叫做 `html` 实体的概念，我们来看如下这段 `html` 模板：
+大家仔细观察如上 `div` 标签的 `style` 属性值中存在几个分号？答案是三个分号，但只有其中两个分号才是真正的样式规则分割符，而字符串 `'url(www.xxx.com?a=1&amp;copy=3)'` 中的分号则是不能作为样式规则分割符的，正则常量 `listDelimiter` 正是为了实现这个功能而设计的。有的同学可能会问为什么 `url` 中会带有分号(`;`)，实际上正如上面的例子所示，我们知道内联样式是写在 `html` 文件中的，而在 `html` 规范中存在一个叫做 `html实体` 的概念，我们来看如下这段 `html` 模板：
 
 ```html
 <a href="foo.cgi?chapter=1&copy=3">link</a>
@@ -2070,7 +2070,6 @@ if (styleBinding) {
 ```
 
 与处理绑定的 `class` 属性类似，使用 `getBindingAttr` 函数获取到绑定的 `style` 属性值后，如果值存在则直接将其赋值给元素描述对象的 `el.styleBinding` 属性。
-
 
 以上就是中置处理对于 `style` 属性的处理方式，我们做一个简短的总结：
 
@@ -2101,7 +2100,7 @@ el.staticStyle = JSON.stringify({
 el.styleBinding = "{ fontSize: fontSize + 'px' }"
 ```
 
-现在前置处理(`preTransformNode`)和中置处理(`transformNode`)我们都讲完了，还剩下后置处理(`postTransformsNode`)没有将，每当遇到非一元标签的结束标签或遇到一元标签时则会应用后置处理，我们回到 `src/compiler/parser/index.js` 文件，如下高亮的代码所示：
+现在前置处理(`preTransformNode`)和中置处理(`transformNode`)我们都讲完了，还剩下后置处理(`postTransformsNode`)没有讲，每当遇到非一元标签的结束标签或遇到一元标签时则会应用后置处理，我们回到 `src/compiler/parser/index.js` 文件，如下高亮的代码所示：
 
 ```js {10-12}
 function closeElement (element) {
@@ -2156,7 +2155,7 @@ if (!currentParent) {
 }
 ```
 
-这段代码是连续的几个 `if` 条件语句，首先判断了 `currentParent` 变量是否存在，我们知道 `currentParent` 变量指向的是当前节点的父节点，如果父节点不存在才会执行该 `if` 条件语句里面的代码。大家思考一下，如果 `currentParent` 变量不存在说明什么问题？我们知道如果代码执行到了这里，那么当前节点必然是文本节点，并且该文本节点没有父级节点。什么情况下回出现一个文本节点没有父级节点呢？有两种情况：
+这段代码是连续的几个 `if` 条件语句，首先判断了 `currentParent` 变量是否存在，我们知道 `currentParent` 变量指向的是当前节点的父节点，如果父节点不存在才会执行该 `if` 条件语句里面的代码。大家思考一下，如果 `currentParent` 变量不存在说明什么问题？我们知道如果代码执行到了这里，那么当前节点必然是文本节点，并且该文本节点没有父级节点。什么情况下会出现一个文本节点没有父级节点呢？有两种情况：
 
 * 第一：模板中只有文本节点
 
@@ -2209,7 +2208,7 @@ if (isIE &&
 </div>
 ```
 
-如上 `html` 片段是存在一个 `<textarea>` 标签，该标签拥有 `placeholder` 属性，但却没有真实的文本内容，假如我们使用如下代码获取字符串内容：
+如上 `html` 片段存在一个 `<textarea>` 标签，该标签拥有 `placeholder` 属性，但却没有真实的文本内容，假如我们使用如下代码获取字符串内容：
 
 ```js
 document.getElementById('box').innerHTML
@@ -2285,13 +2284,13 @@ text = inPre || text.trim()
 text = preserveWhitespace && children.length ? ' ' : ''
 ```
 
-首先我们要明确的是当条件 `inPre || text.trim()` 为假时代表什么，我们对该条件取反：`!inPre && !text.trim()`，取反后的条件很容易理解，用一句话描述就是**不存在于 `<pre>` 标签的空白符**，有的同学可能会有疑问，此时 `text` 一定是空白符吗？难道不可能是空字符串吗？当然不可能是空字符串，因为如果 `text` 是空字符串则代码是不会执行 `chars` 钩子函数的。那么对于不存在于 `<pre>` 标签内的空白符要如何处理呢？我们来看如下代码：
+首先我们要明确的是当条件 `inPre || text.trim()` 为假时代表什么，我们对该条件取反：`!inPre && !text.trim()`，取反后的条件很容易理解，用一句话描述就是 **不存在于 `<pre>` 标签内的空白符**，有的同学可能会有疑问，此时 `text` 一定是空白符吗？难道不可能是空字符串吗？当然不可能是空字符串，因为如果 `text` 是空字符串则代码是不会执行 `chars` 钩子函数的。那么对于不存在于 `<pre>` 标签内的空白符要如何处理呢？我们来看如下代码：
 
 ```js
 text = preserveWhitespace && children.length ? ' ' : ''
 ```
 
-如上代码是一个三元运算符，如果 `preserveWhitespace` 常量为真并且当前文本节点的父节点有子元素存在，则将 `text` 变量设置为空格字符(`' '`)，否则将 `text` 变量设置为空字符串。其中 `preserveWhitespace` 常量是一个布尔值代表着是否保留空格，只有它为真的情况下才会保留空格。但即使 `preserveWhitespace` 常量的值为真，如果当前节点的父节点没有子元素则也不会保留空格，换句话说，编译器只会保留那些**不存在于开始标签之后的空格**。而这也体现在了编译器源码的注释中，如下：
+如上代码是一个三元运算符，如果 `preserveWhitespace` 常量为真并且当前文本节点的父节点有子元素存在，则将 `text` 变量设置为空格字符(`' '`)，否则将 `text` 变量设置为空字符串。其中 `preserveWhitespace` 常量是一个布尔值代表着是否保留空格，只有它为真的情况下才会保留空格。但即使 `preserveWhitespace` 常量的值为真，如果当前节点的父节点没有子元素则也不会保留空格，换句话说，编译器只会保留那些 **不存在于开始标签之后的空格**。而这也体现在了编译器源码的注释中，如下：
 
 ```js {3}
 text = inPre || text.trim()
@@ -2304,7 +2303,7 @@ text = inPre || text.trim()
 
 我们来做一下总结：
 
-* 1、如果文本节点是非空白符，无论其在不在 `<pre>` 标签之内，只要其不在文本标签内则就会对文本进行解码，否则不会解码。
+* 1、如果文本节点是非空白符，无论其在不在 `<pre>` 标签之内，只要其不在文本标签内就会对文本进行解码，否则不会解码。
 * 2、如果文本节点是空白符
   * 2.1、空白符存在于 `<pre>` 标签之内，则完全保留
   * 2.2、空白符不存在于 `<pre>` 标签之内，则根据编译器选项配置来决定是否保留空白，并且只会保留那些不存在于开始标签之后的空白符。
@@ -2410,15 +2409,15 @@ else if (text !== ' ' || !children.length || children[children.length - 1].text 
 <p>我的名字叫：{{name}}</p>
 ```
 
-如上 `<p>` 标签内的文本在解析阶段会被当做一个普通的文本节点，是该文本节点却包含了 `Vue` 的模板语法，所以需要使用 `parseText` 对其进行解析，为了让大家更好的理解 `parseText` 函数的作用，我们需要先了解 `parseText` 函数的最终目的。我们知道模板最终会被编译器编译为渲染函数，而如上文本节点被编译后将以如下表达式存在于渲染函数中：
+如上 `<p>` 标签内的文本在解析阶段会被当做一个普通的文本节点，可是该文本节点却包含了 `Vue` 的模板语法，所以需要使用 `parseText` 对其进行解析，为了让大家更好地理解 `parseText` 函数的作用，我们需要先了解 `parseText` 函数的最终目的。我们知道模板最终会被编译器编译为渲染函数，而如上文本节点被编译后将以如下表达式存在于渲染函数中：
 
 ```js
 "我的名字叫："+_s(name)
 ```
 
-可以看到编译的结果分为两部分，第一部分是普通文本：`"我的名字叫："`，另外一部分是把字面量表达式中的表达式提取出来并作为 `_s` 函数的参数，这里大家暂时把 `_s` 函数理解成与 `toString` 函数的功能类似即可，并没有什么特别之处。看到这里相信你已经明白 `parseText` 函数的作用了，没错它的作用就是用来识别一段文本节点内容中的普通文本和字面量表达式并把他们按顺序拼接起来的。
+可以看到编译的结果分为两部分，第一部分是普通文本：`"我的名字叫："`，另外一部分是把字面量表达式中的表达式提取出来并作为 `_s` 函数的参数，这里大家暂时把 `_s` 函数理解成与 `toString` 函数的功能类似即可，并没有什么特别之处。看到这里相信你已经明白 `parseText` 函数的作用了，没错它的作用就是用来识别一段文本节点内容中的普通文本和字面量表达式并把他们按顺序拼接起来。
 
-接下来我们打开 `src/compiler/parser/text-parser.js` 文件，可以看到该文件指导出了一个 `parseText` 函数，所以这个文件的所有内容都服务于 `parseText` 函数，既然 `parseText` 函数会识别字面量表达式，那么自然需要一种识别机制，最容易想到的办法就是使用正则表达式，我们在 `src/compiler/parser/text-parser.js` 文件中能够看到如下正则常量：
+接下来我们打开 `src/compiler/parser/text-parser.js` 文件，可以看到该文件只导出了一个 `parseText` 函数，所以这个文件的所有内容都服务于 `parseText` 函数，既然 `parseText` 函数会识别字面量表达式，那么自然需要一种识别机制，最容易想到的办法就是使用正则表达式，我们在 `src/compiler/parser/text-parser.js` 文件中能够看到如下正则常量：
 
 ```js
 const defaultTagRE = /\{\{((?:.|\n)+?)\}\}/g
@@ -2776,5 +2775,5 @@ comment (text: string) {
 
 大家需要注意的是，普通文本节点与注释节点的元素描述对象的类型是一样的，都是 `3`，不同的是注释节点的元素描述对象拥有 `isComment` 属性，并且该属性的值为 `true`，目的就是用来与普通文本节点做区分的。
 
-至此，对于解析器相关的内容我们就全部讲解完毕了，最终解析器把 `Vue` 的模板解析为抽象语法树(`AST`)，强烈建议读完本节的同学能够仔细阅读以下附录 [Vue 模板 AST 详解](./appendix/ast.html)，相信你一定会有更多的收货。
+至此，对于解析器相关的内容我们就全部讲解完毕了，最终解析器把 `Vue` 的模板解析为抽象语法树(`AST`)，强烈建议读完本节的同学能够仔细阅读以下附录 [Vue 模板 AST 详解](../appendix/ast.md)，相信你一定会有更多的收获。
 
