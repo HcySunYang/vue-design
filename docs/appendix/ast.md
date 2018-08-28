@@ -866,9 +866,25 @@ ast = {
 
 节点元素对象的 `directives` 属性是一个数组，用来保存标签中所有指令信息。但并不是所有指令信息都会保存在 `directives` 数组中，比如 `v-for` 指令和 `v-if` 指令等等，因为这些指令在之前的处理中已经被移除掉。总的来说，指令分为内置指令和自定义指令，真正会出现在 `directives` 数组中的只有部分内置指令已经全部自定义指令。
 
-不会出现在 `directives` 数组中的内置指令有：`v-pre`、`v-for`、`v-if`、`v-else-if`、`v-else`、`v-on`、`v-bind` 以及 `v-once`。
+不会出现在 `directives` 数组中的内置指令有：`v-pre`、`v-for`、`v-if`、`v-else-if`、`v-else` 以及 `v-once`。
 
-除了以上列出的指令之外，所有内置指令都会出现在 `directives` 数组中，它们有：`v-text`、`v-html`、`v-show`、`v-model` 以及 `v-cloak`。
+会出现在 `directives` 数组中的内置有：`v-text`、`v-html`、`v-show`、`v-model` 以及 `v-cloak`。
+
+另外 `v-on`、`v-bind` 是两个比较特殊的指令，当这两个指令拥有参数时，则不会出现在 `directives` 数组中，比如：
+
+```html
+<div v-on:click="handler"></div>
+<div v-bind:some-prop="val"></div>
+```
+
+以上这两中写法，由于 `v-on` 和 `v-bind` 指令拥有参数，所以这两个指令不会出现在 `directives`，但是我们知道 `v-on` 和 `v-bind` 指令可以直接绑定对象，此时他们是没有参数的：
+
+```html
+<div v-on="$listeners"></div>
+<div v-bind="$attrs"></div>
+```
+
+这时候 `v-on` 和 `v-bind` 指令都会出现在 `directives` 数组中。为什么同样指令不同的使用方式会得到不同的对待呢？其实正是由于使用方式的不同，才需要不同的处理，在代码生成阶段，我们会更加理解这一点。
 
 一个完整的指令由四部分组成，分别是：`指令的名称`、`指令表达式`、`指令参数` 以及 `指令修饰符`，假设有如下模板：
 
