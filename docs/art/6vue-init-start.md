@@ -711,7 +711,7 @@ if (parent && !options.abstract) {
   while (parent.$options.abstract && parent.$parent) {
     parent = parent.$parent
   }
-  // 经过上线的 while 循环后，parent 应该是一个非抽象的组件，将它作为当前实例的父级，所以将当前实例 vm 添加到父级的 $children 属性里
+  // 经过上面的 while 循环后，parent 应该是一个非抽象的组件，将它作为当前实例的父级，所以将当前实例 vm 添加到父级的 $children 属性里
   parent.$children.push(vm)
 }
 
