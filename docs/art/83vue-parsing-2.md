@@ -2759,7 +2759,7 @@ end () {
 
 ## 注释节点的元素描述对象
 
-解析器是否会解析并保留注释节点，是由 `shouldKeepComment` 编译器选项决定的，开发者可以在创建 `Vue` 实例的时候通过设置 `comments` 选项的值来控制编译器的 `shouldKeepComment` 选项。没人情况 `comments` 选项的值为 `false`，即不保留注释，假如将其设置为 `true`，则当计息期遇到注释节点时会保留该注释节点，此时 `parseHTML` 函数的 `comment` 钩子函数会被调用，如下：
+解析器是否会解析并保留注释节点，是由 `shouldKeepComment` 编译器选项决定的，开发者可以在创建 `Vue` 实例的时候通过设置 `comments` 选项的值来控制编译器的 `shouldKeepComment` 选项。默认情况下 `comments` 选项的值为 `false`，即不保留注释，假如将其设置为 `true`，则当计息期遇到注释节点时会保留该注释节点，此时 `parseHTML` 函数的 `comment` 钩子函数会被调用，如下：
 
 ```js
 comment (text: string) {
