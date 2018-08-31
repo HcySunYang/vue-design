@@ -1686,7 +1686,7 @@ callbacks = [
 ]
 ```
 
-接下来主线程处于空闲状态(调用栈清空)，开始执行 `microtask` 队列中的任务，即执行 `flushCallbacks` 函数，`flushCallbacks` 函数会按照顺序执行 `callbacks` 数组中的函数，首先会执行 `flushSchedulerQueue` 函数，这个函数会遍历 `queue` 中的所有观察者并重新求值，完成重新渲染，在完成渲染之后，本次更新队列已经清空，`queue` 会被重置为空数组，一切状态还原。接着会执行如下函数：
+接下来主线程处于空闲状态(调用栈清空)，开始执行 `microtask` 队列中的任务，即执行 `flushCallbacks` 函数，`flushCallbacks` 函数会按照顺序执行 `callbacks` 数组中的函数，首先会执行 `flushSchedulerQueue` 函数，这个函数会遍历 `queue` 中的所有观察者并重新求值，完成重新渲染(`re-render`)，在完成渲染之后，本次更新队列已经清空，`queue` 会被重置为空数组，一切状态还原。接着会执行如下函数：
 
 ```js
 () => {

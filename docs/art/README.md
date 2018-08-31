@@ -51,5 +51,6 @@
 * [https://github.com/vuejs/vue/pull/7308](https://github.com/vuejs/vue/pull/7308)
 * [https://github.com/vuejs/vue/pull/7762](https://github.com/vuejs/vue/pull/7762)
 * [https://github.com/vuejs/vue/pull/7510](https://github.com/vuejs/vue/pull/7510)
+* [https://github.com/vuejs/vue/pull/8734](https://github.com/vuejs/vue/pull/8734)
 
 说实话，上面的 `PR` 都是些微不足道的，因为写文章需要大量的时间，随着这些文章的完成，我很希望抽出时间做一些实质性的贡献。
