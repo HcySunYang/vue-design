@@ -313,7 +313,7 @@ Object.defineProperty(data, 'a', {
   set () {
     dep.forEach(fn => fn())
   },
-  get () {
+  get (Target) {
     // 此时 Target 变量中保存的就是依赖函数
     dep.push(Target)
   }
