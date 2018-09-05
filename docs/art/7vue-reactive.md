@@ -284,7 +284,7 @@ Object.defineProperty(data, 'a', {
     // 当属性被设置的时候，将“筐”里的依赖都执行一次
     dep.forEach(fn => fn())
   },
-  get () {
+  get (fn) {
     // 当属性被获取的时候，把依赖放到“筐”里
     dep.push(fn)
   }
@@ -313,7 +313,7 @@ Object.defineProperty(data, 'a', {
   set () {
     dep.forEach(fn => fn())
   },
-  get () {
+  get (Target) {
     // 此时 Target 变量中保存的就是依赖函数
     dep.push(Target)
   }
