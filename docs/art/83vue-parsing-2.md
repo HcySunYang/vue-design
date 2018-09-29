@@ -1345,7 +1345,7 @@ const { compile, compileToFunctions } = createCompiler(baseOptions)
 
 如上代码来自 `src/platforms/web/compiler/index.js` 文件，可以看到 `baseOptions` 导入自 `src/platforms/web/compiler/options.js` 文件，对于基本选项的解析我们在 [compile 的作用](./80vue-compiler-start.md#compile-的作用) 一节中做了详细的讲解，并且整理了 [附录/编译器选项](../appendix/compiler-options.md)，如果大家忘记了可以回头查看。
 
-最终我们了解到编译器选项的 `modules` 选项来 `src/platforms/web/compiler/modules/index.js` 文件导出的一个数组，如下：
+最终我们了解到编译器选项的 `modules` 选项来自 `src/platforms/web/compiler/modules/index.js` 文件导出的一个数组，如下：
 
 ```js
 import klass from './class'
