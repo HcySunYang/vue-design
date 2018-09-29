@@ -1194,7 +1194,7 @@ function processAttrs (el) {
 * `slot`、`slot-scope`、`scope`、`name`
 * `is`、`inline-template`
 
-这些非指令属性都已经被相应的处理函数解析过了，所以 `processAttrs` 函数是不负责处理如上这些非指令属性的。换句话说除了以上属性基本指令的非指令属性基本都由 `processAttrs` 函数来处理，比如 `id`、`width` 等，如下：
+这些非指令属性都已经被相应的处理函数解析过了，所以 `processAttrs` 函数是不负责处理如上这些非指令属性的。换句话说除了以上这些以外，其他的非指令属性基本都由 `processAttrs` 函数来处理，比如 `id`、`width` 等，如下：
 
 ```html
 <div id="box" width="100px"></div>
