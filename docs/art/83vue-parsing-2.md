@@ -1626,7 +1626,7 @@ const hasElse = getAndRemoveAttr(el, 'v-else', true) != null
 const elseIfCondition = getAndRemoveAttr(el, 'v-else-if', true)
 ```
 
-实际上 `preTransformNode` 函数的处理逻辑就是把一个 `input` 标签扩展为多个标签，并且些扩展出来的标签彼此之间是互斥的，后面大家会看到这些扩展出来的标签都存在于元素描述对象的 `el.ifConditions` 数组中。
+实际上 `preTransformNode` 函数的处理逻辑就是把一个 `input` 标签扩展为多个标签，并且这些扩展出来的标签彼此之间是互斥的，后面大家会看到这些扩展出来的标签都存在于元素描述对象的 `el.ifConditions` 数组中。
 
 我们接着看代码，如下高亮代码所示：
 
