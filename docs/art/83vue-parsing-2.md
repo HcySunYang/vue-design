@@ -1332,9 +1332,9 @@ for (let i = 0; i < preTransforms.length; i++) {
 preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
 ```
 
-由以上代码可知 `preTransforms` 变量的值是使用 `pluckModuleFunction` 函数从 `options.modules` 编译器选项中读取 `preTransformNode` 字段筛选出来的。具体的筛选过程在前面的章节中我们已经讲解过了，这里就不再细说。
+由上代码可知 `preTransforms` 变量的值是使用 `pluckModuleFunction` 函数从 `options.modules` 编译器选项中读取 `preTransformNode` 字段筛选出来的。具体的筛选过程在前面的章节中我们已经讲解过了，这里就不再细说。
 
-我来说一说编译器选项中的 `modules`，在 [理解编译器代码的组织方式](./80vue-compiler-start.md#理解编译器代码的组织方式) 一节中我们知道编译器的选项来自于两部分，一部分是创建编译器时传递的基本选项(`baseOptions`)，另一部分则是在使用编辑器编译模板时传递的选项参数。如下是创建编译器时的基本选项：
+我来说一说编译器选项中的 `modules`，在 [理解编译器代码的组织方式](./80vue-compiler-start.md#理解编译器代码的组织方式) 一节中我们知道编译器的选项来自于两部分，一部分是创建编译器时传递的基本选项(`baseOptions`)，另一部分则是在使用编译器编译模板时传递的选项参数。如下是创建编译器时的基本选项：
 
 ```js
 import { baseOptions } from './options'
