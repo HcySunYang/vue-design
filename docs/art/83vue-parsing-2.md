@@ -1536,7 +1536,7 @@ if (typeBinding) {
 
 这段代码定义了四个常量，分别是 `ifCondition`、`ifConditionExtra`、`hasElse` 以及 `elseIfCondition`，其中 `ifCondition` 常量保存的值是通过 `getAndRemoveAttr` 函数取得的 `v-if` 指令的值，注意如上代码中调用 `getAndRemoveAttr` 函数时传递的第三个参数为 `true`，所以在获取到属性值之后，会将该属性从元素描述对象的 `el.attrsMap` 中移除。
 
-假设有我们如下模板：
+假设我们有如下模板：
 
 ```html
 <input v-model="val" :type="inputType" v-if="display" />
