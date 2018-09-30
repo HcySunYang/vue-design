@@ -2534,7 +2534,7 @@ while ((match = tagRE.exec(text))) {
 (match = tagRE.exec(text))
 ```
 
-这里使用 `tagRE` 正则匹配文本内容，并将匹配结果保存在 `match` 变量中，直到匹配失败循环才会终止，这时意味着所有的字面量表达式都已经处理完毕了。那么匹配结果 `match` 变量中保存着什么值呢？如果匹配成功则 `match` 变量将会是一个数组，该数组的第一个元素为整个匹配的字符串，第二个元素是正则 `tagRE` 捕获组所匹配的内容，假设我们的文本为 `'{{name}}'`，则匹配成功后 `match` 数组的值为：
+这里使用 `tagRE` 正则匹配文本内容，并将匹配结果保存在 `match` 变量中，直到匹配失败循环才会终止，这时意味着所有的字面量表达式都已经处理完毕了。那么匹配结果 `match` 变量中保存着什么值呢？如果匹配成功则 `match` 变量将会是一个数组，该数组的第一个元素为整个匹配的字符串，第二个元素是正则 `tagRE` 捕获组所匹配的内容，假设我们的文本为 '{{name}}'，则匹配成功后 `match` 数组的值为：
 
 ```js
 match = ['{{name}}', 'name']
@@ -2623,7 +2623,7 @@ rawTokens = [
 lastIndex = index + match[0].length
 ```
 
-这句代码的作用是更新 `lastIndex` 变量的值，可以看到 `lastIndex` 变量的值等于 `index` 变量的值加上匹配的字符串的长度，我们以字符串 `'abc{{name}}def'` 为例，此时 `lastIndex` 变量的初始值为 `0`；`index` 变量的值为 `3`，指向第一个左花括号(`{`)；`match[0].length` 的值为匹配的字符串 `'{{name}}'` 的长度，所以 `match[0].length` 的值为 `8`，最终：
+这句代码的作用是更新 `lastIndex` 变量的值，可以看到 `lastIndex` 变量的值等于 `index` 变量的值加上匹配的字符串的长度，我们以字符串 `'abc{{name}}def'` 为例，此时 `lastIndex` 变量的初始值为 `0`；`index` 变量的值为 `3`，指向第一个左花括号(`{`)；`match[0].length` 的值为匹配的字符串 '{{name}}' 的长度，所以 `match[0].length` 的值为 `8`，最终：
 
 ```js
 lastIndex = 3 + 8 // lastIndex = 11
