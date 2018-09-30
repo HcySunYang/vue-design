@@ -1536,7 +1536,7 @@ if (typeBinding) {
 
 这段代码定义了四个常量，分别是 `ifCondition`、`ifConditionExtra`、`hasElse` 以及 `elseIfCondition`，其中 `ifCondition` 常量保存的值是通过 `getAndRemoveAttr` 函数取得的 `v-if` 指令的值，注意如上代码中调用 `getAndRemoveAttr` 函数时传递的第三个参数为 `true`，所以在获取到属性值之后，会将该属性从元素描述对象的 `el.attrsMap` 中移除。
 
-假设有我们如下模板：
+假设我们有如下模板：
 
 ```html
 <input v-model="val" :type="inputType" v-if="display" />
@@ -1575,9 +1575,9 @@ function cloneASTElement (el) {
 }
 ```
 
-其实现很简单，就是通过 `createASTElement` 函数再创建出一个元素描述对象即可，不过由于 `el.attrsList` 数组时引用类型，所以为了避免克隆的元素描述对象与原始描述对象互相干扰，所以需要使用数组的 `slice` 方法复刻出一个新的 `el.attrList` 数组。
+其实现很简单，就是通过 `createASTElement` 函数再创建出一个元素描述对象即可，不过由于 `el.attrsList` 数组是引用类型，所以为了避免克隆的元素描述对象与原始描述对象互相干扰，所以需要使用数组的 `slice` 方法复刻出一个新的 `el.attrList` 数组。
 
-拿到了克隆出的新元素描述对象后需要做什么呢？很简单啊，该怎么处理就怎么处理被，打开 `src/compiler/parser/index.js` 文件，在解析开始标签的 `start` 钩子函数中有如下这样一段代码：
+拿到了克隆出的新元素描述对象后需要做什么呢？很简单啊，该怎么处理就怎么处理呗，打开 `src/compiler/parser/index.js` 文件，在解析开始标签的 `start` 钩子函数中有如下这样一段代码：
 
 ```js {4-9}
 if (inVPre) {
@@ -1626,7 +1626,7 @@ const hasElse = getAndRemoveAttr(el, 'v-else', true) != null
 const elseIfCondition = getAndRemoveAttr(el, 'v-else-if', true)
 ```
 
-实际上 `preTransformNode` 函数的处理逻辑就是把一个 `input` 标签扩展为多个标签，并且些扩展出来的标签彼此之间是互斥的，后面大家会看到这些扩展出来的标签都存在于元素描述对象的 `el.ifConditions` 数组中。
+实际上 `preTransformNode` 函数的处理逻辑就是把一个 `input` 标签扩展为多个标签，并且这些扩展出来的标签彼此之间是互斥的，后面大家会看到这些扩展出来的标签都存在于元素描述对象的 `el.ifConditions` 数组中。
 
 我们接着看代码，如下高亮代码所示：
 
@@ -2457,7 +2457,7 @@ const open = '${'.replace(regexEscapeRE, '\\$&')
 const regexEscapeRE = /[-.*+?^${}()|[\]\/\\]/g
 ```
 
-可以看到该正则所匹配的字符都是那些在正则表达式中具有特殊意义的字符，正式因为这些字符在正则表达式中具有特殊意义，所以才需要使用 `replace` 方法将匹配到的具有特殊意义的字符进行转义，转义的结果就是在具有特殊意义的字符前面添加字符 `\`，所以最终 `open` 常量的值将为：`'\$\{'`。这里简单说明一下，字符串的 `replace` 方法的第二个参数可以是一个字符串，即要替换的文本，如果第二个参数是字符串，则可以使用特殊的字符序列：
+可以看到该正则所匹配的字符都是那些在正则表达式中具有特殊意义的字符，正是因为这些字符在正则表达式中具有特殊意义，所以才需要使用 `replace` 方法将匹配到的具有特殊意义的字符进行转义，转义的结果就是在具有特殊意义的字符前面添加字符 `\`，所以最终 `open` 常量的值将为：`'\$\{'`。这里简单说明一下，字符串的 `replace` 方法的第二个参数可以是一个字符串，即要替换的文本，如果第二个参数是字符串，则可以使用特殊的字符序列：
 
 * $$ =====> $
 * $& =====> 匹配整个模式的字符串，与RegExp.lastMatch的值相同
