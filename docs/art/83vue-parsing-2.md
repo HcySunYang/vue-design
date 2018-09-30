@@ -1402,7 +1402,7 @@ preTransforms = [
 为了方便描述，后续我们会把 `src/platforms/web/compiler/modules/model.js` 文件简称 `model.js` 文件（注意：此约定仅限当前章节）
 :::
 
-如下是 `preTransformNode` 函数的签名以及函数体内一开始的一段代码：
+如下是 `preTransformNode` 函数的签名以及函数体内开始的一段代码：
 
 ```js
 function preTransformNode (el: ASTElement, options: CompilerOptions) {
