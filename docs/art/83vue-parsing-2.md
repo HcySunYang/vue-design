@@ -1575,7 +1575,7 @@ function cloneASTElement (el) {
 }
 ```
 
-其实现很简单，就是通过 `createASTElement` 函数再创建出一个元素描述对象即可，不过由于 `el.attrsList` 数组时引用类型，所以为了避免克隆的元素描述对象与原始描述对象互相干扰，所以需要使用数组的 `slice` 方法复刻出一个新的 `el.attrList` 数组。
+其实现很简单，就是通过 `createASTElement` 函数再创建出一个元素描述对象即可，不过由于 `el.attrsList` 数组是引用类型，所以为了避免克隆的元素描述对象与原始描述对象互相干扰，所以需要使用数组的 `slice` 方法复刻出一个新的 `el.attrList` 数组。
 
 拿到了克隆出的新元素描述对象后需要做什么呢？很简单啊，该怎么处理就怎么处理被，打开 `src/compiler/parser/index.js` 文件，在解析开始标签的 `start` 钩子函数中有如下这样一段代码：
 
