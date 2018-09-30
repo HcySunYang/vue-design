@@ -2540,7 +2540,7 @@ while ((match = tagRE.exec(text))) {
 match = ['{{name}}', 'name']
 ```
 
-但 `match` 并不是一个普通的数组，它还包含 `match.index` 属性，该属性的值代表着匹配的字符串在整个字符串中的位置，假设我们有这样一段文本：`'abc{{name}}'`，则匹配成功后 `match.index` 的值为 `3`，因为第一个左花括号(`{`)在整个字符串中的索引是 `3`。明白了这些我们就可以继续看 `while` 循环内的代码了，在 `while` 循环内的开头是如下这段代码：
+但 `match` 并不是一个普通的数组，它还包含 `match.index` 属性，该属性的值代表着匹配的字符串在整个字符串中的位置，假设我们有这样一段文本：'abc{{name}}'，则匹配成功后 `match.index` 的值为 `3`，因为第一个左花括号(`{`)在整个字符串中的索引是 `3`。明白了这些我们就可以继续看 `while` 循环内的代码了，在 `while` 循环内的开头是如下这段代码：
 
 ```js
 index = match.index
@@ -2551,7 +2551,7 @@ if (index > lastIndex) {
 }
 ```
 
-这段代码首先使用 `index` 变量保存了 `match.index` 属性的值，接着是一个 `if` 条件语句，它判断了变量 `index` 的值是否大于 `lastIndex` 变量的值，大家思考一下什么情况下会出现变量 `index` 的值大于 `lastIndex` 变量的值的情况？我们知道 `lastIndex` 变量的初始值是 `0`，所以只要 `index` 变量大于 `0` 即可，换句话说只要 `match.index` 变量的值大于 `0` 即可，我们还是以这段文本为例：`'abc{{name}}'`，我们知道当匹配这段文本时，`match.index` 的值将会为 `3`，它大于 `0`，所以此时如上 `if` 条件语句的判断条件满足，此时将会执行 `if` 语句块内的代码，在 `if` 语句块内有这样一句话，如下：
+这段代码首先使用 `index` 变量保存了 `match.index` 属性的值，接着是一个 `if` 条件语句，它判断了变量 `index` 的值是否大于 `lastIndex` 变量的值，大家思考一下什么情况下会出现变量 `index` 的值大于 `lastIndex` 变量的值的情况？我们知道 `lastIndex` 变量的初始值是 `0`，所以只要 `index` 变量大于 `0` 即可，换句话说只要 `match.index` 变量的值大于 `0` 即可，我们还是以这段文本为例：'abc{{name}}'，我们知道当匹配这段文本时，`match.index` 的值将会为 `3`，它大于 `0`，所以此时如上 `if` 条件语句的判断条件满足，此时将会执行 `if` 语句块内的代码，在 `if` 语句块内有这样一句话，如下：
 
 ```js
 rawTokens.push(tokenValue = text.slice(lastIndex, index))
@@ -2623,7 +2623,7 @@ rawTokens = [
 lastIndex = index + match[0].length
 ```
 
-这句代码的作用是更新 `lastIndex` 变量的值，可以看到 `lastIndex` 变量的值等于 `index` 变量的值加上匹配的字符串的长度，我们以字符串 `'abc{{name}}def'` 为例，此时 `lastIndex` 变量的初始值为 `0`；`index` 变量的值为 `3`，指向第一个左花括号(`{`)；`match[0].length` 的值为匹配的字符串 '{{name}}' 的长度，所以 `match[0].length` 的值为 `8`，最终：
+这句代码的作用是更新 `lastIndex` 变量的值，可以看到 `lastIndex` 变量的值等于 `index` 变量的值加上匹配的字符串的长度，我们以字符串 'abc{{name}}def' 为例，此时 `lastIndex` 变量的初始值为 `0`；`index` 变量的值为 `3`，指向第一个左花括号(`{`)；`match[0].length` 的值为匹配的字符串 '{{name}}' 的长度，所以 `match[0].length` 的值为 `8`，最终：
 
 ```js
 lastIndex = 3 + 8 // lastIndex = 11
@@ -2640,7 +2640,7 @@ if (lastIndex < text.length) {
 }
 ```
 
-这是一段 `if` 条件语句，其对比了 `lastIndex` 变量的值和原始文本长度(`text.length`)的大小，当 `lastIndex` 变量的值小于原始文本长度时该 `if` 条件语句内的代码将被执行。那么什么情况下 `lastIndex` 变量的值小于原始文本长度呢？我们知道每当 `while` 循环结束之前都会更新 `lastIndex` 变量的值并开始下一次循环，我们假设原始文本为 `'abc{{name}}def'`，当第一次 `while` 循环结束之前会更新 `lastIndex` 变量的值，使其指向字符 `'d'`，所以此时 `lastIndex` 变量的值为 `11`。然后开始下一次 `while` 循环，但大家不要忘了 `while` 循环的判断条件是：`(match = tagRE.exec(text))`，由于第二次 `while` 循环将会从字符 `'d'` 开始向后匹配，即匹配剩余的字符串 `'def'`，很明显该字符串中不在包含字面量表达式，所以 `while` 循环的判断条件会失败，循环终止。最终 `lastIndex` 变量的值停留在 `11`，而整个原始字符串的长度为 `14`，此时满足 `lastIndex` 变量的值小于原始字符串的长度，如上 `if` 条件语句内的代码将被执行。很明显，如上代码的目的是为了截取剩余的普通文本并将其添加到 `rawTokens` 和 `tokens` 数组中。当原始字符串 `'abc{{name}}def'` 被解析完毕后，`rawTokens` 和 `tokens` 数组的值将是：
+这是一段 `if` 条件语句，其对比了 `lastIndex` 变量的值和原始文本长度(`text.length`)的大小，当 `lastIndex` 变量的值小于原始文本长度时该 `if` 条件语句内的代码将被执行。那么什么情况下 `lastIndex` 变量的值小于原始文本长度呢？我们知道每当 `while` 循环结束之前都会更新 `lastIndex` 变量的值并开始下一次循环，我们假设原始文本为 'abc{{name}}def'，当第一次 `while` 循环结束之前会更新 `lastIndex` 变量的值，使其指向字符 `'d'`，所以此时 `lastIndex` 变量的值为 `11`。然后开始下一次 `while` 循环，但大家不要忘了 `while` 循环的判断条件是：`(match = tagRE.exec(text))`，由于第二次 `while` 循环将会从字符 `'d'` 开始向后匹配，即匹配剩余的字符串 `'def'`，很明显该字符串中不在包含字面量表达式，所以 `while` 循环的判断条件会失败，循环终止。最终 `lastIndex` 变量的值停留在 `11`，而整个原始字符串的长度为 `14`，此时满足 `lastIndex` 变量的值小于原始字符串的长度，如上 `if` 条件语句内的代码将被执行。很明显，如上代码的目的是为了截取剩余的普通文本并将其添加到 `rawTokens` 和 `tokens` 数组中。当原始字符串 'abc{{name}}def' 被解析完毕后，`rawTokens` 和 `tokens` 数组的值将是：
 
 ```js
 tokens = ["'abc'", '_s(name)', "'def'"]
