@@ -32,7 +32,7 @@ if (opts.data) {
 let data = vm.$options.data
 data = vm._data = typeof data === 'function'
   ? getData(data, vm)
-  : data || {}
+  : data || {} 
 ```
 
 首先定义 `data` 变量，它是 `vm.$options.data` 的引用。在 [Vue选项的合并](./5vue-merge.md) 一节中我们知道 `vm.$options.data` 其实最终被处理成了一个函数，且该函数的执行结果才是真正的数据。在上面的代码中我们发现其中依然存在一个使用 `typeof` 语句判断 `data` 数据类型的操作，我们知道经过 `mergeOptions` 函数处理后 `data` 选项必然是一个函数，那么这里的判断还有必要吗？答案是有，这是因为 `beforeCreate` 生命周期钩子函数是在 `mergeOptions` 函数之后 `initData` 之前被调用的，如果在 `beforeCreate` 生命周期钩子函数中修改了 `vm.$options.data` 的值，那么在 `initData` 函数中对于 `vm.$options.data` 类型的判断就是必要的了。
