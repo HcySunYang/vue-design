@@ -1,3 +1,6 @@
+
+# 阅读之前请查看：[For the reader](https://github.com/HcySunYang/vue-design/issues/167)
+
 # 写在前面
 
 ## 文章特点
