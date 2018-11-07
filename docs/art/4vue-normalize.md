@@ -48,7 +48,7 @@ export function resolveConstructorOptions (Ctor: Class<Component>) {
 }
 ```
 
-在具体去看代码之前，大家能否通过这个函数的名字猜一猜这个函数的作用呢？其名字是 `resolve Constructor Options` 那么这个函数是不是用来*解析构造者的 `options`*的呢？答案是：对，就是干这个的。接下来我们就具体看一下它是怎么做的，首先第一句：
+在具体去看代码之前，大家能否通过这个函数的名字猜一猜这个函数的作用呢？其名字是 `resolve Constructor Options` 那么这个函数是不是用来 *解析构造者的 `options`* 的呢？答案是：对，就是干这个的。接下来我们就具体看一下它是怎么做的，首先第一句：
 
 ```js
 let options = Ctor.options

@@ -1194,7 +1194,7 @@ function processAttrs (el) {
 * `slot`、`slot-scope`、`scope`、`name`
 * `is`、`inline-template`
 
-这些非指令属性都已经被相应的处理函数解析过了，所以 `processAttrs` 函数是不负责处理如上这些非指令属性的。换句话说除了以上属性基本指令的非指令属性基本都由 `processAttrs` 函数来处理，比如 `id`、`width` 等，如下：
+这些非指令属性都已经被相应的处理函数解析过了，所以 `processAttrs` 函数是不负责处理如上这些非指令属性的。换句话说除了以上这些以外，其他的非指令属性基本都由 `processAttrs` 函数来处理，比如 `id`、`width` 等，如下：
 
 ```html
 <div id="box" width="100px"></div>
@@ -1334,7 +1334,7 @@ preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
 
 由上代码可知 `preTransforms` 变量的值是使用 `pluckModuleFunction` 函数从 `options.modules` 编译器选项中读取 `preTransformNode` 字段筛选出来的。具体的筛选过程在前面的章节中我们已经讲解过了，这里就不再细说。
 
-我来说一说编译器选项中的 `modules`，在 [理解编译器代码的组织方式](./80vue-compiler-start.md#理解编译器代码的组织方式) 一节中我们知道编译器的选项来自于两部分，一部分是创建编译器时传递的基本选项(`baseOptions`)，另一部分则是在使用编辑器编译模板时传递的选项参数。如下是创建编译器时的基本选项：
+我来说一说编译器选项中的 `modules`，在 [理解编译器代码的组织方式](./80vue-compiler-start.md#理解编译器代码的组织方式) 一节中我们知道编译器的选项来自于两部分，一部分是创建编译器时传递的基本选项(`baseOptions`)，另一部分则是在使用编译器编译模板时传递的选项参数。如下是创建编译器时的基本选项：
 
 ```js
 import { baseOptions } from './options'
@@ -1345,7 +1345,7 @@ const { compile, compileToFunctions } = createCompiler(baseOptions)
 
 如上代码来自 `src/platforms/web/compiler/index.js` 文件，可以看到 `baseOptions` 导入自 `src/platforms/web/compiler/options.js` 文件，对于基本选项的解析我们在 [compile 的作用](./80vue-compiler-start.md#compile-的作用) 一节中做了详细的讲解，并且整理了 [附录/编译器选项](../appendix/compiler-options.md)，如果大家忘记了可以回头查看。
 
-最终我们了解到编译器选项的 `modules` 选项来 `src/platforms/web/compiler/modules/index.js` 文件导出的一个数组，如下：
+最终我们了解到编译器选项的 `modules` 选项来自 `src/platforms/web/compiler/modules/index.js` 文件导出的一个数组，如下：
 
 ```js
 import klass from './class'
@@ -1536,7 +1536,7 @@ if (typeBinding) {
 
 这段代码定义了四个常量，分别是 `ifCondition`、`ifConditionExtra`、`hasElse` 以及 `elseIfCondition`，其中 `ifCondition` 常量保存的值是通过 `getAndRemoveAttr` 函数取得的 `v-if` 指令的值，注意如上代码中调用 `getAndRemoveAttr` 函数时传递的第三个参数为 `true`，所以在获取到属性值之后，会将该属性从元素描述对象的 `el.attrsMap` 中移除。
 
-假设有我们如下模板：
+假设我们有如下模板：
 
 ```html
 <input v-model="val" :type="inputType" v-if="display" />
@@ -1575,9 +1575,9 @@ function cloneASTElement (el) {
 }
 ```
 
-其实现很简单，就是通过 `createASTElement` 函数再创建出一个元素描述对象即可，不过由于 `el.attrsList` 数组时引用类型，所以为了避免克隆的元素描述对象与原始描述对象互相干扰，所以需要使用数组的 `slice` 方法复刻出一个新的 `el.attrList` 数组。
+其实现很简单，就是通过 `createASTElement` 函数再创建出一个元素描述对象即可，不过由于 `el.attrsList` 数组是引用类型，所以为了避免克隆的元素描述对象与原始描述对象互相干扰，所以需要使用数组的 `slice` 方法复刻出一个新的 `el.attrList` 数组。
 
-拿到了克隆出的新元素描述对象后需要做什么呢？很简单啊，该怎么处理就怎么处理被，打开 `src/compiler/parser/index.js` 文件，在解析开始标签的 `start` 钩子函数中有如下这样一段代码：
+拿到了克隆出的新元素描述对象后需要做什么呢？很简单啊，该怎么处理就怎么处理呗，打开 `src/compiler/parser/index.js` 文件，在解析开始标签的 `start` 钩子函数中有如下这样一段代码：
 
 ```js {4-9}
 if (inVPre) {
@@ -1626,7 +1626,7 @@ const hasElse = getAndRemoveAttr(el, 'v-else', true) != null
 const elseIfCondition = getAndRemoveAttr(el, 'v-else-if', true)
 ```
 
-实际上 `preTransformNode` 函数的处理逻辑就是把一个 `input` 标签扩展为多个标签，并且些扩展出来的标签彼此之间是互斥的，后面大家会看到这些扩展出来的标签都存在于元素描述对象的 `el.ifConditions` 数组中。
+实际上 `preTransformNode` 函数的处理逻辑就是把一个 `input` 标签扩展为多个标签，并且这些扩展出来的标签彼此之间是互斥的，后面大家会看到这些扩展出来的标签都存在于元素描述对象的 `el.ifConditions` 数组中。
 
 我们接着看代码，如下高亮代码所示：
 
@@ -1773,7 +1773,7 @@ addIfCondition(branch0, {
 })
 ```
 
-这段代码可以分成两部分，与扩展复选按钮一样，如上这段代码中，第一部分用来扩展单选按钮，而第二部分用来扩展其他类型的 `input` 标签。需要注意的有两点，第一点是如上代码中无论是扩展单选按钮还是扩展其他类型的 `input` 标签，它们都重新使用 `cloneASTElement` 函数克隆除了新的元素描述对象并且这两个元素描述对象都会被添加到复选按钮元素描述对象的 `el.ifConditions` 数组中。第二点需要注意的是无论是扩展单选按钮还是扩展其他类型的 `input` 标签，它们都执行如下这句代码：
+这段代码可以分成两部分，与扩展复选按钮一样，如上这段代码中，第一部分用来扩展单选按钮，而第二部分用来扩展其他类型的 `input` 标签。需要注意的有两点，第一点是如上代码中无论是扩展单选按钮还是扩展其他类型的 `input` 标签，它们都重新使用 `cloneASTElement` 函数克隆出了新的元素描述对象并且这两个元素描述对象都会被添加到复选按钮元素描述对象的 `el.ifConditions` 数组中。第二点需要注意的是无论是扩展单选按钮还是扩展其他类型的 `input` 标签，它们都执行如下这句代码：
 
 ```js
 getAndRemoveAttr(branch2, 'v-for', true)
@@ -1791,7 +1791,7 @@ if (hasElse) {
 }
 ```
 
-这段代码的作用是什么呢？在前面的讲解中，我们所举的例子都是使用 `v-if` 指令的 `input` 标签，但该 `input` 标也有可能使用 `v-else-if` 或 `v-else` 啊，如下：
+这段代码的作用是什么呢？在前面的讲解中，我们所举的例子都是使用 `v-if` 指令的 `input` 标签，但该 `input` 标签也有可能使用 `v-else-if` 或 `v-else` 啊，如下：
 
 ```html
 <div v-if="num === 1"></div>
@@ -2457,7 +2457,7 @@ const open = '${'.replace(regexEscapeRE, '\\$&')
 const regexEscapeRE = /[-.*+?^${}()|[\]\/\\]/g
 ```
 
-可以看到该正则所匹配的字符都是那些在正则表达式中具有特殊意义的字符，正式因为这些字符在正则表达式中具有特殊意义，所以才需要使用 `replace` 方法将匹配到的具有特殊意义的字符进行转义，转义的结果就是在具有特殊意义的字符前面添加字符 `\`，所以最终 `open` 常量的值将为：`'\$\{'`。这里简单说明一下，字符串的 `replace` 方法的第二个参数可以是一个字符串，即要替换的文本，如果第二个参数是字符串，则可以使用特殊的字符序列：
+可以看到该正则所匹配的字符都是那些在正则表达式中具有特殊意义的字符，正是因为这些字符在正则表达式中具有特殊意义，所以才需要使用 `replace` 方法将匹配到的具有特殊意义的字符进行转义，转义的结果就是在具有特殊意义的字符前面添加字符 `\`，所以最终 `open` 常量的值将为：`'\$\{'`。这里简单说明一下，字符串的 `replace` 方法的第二个参数可以是一个字符串，即要替换的文本，如果第二个参数是字符串，则可以使用特殊的字符序列：
 
 * $$ =====> $
 * $& =====> 匹配整个模式的字符串，与RegExp.lastMatch的值相同
@@ -2534,7 +2534,7 @@ while ((match = tagRE.exec(text))) {
 (match = tagRE.exec(text))
 ```
 
-这里使用 `tagRE` 正则匹配文本内容，并将匹配结果保存在 `match` 变量中，直到匹配失败循环才会终止，这时意味着所有的字面量表达式都已经处理完毕了。那么匹配结果 `match` 变量中保存着什么值呢？如果匹配成功则 `match` 变量将会是一个数组，该数组的第一个元素为整个匹配的字符串，第二个元素是正则 `tagRE` 捕获组所匹配的内容，假设我们的文本为 `'{{name}}'`，则匹配成功后 `match` 数组的值为：
+这里使用 `tagRE` 正则匹配文本内容，并将匹配结果保存在 `match` 变量中，直到匹配失败循环才会终止，这时意味着所有的字面量表达式都已经处理完毕了。那么匹配结果 `match` 变量中保存着什么值呢？如果匹配成功则 `match` 变量将会是一个数组，该数组的第一个元素为整个匹配的字符串，第二个元素是正则 `tagRE` 捕获组所匹配的内容，假设我们的文本为 '{{name}}'，则匹配成功后 `match` 数组的值为：
 
 ```js
 match = ['{{name}}', 'name']
@@ -2623,7 +2623,7 @@ rawTokens = [
 lastIndex = index + match[0].length
 ```
 
-这句代码的作用是更新 `lastIndex` 变量的值，可以看到 `lastIndex` 变量的值等于 `index` 变量的值加上匹配的字符串的长度，我们以字符串 `'abc{{name}}def'` 为例，此时 `lastIndex` 变量的初始值为 `0`；`index` 变量的值为 `3`，指向第一个左花括号(`{`)；`match[0].length` 的值为匹配的字符串 `'{{name}}'` 的长度，所以 `match[0].length` 的值为 `8`，最终：
+这句代码的作用是更新 `lastIndex` 变量的值，可以看到 `lastIndex` 变量的值等于 `index` 变量的值加上匹配的字符串的长度，我们以字符串 `'abc{{name}}def'` 为例，此时 `lastIndex` 变量的初始值为 `0`；`index` 变量的值为 `3`，指向第一个左花括号(`{`)；`match[0].length` 的值为匹配的字符串 '{{name}}' 的长度，所以 `match[0].length` 的值为 `8`，最终：
 
 ```js
 lastIndex = 3 + 8 // lastIndex = 11
