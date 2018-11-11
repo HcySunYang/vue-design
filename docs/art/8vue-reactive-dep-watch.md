@@ -387,7 +387,7 @@ new Watcher(vm, updateComponent, noop, {
 }, true /* isRenderWatcher */)
 ```
 
-前面说过，这将是我们第一次真正意义上的遇到观察者构造函数 `Watcher`，我们在 [揭开数据响应系统的面纱](./art/7vue-reactive.md) 一章中有提到过，正是因为 `watcher` 对表达式的求值，触发了数据属性的 `get` 拦截器函数，从而收集到了依赖，当数据变化时能够触发响应。在上面的代码中 `Watcher` 观察者实例将对 `updateComponent` 函数求值，我们知道 `updateComponent` 函数的执行会间接触发渲染函数(`vm.$options.render`)的执行，而渲染函数的执行则会触发数据属性的 `get` 拦截器函数，从而将依赖(`观察者`)收集，当数据变化时将重新执行 `updateComponent` 函数，这就完成了重新渲染。同时我们把上面代码中实例化的观察者对象称为 **渲染函数的观察者**。
+前面说过，这将是我们第一次真正意义上的遇到观察者构造函数 `Watcher`，我们在 [揭开数据响应系统的面纱](./7vue-reactive.md) 一章中有提到过，正是因为 `watcher` 对表达式的求值，触发了数据属性的 `get` 拦截器函数，从而收集到了依赖，当数据变化时能够触发响应。在上面的代码中 `Watcher` 观察者实例将对 `updateComponent` 函数求值，我们知道 `updateComponent` 函数的执行会间接触发渲染函数(`vm.$options.render`)的执行，而渲染函数的执行则会触发数据属性的 `get` 拦截器函数，从而将依赖(`观察者`)收集，当数据变化时将重新执行 `updateComponent` 函数，这就完成了重新渲染。同时我们把上面代码中实例化的观察者对象称为 **渲染函数的观察者**。
 
 ## 初识 Watcher
 
