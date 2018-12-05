@@ -1434,7 +1434,7 @@ export function renderMixin (Vue: Class<Component>) {
 
 `$nextTick` 方法是在 `renderMixin` 函数中挂载到 `Vue` 原型上的，可以看到 `$nextTick` 函数体只有一句话即调用 `nextTick` 函数，这说明 `$nextTick` 确实是对 `nextTick` 函数的简单包装。
 
-前面说过 `nextTick` 函数的作用相当于 `setTiomeout(fn, 0)`，这里有几个概念需要大家去了解一下，即调用栈、任务队列、事件循环，`javascript` 是一种单线程的语言，它的一切都是建立在以这三个概念为基础之上的。详细内容在这里就不讨论了，读者自行补充，后面的讲解将假设大家对这些概念已经非常清楚了。
+前面说过 `nextTick` 函数的作用相当于 `setTimeout(fn, 0)`，这里有几个概念需要大家去了解一下，即调用栈、任务队列、事件循环，`javascript` 是一种单线程的语言，它的一切都是建立在以这三个概念为基础之上的。详细内容在这里就不讨论了，读者自行补充，后面的讲解将假设大家对这些概念已经非常清楚了。
 
 我们知道任务队列并非只有一个队列，在 `node` 中更为复杂，但总的来说我们可以将其分为 `microtask` 和 `(macro)task`，并且这两个队列的行为还要依据不同浏览器的具体实现去讨论，这里我们只讨论被广泛认同和接受的队列执行行为。当调用栈空闲后每次事件循环只会从 `(macro)task` 中读取一个任务并执行，而在同一次事件循环内会将 `microtask` 队列中所有的任务全部执行完毕，且要先于 `(macro)task`。另外 `(macro)task` 中两个不同的任务之间可能穿插着UI的重渲染，那么我们只需要在 `microtask` 中把所有在UI重渲染之前需要更新的数据全部更新，这样只需要一次重渲染就能得到最新的DOM了。恰好 `Vue` 是一个数据驱动的框架，如果能在UI重渲染之前更新所有数据状态，这对性能的提升是一个很大的帮助，所有要优先选用 `microtask` 去更新数据状态而不是 `(macro)task`，这就是为什么不使用 `setTimeout` 的原因，因为 `setTimeout` 会将回调放到 `(macro)task` 队列中而不是 `microtask` 队列，所以理论上最优的选择是使用 `Promise`，当浏览器不支持 `Promise` 时再降级为 `setTimeout`。如下是 `next-tick.js` 文件中的一段代码：
 
