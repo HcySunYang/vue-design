@@ -405,7 +405,7 @@ return function mergedDataFn () {
 
 以上就是 `strats.data` 策略函数在处理子组件的 `data` 选项时所做的事，我们可以发现 `mergeDataOrFn` 函数在处理子组件选项时返回的总是一个函数，这也就间接导致 `strats.data` 策略函数在处理子组件选项时返回的也总是一个函数。
 
-说完了处理子选项的情况，我们再看看处理非子选项的情况，也就是使用 `new` 操作符创建实例时的情况，此时程序直接执行 `strats.data` 函数的最后一句代码：
+说完了处理子组件选项的情况，我们再看看处理非子组件选项的情况，也就是使用 `new` 操作符创建实例时的情况，此时程序直接执行 `strats.data` 函数的最后一句代码：
 
 ```js
 return mergeDataOrFn(parentVal, childVal, vm)
