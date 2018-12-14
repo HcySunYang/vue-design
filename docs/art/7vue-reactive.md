@@ -749,7 +749,7 @@ walk (obj: Object) {
 }
 ```
 
-`walk` 方法很简单，首先使用 `Object.keys(obj)` 获取对象属性所有可枚举的属性，然后使用 `for` 循环遍历这些属性，同时为每个属性调用了 `defineReactive` 函数。
+`walk` 方法很简单，首先使用 `Object.keys(obj)` 获取对象所有可枚举的属性，然后使用 `for` 循环遍历这些属性，同时为每个属性调用了 `defineReactive` 函数。
 
 ### defineReactive 函数
 
