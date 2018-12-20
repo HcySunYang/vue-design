@@ -2363,7 +2363,7 @@ for (const key in computed) {
 }
 ```
 
-这个 `for` 循环用来遍历 `computed` 选项对象，在循环的内部首先是这样一段代码：
+这个 `for...in` 循环用来遍历 `computed` 选项对象，在循环的内部首先是这样一段代码：
 
 ```js
 const userDef = computed[key]
