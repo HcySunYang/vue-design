@@ -2355,7 +2355,7 @@ const watchers = vm._computedWatchers = Object.create(null)
 const isSSR = isServerRendering()
 ```
 
-其中 `watchers` 常量与组件实例的 `vm._computedWatchers` 属性拥有相同的引用，且初始值都是通过 `Object.create(null)` 创建的空对象，`isSSR` 常量是用来判断是否是服务端渲染的布尔值。接着开启一个 `for` 循环，后续的所有代码都写在了这个 `for` 循环中：
+其中 `watchers` 常量与组件实例的 `vm._computedWatchers` 属性拥有相同的引用，且初始值都是通过 `Object.create(null)` 创建的空对象，`isSSR` 常量是用来判断是否是服务端渲染的布尔值。接着开启一个 `for...in` 循环，后续的所有代码都写在了这个 `for...in` 循环中：
 
 ```js
 for (const key in computed) {
