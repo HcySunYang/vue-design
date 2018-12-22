@@ -2355,7 +2355,7 @@ const watchers = vm._computedWatchers = Object.create(null)
 const isSSR = isServerRendering()
 ```
 
-其中 `watchers` 常量与组件实例的 `vm._computedWatchers` 属性拥有相同的引用，且初始值都是通过 `Object.create(null)` 创建的空对象，`isSSR` 常量是用来判断是否是服务端渲染的布尔值。接着开启一个 `for` 循环，后续的所有代码都写在了这个 `for` 循环中：
+其中 `watchers` 常量与组件实例的 `vm._computedWatchers` 属性拥有相同的引用，且初始值都是通过 `Object.create(null)` 创建的空对象，`isSSR` 常量是用来判断是否是服务端渲染的布尔值。接着开启一个 `for...in` 循环，后续的所有代码都写在了这个 `for...in` 循环中：
 
 ```js
 for (const key in computed) {
@@ -2363,7 +2363,7 @@ for (const key in computed) {
 }
 ```
 
-这个 `for` 循环用来遍历 `computed` 选项对象，在循环的内部首先是这样一段代码：
+这个 `for...in` 循环用来遍历 `computed` 选项对象，在循环的内部首先是这样一段代码：
 
 ```js
 const userDef = computed[key]
@@ -2485,7 +2485,7 @@ const computedWatcherOptions = { computed: true }
 
 我们知道传递给 `Watcher` 类的第四个参数是观察者的选项参数，选项参数对象可以包含如 `deep`、`sync` 等选项，当然了其中也包括 `computed` 选项，通过如上这句代码可知在创建计算属性观察者对象时 `computed` 选项为 `true`，它的作用就是用来标识一个观察者对象是计算属性的观察者，计算属性的观察者与非计算属性的观察者的行为是不一样的。
 
-再往下是 `for` 循环中的最后一段代码，如下：
+再往下是 `for...in` 循环中的最后一段代码，如下：
 
 ```js
 if (!(key in vm)) {
