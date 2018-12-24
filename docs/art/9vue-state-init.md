@@ -1508,7 +1508,7 @@ const provideKey = inject[key].from
 let source = vm
 ```
 
-其中 `key` 常量就是 `keys` 数组中的每一个值，即 `inject` 选项的每一个键值，`provideKey` 常量保存的是每一个 `inject` 选项内所定义的注入对象的 `from` 属性的值，我们知道 `from` 属性的值代表着 `vm._provided` 数据中的每个数据的键名，所以 `provideKey` 常量将用来查找所注入的数据。最后定义了 `source` 变量，它的初始值是当前组件实例对象。
+其中 `key` 常量就是 `keys` 数组中的每一个值，即 `inject` 选项的每一个键名，`provideKey` 常量保存的是每一个 `inject` 选项内所定义的注入对象的 `from` 属性的值，我们知道 `from` 属性的值代表着 `vm._provided` 数据中的每个数据的键名，所以 `provideKey` 常量将用来查找所注入的数据。最后定义了 `source` 变量，它的初始值是当前组件实例对象。
 
 接下来将开启一个 `while` 循环，用来查找注入数据的工作，如下：
 
