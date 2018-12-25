@@ -1304,7 +1304,7 @@ console.log(v.$options)
 
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-10-26-112916.jpg)
 
-可以发现 `watch.test` 变成了数组，但是 `watch.test` 并不一定总是数组，只有父选项(`parentVal`)也存在对该字段的观测时它才是数组，如下：
+可以发现 `watch.test` 变成了数组，但是 `watch.test` 并不一定总是数组，只有父选项(`parentVal`)也存在时(即使父选项parentVal是一个空对象)它才是数组，如下：
 
 ```js
 // 创建实例
