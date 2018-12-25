@@ -886,7 +886,7 @@ export function otherCompiler (template: string, options: CompilerOptions) {
 
 ```js
 function createCompilerCreator (baseCompile) {
-  return customCompiler function (template: string, options: CompilerOptions) {
+  return function customCompiler (template: string, options: CompilerOptions) {
 
     // 一些处理编译错误的代码
 
