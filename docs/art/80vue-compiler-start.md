@@ -571,7 +571,7 @@ export default {
 }
 ```
 
-可以看到这三个文件输出的都是对象，且 `klass.js` 文件与 `style.js` 文件的输出基本相同，只有 `staticKeys` 字段有所区别，而 `model.js` 文件输出的对象只包含 `preTransformNode` 属性。最终 `platforms/web/compiler/modules/index.js` 文件将这三个文件的输出综合为一个数组进行输出，所以其输出的内容为：
+可以看到这三个文件输出的都是对象，且 `class.js` 文件与 `style.js` 文件的输出基本相同，只有 `staticKeys` 字段有所区别，而 `model.js` 文件输出的对象只包含 `preTransformNode` 属性。最终 `platforms/web/compiler/modules/index.js` 文件将这三个文件的输出综合为一个数组进行输出，所以其输出的内容为：
 
 ```js
 [
