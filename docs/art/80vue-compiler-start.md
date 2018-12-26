@@ -218,7 +218,7 @@ const { render, staticRenderFns } = compileToFunctions(template, {
 }
 ```
 
-其中 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个变量来自于 `platforms/web/util/compat.js` 文件，大家可以在附录 [platforms/web/util 目录下的工具方法全解](../appendix/web-util.md) 中查看这两个变量的作用，其目的是对浏览器的怪癖做兼容，具体在附录中都有讲到，并且这两个变量的类型都是布尔值。
+其中 `shouldDecodeNewlines` 和 `shouldDecodeNewlinesForHref` 这两个常量来自于 `platforms/web/util/compat.js` 文件，大家可以在附录 [platforms/web/util 目录下的工具方法全解](../appendix/web-util.md) 中查看这两个常量的作用，其目的是对浏览器的怪癖做兼容，具体在附录中都有讲到，并且这两个常量的类型都是布尔值。
 
 对于 `options.delimiters` 和 `options.comments`，其中 `options` 就是当前 `Vue` 实例的 `$options` 属性，并且 `delimiters` 和 `comments` 都是 `Vue` 提供的选项。所以这里只是简单的将这两个选项透传了过去。
 
