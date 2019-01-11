@@ -908,7 +908,7 @@ export function baseWarn (msg: string) {
 platformIsPreTag = options.isPreTag || no
 ```
 
-可知 `platformIsPreTag` 变量的值为 `options.isPreTag` 函数，该函数是一个编译器选项，其作用是通过给定的标签名字判断该标签是否是 `pre` 标签。另外如上代码所示如果编译器选项中不包含 `options.isPreTag` 函数则会降级使用 `no` 函数，该函数是一个空函数，即什么都不做。
+可知 `platformIsPreTag` 变量的值为 `options.isPreTag` 函数，该函数是一个编译器选项，其作用是通过给定的标签名字判断该标签是否是 `pre` 标签。另外如上代码所示如果编译器选项中不包含 `options.isPreTag` 函数则会降级使用 `no` 函数，该函数始终返回 `false` 。
 
 第三个赋值的是 `platformMustUseProp` 变量，如下是它的赋值语句：
 
