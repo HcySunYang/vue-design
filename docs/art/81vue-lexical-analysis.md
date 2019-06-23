@@ -427,7 +427,7 @@ export function parseHTML (html, options) {
   // 开启一个 while 循环，循环结束的条件是 html 为空，即 html 被 parse 完毕
   while (html) {
     last = html
-    
+
     if (!lastTag || !isPlainTextElement(lastTag)) {
       // 确保即将 parse 的内容不是在纯文本标签里 (script,style,textarea)
     } else {
@@ -490,6 +490,30 @@ let last, lastTag
 
 在 `parse` 这个字符串的时候，首先会遇到 `article` 开始标签，并将该标签入栈(`push` 到 `stack` 数组)，然后会遇到 `section` 开始标签，并将该标签 `push` 到栈顶，接下来会遇到 `div` 开始标签，同样被压入栈顶，注意此时 `stack` 数组内包含三个元素，如下：
 
+```js
+
+ stack = [
+   {
+     attrs: [],
+     lowerCasedTag: 'article',
+     tag: 'article',
+     __proto__: Object,
+   },
+   {
+     attrs: [],
+     lowerCasedTag: 'section',
+     tag: 'section',
+     __proto__: Object,
+   },
+   {
+     attrs: [],
+     lowerCasedTag: 'div',
+     tag: 'div',
+     __proto__: Object,
+   }
+ ]
+
+```
 ![](http://ovjvjtt4l.bkt.clouddn.com/2017-12-25-070202.jpg)
 
 再然后便会遇到 `section` 结束标签，我们知道：**最先遇到的结束标签，其对应的开始标签应该最后被压入 stack 栈**，也就是说此时 `stack` 栈顶的元素应该是 `section`，但是我们发现事实上 `stack` 栈顶并不是 `section` 而是 `div`，这说明 `div` 元素缺少闭合标签。这就是检测 `html` 字符串中是否缺少闭合标签的原理。
@@ -509,7 +533,7 @@ let last, lastTag
 ```js
 while (html) {
   last = html
-  
+
   if (!lastTag || !isPlainTextElement(lastTag)) {
     // 确保即将 parse 的内容不是在纯文本标签里 (script,style,textarea)
   } else {
