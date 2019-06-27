@@ -1954,7 +1954,7 @@ function processPre (el) {
 }
 ```
 
-现在来看 `processPre` 函数的逻辑就很容易理解了，可知 `processPre` 函数获取给定元素 `v-pre` 属性的值，如果 `v-pre` 属性的值不等于 `null` 则会在元素描述对象上添加 `.pre` 属性，并将其值设置为 `true`。这里简单提一下，由于使用 `v-pre` 指令时不需要指定属性值，所以使用 `getAndRemoveAttr` 函数获取到的属性值为空字符串，由于 `'' != null` 成立，所以以上判断条件成立。
+现在来看 `processPre` 函数的逻辑就很容易理解了，可知 `getAndRemoveAttr` 函数获取给定元素 `v-pre` 属性的值，如果 `v-pre` 属性的值不等于 `null` 则会在元素描述对象上添加 `.pre` 属性，并将其值设置为 `true`。这里简单提一下，由于使用 `v-pre` 指令时不需要指定属性值，所以使用 `getAndRemoveAttr` 函数获取到的属性值为空字符串，由于 `'' != null` 成立，所以以上判断条件成立。
 
 了解了 `precessPre` 函数的作用之后，我们再回到 `start` 钩子函数中，如下高亮的代码：
 
