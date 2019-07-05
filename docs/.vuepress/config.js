@@ -1,6 +1,7 @@
 const { resolve } = require('path')
 
 module.exports = {
+  base: '/vue-design/',
   locales: {
     '/': {
       lang: 'en-US',
@@ -40,7 +41,7 @@ module.exports = {
         ]
       }
     },
-    repo: 'HcySunYang/vue3-in-depth',
+    repo: 'HcySunYang/vue-design',
     docsDir: 'docs',
     editLinks: true,
     sidebar: 'auto'

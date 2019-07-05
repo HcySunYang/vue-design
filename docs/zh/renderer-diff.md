@@ -1104,7 +1104,7 @@ if (oldEndIdx < oldStartIdx) {
 
 以上就是相对完整的双端比较算法的实现，这是 `Vue2` 所采用的算法，借鉴于开源项目：[snabbdom](https://github.com/snabbdom/snabbdom)，但最早采用双端比较算法的库是 [citojs](https://github.com/joelrich/citojs)。
 
-## Vue3 所采用的核心 Diff 算法及原理
+## inferno 所采用的核心 Diff 算法及原理
 
 在 `Vue3` 中将采用另外一种核心 `Diff` 算法，它借鉴于 [ivi](https://github.com/localvoid/ivi) 和 [inferno](https://github.com/infernojs/inferno)，看下图：
 
