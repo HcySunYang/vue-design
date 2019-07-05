@@ -1,99 +1,55 @@
+const { resolve } = require('path')
+
 module.exports = {
-  base: '/vue-design/',
-  title: 'Vue技术内幕',
-  ga: 'UA-120533817-1',
-  description: '逐行级别的 Vue 源码分析',
-  head: [
-    ['script', { async: '', src: 'http://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js' }],
-    ['link', { rel: 'icon', href: '/logo.png' }]
-  ],
-  markdown: {
-    toc: {
-      includeLevel: [2, 3, 4, 5, 6]
+  locales: {
+    '/': {
+      lang: 'en-US',
+      title: 'renderer',
+      description: 'Detailed renderer'
+    },
+    '/zh/': {
+      lang: 'zh-CN',
+      title: '渲染器',
+      description: '也许是讲渲染器相关内容中最细最全的了吧'
     }
   },
   themeConfig: {
-    repo: 'HcySunYang/vue-design',
+    displayAllHeaders: true,
+    sidebarDepth: 2,
+    locales: {
+      '/': {
+        label: 'English',
+        sidebar: [
+          '/'
+        ]
+      },
+      '/zh/': {
+        label: '简体中文',
+        editLinkText: '在 GitHub 上编辑此页',
+        sidebar: [
+          ['/zh/essence-of-comp', '组件的本质'],
+          ['/zh/vnode', '先设计 VNode 吧'],
+          ['/zh/h', '辅助创建 VNode 的 h 函数'],
+          ['/zh/renderer', '渲染器之挂载'],
+          ['/zh/renderer-patch', '渲染器之patch'],
+          ['/zh/renderer-diff', '渲染器的核心 Diff 算法'],
+          ['/zh/renderer-advanced', '自定义渲染器']
+          // ['/zh/stateful-component', '有状态组件的设计'],
+          // ['/zh/observer', '基于 Proxy 的响应系统'],
+          // ['/zh/component-expand', '组件的拓展']
+        ]
+      }
+    },
+    repo: 'HcySunYang/vue3-in-depth',
     docsDir: 'docs',
     editLinks: true,
-    editLinkText: '错别字纠正',
-    sidebarDepth: 3,
-    nav: [
-      {
-        text: '正文',
-        link: '/art/',
-      },
-      {
-        text: '附录',
-        link: '/appendix/'
-      },
-      {
-        text: '扩展阅读',
-        link: '/more/'
-      },
-      {
-        text: '辅助工具',
-        link: '/tools/'
-      },
-      {
-        text: '人之初',
-        link: '/donate/'
-      },
-      {
-        text: '关于',
-        link: '/about/'
+    sidebar: 'auto'
+  },
+  configureWebpack: {
+    resolve: {
+      alias: {
+        '@imgs': resolve(__dirname, './assets/imgs')
       }
-    ],
-    sidebar: {
-      '/art/': [
-        {
-          title: '正文(持续更新...)',
-          children: [
-            '',
-            '1start-learn',
-            '2vue-constructor',
-            '3vue-example',
-            '4vue-normalize',
-            '5vue-merge',
-            '6vue-init-start',
-            '7vue-reactive',
-            '8vue-reactive-dep-watch',
-            '9vue-state-init',
-            '80vue-compiler-start',
-            '81vue-lexical-analysis',
-            '82vue-parsing',
-            '83vue-parsing-2',
-            '84vue-codegen',
-            '85vue-vdom',
-            '86vue-vdom-patch'
-          ]
-        }
-      ],
-      '/appendix/': [
-        {
-          title: '附录',
-          children: [
-            '',
-            'vue-prototype',
-            'vue-global-api',
-            'vue-ins',
-            'core-util',
-            'web-util',
-            'shared-util',
-            'compiler-options',
-            'ast'
-          ]
-        }
-      ],
-      '/more/': [
-        {
-          title: '扩展阅读',
-          children: [
-            '',
-            'vue-hoc'
-          ]
-        }
-      ]
     }
   }
 }
