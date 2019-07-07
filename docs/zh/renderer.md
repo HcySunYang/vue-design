@@ -284,7 +284,7 @@ function h(tag, data, children) {
 ```js {1,2,11-12,15-16}
 function mountElement(vnode, container, isSVG) {
   isSVG = isSVG || vnode.flags & VNodeFlags.ELEMENT_SVG
-  const el = isSVG 
+  const el = isSVG
     ? document.createElementNS('http://www.w3.org/2000/svg', vnode.tag)
     : document.createElement(vnode.tag)
   // 省略处理 VNodeData 的代码
@@ -720,7 +720,7 @@ const elementVNode = h(
 - 没有 `Fragment`：
 
 ```js {2,3}
-cosnt elementVNode = {
+const elementVNode = {
   flags: VNodeFlags.ELEMENT_HTML,
   tag: "div",
   data: null,
@@ -750,7 +750,7 @@ cosnt elementVNode = {
 - 有 `Fragment`：
 
 ```js {2,3}
-cosnt elementVNode = {
+const elementVNode = {
   flags: VNodeFlags.FRAGMENT,
   tag: null,
   data: null,
