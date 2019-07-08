@@ -5,3 +5,4 @@
 感谢以下捐赠者，本文是良心文章，没有在任何平台卖钱，用郭德纲的话叫：“我给你快乐，你给我饭吃”，我就只能说：“我给你知识，你给我买咖啡☕️的钱”(排名按照时间顺序)：
 
 - [【SilurianYang】](https://github.com/SilurianYang) - <span style="color: red;">￥88</span>
+- [【王如果: http://zving.com】](http://demo.zving.com/) - <span style="color: red;">￥57</span>
