@@ -10,3 +10,4 @@
 - [【Kylin】](https://github.com/mrKylinZhou) - <span style="color: red;">￥66</span>
 - [【罗伟】](supercoder.io) - <span style="color: red;">￥66</span>
 - [【SeanKChan】](https://github.com/SeanKChan) - <span style="color: red;">￥88</span>
+- [【发财】](https://github.com/IWSR) - <span style="color: red;">￥40</span>
