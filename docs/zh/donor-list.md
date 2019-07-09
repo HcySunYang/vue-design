@@ -7,3 +7,4 @@
 - [【SilurianYang】](https://github.com/SilurianYang) - <span style="color: red;">￥88</span>
 - [【王如果: http://zving.com】](http://demo.zving.com/) - <span style="color: red;">￥57</span>
 - [【颜海镜】](https://yanhaijing.com/) - <span style="color: red;">￥5</span>
+- [【Kylin】](https://github.com/mrKylinZhou) - <span style="color: red;">￥66</span>
