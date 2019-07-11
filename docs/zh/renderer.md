@@ -297,7 +297,7 @@ function mountElement(vnode, container, isSVG) {
     } else if (childFlags & ChildrenFlags.MULTIPLE_VNODES) {
       for (let i = 0; i < children.length; i++) {
         // 这里需要把 isSVG 传递下去
-        mount(child, el, isSVG)
+        mount(children[i], el, isSVG)
       }
     }
   }
