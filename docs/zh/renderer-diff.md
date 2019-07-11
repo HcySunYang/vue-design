@@ -693,7 +693,7 @@ if (oldStartVNode.key === newStartVNode.key) {
 
 <img src="@imgs/diff-vue2-6.png" width="400" />
 
-这样，一次比对就完成了，并且位置索引已经更新，我们需要进行下伦的比对，那么什么时候比对才能结束呢？如下代码所示：
+这样，一次比对就完成了，并且位置索引已经更新，我们需要进行下轮的比对，那么什么时候比对才能结束呢？如下代码所示：
 
 ```js
 while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
