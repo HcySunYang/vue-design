@@ -304,12 +304,12 @@ for (let i = 0; i < nextChildren.length; i++) {
 
 我们同样执行一下本节介绍的算法，看看会发生什么：
 
-- 1、取出新 `children` 的第一个节点，即 `li-c`，并尝试在旧 `children` 中寻找 `li-c`，结果是我们找到了，并且 `li-a` 在旧 `children` 中的索引为 `2`。
+- 1、取出新 `children` 的第一个节点，即 `li-c`，并尝试在旧 `children` 中寻找 `li-c`，结果是我们找到了，并且 `li-c` 在旧 `children` 中的索引为 `2`。
 - 2、取出新 `children` 的第二个节点，即 `li-a`，并尝试在旧 `children` 中寻找 `li-a`，也找到了，并且 `li-a` 在旧 `children` 中的索引为 `0`。
 
 到了这里，**递增**的趋势被打破了，我们在寻找的过程中先遇到的索引值是 `2`，接着又遇到了比 `2` 小的 `0`，这说明**在旧 `children` 中 `li-a` 的位置要比 `li-c` 靠前，但在新的 `children` 中 `li-a` 的位置要比 `li-c` 靠后**。这时我们就知道了 `li-a` 是那个需要被移动的节点，我们接着往下执行。
 
-- 3、取出新 `children` 的第三个节点，即 `li-b`，并尝试在旧 `children` 中寻找 `li-b`，同样找到了，并且 `li-c` 在旧 `children` 中的索引为 `1`。
+- 3、取出新 `children` 的第三个节点，即 `li-b`，并尝试在旧 `children` 中寻找 `li-b`，同样找到了，并且 `li-b` 在旧 `children` 中的索引为 `1`。
 
 我们发现 `1` 同样小于 `2`，这说明**在旧 `children` 中节点 `li-b` 的位置也要比 `li-c` 的位置靠前，但在新的 `children` 中 `li-b` 的位置要比 `li-c` 靠后**。所以 `li-b` 也需要被移动。
 
