@@ -434,7 +434,7 @@ h('div', {
 <body custom="val"></body>
 ```
 
-由于 `custom` 是非标准属性，所以当你尝试通过 `document.body.custom` 访问其值时会得到 `undefined`，这也是为什么会有 `setAttribute` 方法存在的原因，因为该方法允许我们为 DOM 元素设置自定义属性，同时该方法也允许为 DOM 元素设置标准属性的值，所以我们可不可以使用 `setAttribute` 设置全部的 `DOM` 属性呢？答案是：不行。举个例子：
+由于 `custom` 是非标准属性，所以当你尝试通过 `document.body.custom` 访问其值时会得到 `undefined`，这也是为什么 `setAttribute` 方法存在的原因，因为该方法允许我们为 DOM 元素设置自定义属性（不会初始化同名的 `property`）。另外该方法也允许我们为 DOM 元素设置标准属性的值，所以我们可不可以总是使用 `setAttribute` 设置全部的 `DOM` 属性呢？答案是：不行。举个例子：
 
 ```js
 // checkbox 元素
@@ -452,6 +452,10 @@ checkboxEl.setAttribute('checked', false)
 // 等价于
 checkboxEl.setAttribute('checked', 'false')
 ```
+
+:::tip
+一些特殊的 `attribute`，比如 `checked/disabled` 等，只要出现了，对应的 `property` 就会被初始化为 `true`，无论设置的值是什么,只有调用 `removeAttribute` 删除这个 `attribute`，对应的 `property` 才会变成 `false`。
+:::
 
 这就指引我们有些属性不能通过 `setAttribute` 设置，而是应该直接通过 DOM 元素设置：`el.checked = true`。好在这样的属性不多，我们可以列举出来：`value`、`checked`、`selected`、`muted`。除此之外还有一些属性也需要使用 `Property` 的方式设置到 DOM 元素上，例如 `innerHTML` 和 `textContent` 等等。
 
