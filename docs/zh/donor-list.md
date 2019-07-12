@@ -18,3 +18,5 @@
 - [【陈卫锋】]() - <span style="color: red;">￥5</span>
 - [【jxZhangLi】](https://github.com/jxZhangLi) - <span style="color: red;">￥26.66</span>
 - [【cheerylong】](http://cheerylong.site/blog/) - <span style="color: red;">￥30</span>
+- [【amorist】](https://github.com/amorist) - <span style="color: red;">￥100</span>
+- [【吕磊】]() - <span style="color: red;">￥66.66</span>
