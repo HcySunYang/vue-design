@@ -21,3 +21,4 @@
 - [【amorist】](https://github.com/amorist) - <span style="color: red;">￥100</span>
 - [【吕磊】]() - <span style="color: red;">￥66.66</span>
 - [【前端迷】](https://mp.weixin.qq.com/s?__biz=MzI5MjUxNjA4Mw==&mid=100000905&idx=1&sn=dd7956bbb9b1b845a8d8f3875ac11253&chksm=6c017d155b76f403f091420f6639e8f2871dd48b584bec153406906cce88bab610492d8c8a6d&scene=18#wechat_redirect) - <span style="color: red;">￥10</span>
+- [【liximomo】](https://github.com/liximomo) - <span style="color: red;">￥66.66</span>
