@@ -554,7 +554,7 @@ function mountElement(vnode, container, isSVG, refNode) {
 
 ### 移除不存在的元素
 
-出了要将全新的节点添加到容器元素之外，我们还应该把已经不存在了的节点移除，如下图所示：
+除了要将全新的节点添加到容器元素之外，我们还应该把已经不存在了的节点移除，如下图所示：
 
 <img src="@imgs/diff-react-6.png" width="400" />
 
