@@ -656,7 +656,7 @@ function patchChildren(
           break
       }
       break
-    
+
     // 省略...
   }
 }
@@ -982,7 +982,7 @@ patchPortal (prevVNode, nextVNode){
     prevVNode.childFlags,
     nextVNode.childFlags,
     prevVNode.children,
-    nextVNode.hildren,
+    nextVNode.children,
     prevVNode.tag // 注意容器元素是旧的 container
   )
 
