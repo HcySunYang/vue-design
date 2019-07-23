@@ -366,8 +366,8 @@ function patchElement(prevVNode, nextVNode, container) {
 
   // 拿到 el 元素，注意这时要让 nextVNode.el 也引用该元素
   const el = (nextVNode.el = prevVNode.el)
-  const prevStyle = prevVNode.data.style
-  const nextStyle = nextVNode.data.style
+  const prevData = prevVNode.data
+  const nextData = nextVNode.data
 
   if (nextData) {
     // 遍历新的 VNodeData，将旧值和新值都传递给 patchData 函数
