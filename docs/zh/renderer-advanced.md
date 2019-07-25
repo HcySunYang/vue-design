@@ -451,7 +451,7 @@ const { render } = createRenderer({
         // 如果找到了，则将其删除
         parent.children.splice(i, 1)
       } else {
-        // 没找到，说明渲染器除了问题，例如没有在 nodeOps.appendChild 函数中维护正确的父子关系等
+        // 没找到，说明渲染器出了问题，例如没有在 nodeOps.appendChild 函数中维护正确的父子关系等
         // 这时需要打印错误信息，以提示开发者
         console.error('target: ', child)
         console.error('parent: ', parent)
