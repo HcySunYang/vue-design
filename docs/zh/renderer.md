@@ -201,7 +201,7 @@ function mountElement(vnode, container) {
 
 观察如上代码中用来递归挂载子节点的代码，我们默认把 `vnode.children` 当作数组来处理，同时递归挂载的时候调用的仍然是 `mountElement` 函数。这存在两个瑕疵，第一个瑕疵是 `VNode` 对象的 `children` 属性不总是数组，因为当 `VNode` 只有一个子节点时，该 `VNode` 的 `children` 属性直接指向该子节点，且 `VNode` 的 `childFlags` 的值为 `ChildrenFlags.SINGLE_VNODE`，所以我们不应该总是使用 `for` 循环遍历 `vnode.children`。第二个瑕疵是我们在 `for` 循环内部直接调用了 `mountElement` 属性去挂载每一个 `children` 中的 `VNode` 对象，但问题是 `children` 中的 `VNode` 对象可能是任意类型的，所以我们不应该直接调用 `mountElement` 函数，而是应该调用 `mount` 函数。更加严谨的代码如下：
 
-```js {6-19}
+```js {6-21}
 function mountElement(vnode, container) {
   const el = document.createElement(vnode.tag)
   vnode.el = el
@@ -218,6 +218,7 @@ function mountElement(vnode, container) {
     } else if (childFlags & ChildrenFlags.MULTIPLE_VNODES) {
       // 如果是单多个子节点则遍历并调用 mount 函数挂载
       for (let i = 0; i < children.length; i++) {
+        const child = children[i]
         mount(child, el)
       }
     }
