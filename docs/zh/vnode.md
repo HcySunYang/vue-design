@@ -370,14 +370,14 @@ const normalComponentVnode = {
 
 // Fragment
 const fragmentVnode = {
-  flags: VNodeFlags.FRAGMENT
+  flags: VNodeFlags.FRAGMENT,
   // 注意，由于 flags 的存在，我们已经不需要使用 tag 属性来存储唯一标识
   tag: null
 }
 
 // Portal
 const portalVnode = {
-  flags: VNodeFlags.PORTAL
+  flags: VNodeFlags.PORTAL,
   // 注意，由于 flags 的存在，我们已经不需要使用 tag 属性来存储唯一标识，tag 属性用来存储 Portal 的 target
   tag: target
 }
