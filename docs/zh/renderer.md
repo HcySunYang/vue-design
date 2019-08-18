@@ -218,7 +218,7 @@ function mountElement(vnode, container) {
     } else if (childFlags & ChildrenFlags.MULTIPLE_VNODES) {
       // 如果是单多个子节点则遍历并调用 mount 函数挂载
       for (let i = 0; i < children.length; i++) {
-        mount(child, el)
+        mount(children[i], el)
       }
     }
   }
