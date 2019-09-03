@@ -24,3 +24,4 @@
 - [【liximomo】](https://github.com/liximomo) - <span style="color: red;">￥66.66</span>
 - [【追一科技：前端】](https://www.zhipin.com/job_detail/79ca9be7fb736e4d03Nz3924FVA~.html) - <span style="color: red;">￥111</span>
 - [【Meoworu】](https://github.com/Meoworu) - <span style="color: red;">￥50</span>
+- [【void】](http://www.cixi518.com/) - <span style="color: red;">￥8.88</span>
