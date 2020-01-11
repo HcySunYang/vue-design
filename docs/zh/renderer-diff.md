@@ -727,7 +727,7 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
     patch(oldEndVNode, newEndVNode, container)
     // 更新索引，指向下一个位置
     oldEndVNode = prevChildren[--oldEndIdx]
-    newEndVNode = newEndVNode[--newEndIdx]
+    newEndVNode = nextChildren[--newEndIdx]
   } else if (oldStartVNode.key === newEndVNode.key) {
     // 步骤三：oldStartVNode 和 newEndVNode 比对
   } else if (oldEndVNode.key === newStartVNode.key) {
