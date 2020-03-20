@@ -27,3 +27,4 @@
 - [【void】](http://www.cixi518.com/) - <span style="color: red;">￥8.88</span>
 - [【KevinWong】](https://www.zhihu.com/people/kevin-wong-91/activities) - <span style="color: red;">￥58</span>
 - [【vvni】](https://github.com/vvni) - <span style="color: red;">￥150</span>
+- [【曾小乱】](https://zengxiaoluan.com/) - <span style="color: red;">￥100</span>
