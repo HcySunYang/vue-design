@@ -489,7 +489,7 @@ h('input', {
 如上代码所示，我们已经实现了关于 `class`、`style` 的处理，所以接下来我们要处理的就是 `VNodeData` 中除 `class` 和 `style` 之外的全部数据，当然也要排除 `VNodeData` 中的 `target` 属性，因为它只用于 `Portal`。处理方式很简单，我们为 `mountElement` 函数添加如下高亮代码：
 
 ```js {1,18-24}
-const domPropsRE = /\[A-Z]|^(?:value|checked|selected|muted)$/
+const domPropsRE = /[A-Z]|^(?:value|checked|selected|muted)$/
 function mountElement(vnode, container, isSVG) {
   // 省略...
 
