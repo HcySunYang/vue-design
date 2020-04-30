@@ -1646,7 +1646,7 @@ function flushCallbacks () {
 很好理解，首先将变量 `pending` 重置为 `false`，接着开始执行回调，但需要注意的是在执行 `callbacks` 队列中的回调函数时并没有直接遍历 `callbacks` 数组，而是使用 `copies` 常量保存一份 `callbacks` 的复制，然后遍历 `copies` 数组，并且在遍历 `copies` 数组之前将 `callbacks` 数组清空：`callbacks.length = 0`。为什么要这么做呢？这么做肯定是有原因的，我们模拟一下整个异步更新的流程就明白了，如下代码：
 
 ```js {3，5}
-created () {
+mounted () {
   this.name = 'HcySunYang'
   this.$nextTick(() => {
     this.name = 'hcy'
