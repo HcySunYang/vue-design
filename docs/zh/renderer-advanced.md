@@ -422,7 +422,7 @@ const { render } = createRenderer({
       return customElement
     },
     appendChild(parent, child) {
-      // 简历父子关系
+      // 建立父子关系
       child.parentNode = parent
       parent.children.push(child)
     }
@@ -440,7 +440,7 @@ const { render } = createRenderer({
     createElement(tag) {/* 省略... */},
     createText(text) {/* 省略... */},
     appendChild(parent, child) {
-      // 简历父子关系
+      // 建立父子关系
       child.parentNode = parent
       parent.children.push(child)
     },
@@ -531,7 +531,7 @@ const { render } = createRenderer({
   nodeOps: {
     createElement(tag) {/* 省略... */},
     appendChild(parent, child) {
-      // 简历父子关系
+      // 建立父子关系
       child.parentNode = parent
       parent.children.push(child)
 
