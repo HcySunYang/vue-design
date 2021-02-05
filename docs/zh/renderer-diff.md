@@ -709,7 +709,7 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 }
 ```
 
-我们将每一轮比对所做的工作封装到一个 `while` 循环内，循环结束的条件是要么 `oldStartIdx` 大于 `oldEndIdx`，要么 `newStartIdx` 大于 `newEndIdx`。
+我们将每一轮比对所做的工作封装到一个 `while` 循环内，循环结束的条件是 `oldStartIdx` 大于 `oldEndIdx` 且 `newStartIdx` 大于 `newEndIdx`。
 
 还是观察上图，我们继续进行第二轮的比对：
 
