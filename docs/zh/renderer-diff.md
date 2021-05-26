@@ -883,7 +883,7 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
   } else {
     // 遍历旧 children，试图寻找与 newStartVNode 拥有相同 key 值的元素
     const idxInOld = prevChildren.findIndex(
-      node => node.key === newStartVNode.key
+      node => node?.key === newStartVNode.key
     )
   }
 }
@@ -908,7 +908,7 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
   } else {
     // 遍历旧 children，试图寻找与 newStartVNode 拥有相同 key 值的元素
     const idxInOld = prevChildren.findIndex(
-      node => node.key === newStartVNode.key
+      node => node?.key === newStartVNode.key
     )
     if (idxInOld >= 0) {
       // vnodeToMove 就是在旧 children 中找到的节点，该节点所对应的真实 DOM 应该被移动到最前面
@@ -948,7 +948,7 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
     // 省略...
   } else {
     const idxInOld = prevChildren.findIndex(
-      node => node.key === newStartVNode.key
+      node => node?.key === newStartVNode.key
     )
     if (idxInOld >= 0) {
       const vnodeToMove = prevChildren[idxInOld]
@@ -991,7 +991,7 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
     // 省略...
   } else {
     const idxInOld = prevChildren.findIndex(
-      node => node.key === newStartVNode.key
+      node => node?.key === newStartVNode.key
     )
     if (idxInOld >= 0) {
       const vnodeToMove = prevChildren[idxInOld]
