@@ -856,7 +856,7 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 - 第三步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-b` 进行比对，不可复用，什么都不做。
 - 第四步：拿旧 `children` 中的 `li-c` 和新 `children` 中的 `li-c` 进行比对，此时，两个节点拥有相同的 `key` 值，可复用。
 
-到了第四步，对于 `li-c` 节点来说，它原本是整个 `children` 的最后一个子节点，但是现在变成了新 `children` 的第一个子节点，按照上端比较的算法逻辑，此时会把 `li-c` 节点所对应的真实 DOM 移动到 `li-a` 节点所对应真实 DOM 的前面，即：
+到了第四步，对于 `li-c` 节点来说，它原本是整个 `children` 的最后一个子节点，但是现在变成了新 `children` 的第一个子节点，按照双端比较的算法逻辑，此时会把 `li-c` 节点所对应的真实 DOM 移动到 `li-a` 节点所对应真实 DOM 的前面，即：
 
 <img src="@imgs/diff-vue2-11.png" width="400"/>
 
@@ -926,7 +926,7 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 }
 ```
 
-如果 `idxInOld` 存在，说明我们在旧 `children` 中找到了相应的节点，于是我们拿到该节点，将其赋值给 `vnodeToMove` 常量，意味着该节点是需要被移动的节点，同时调用 `patch` 函数完成更新，接着将该节点所对应的真实 DOM 移动到最前面，也就是 `oldStartVNode.el` 前面，由于该节点所对应的真实 DOM 已经被移动，所以我们将该节点置为 `undefined`，这是很关键的异步，最后我们将 `newStartIdx` 下移一位，准备进行下一轮的比较。我们用一张图来描述这个过程结束之后的状态：
+如果 `idxInOld` 存在，说明我们在旧 `children` 中找到了相应的节点，于是我们拿到该节点，将其赋值给 `vnodeToMove` 常量，意味着该节点是需要被移动的节点，同时调用 `patch` 函数完成更新，接着将该节点所对应的真实 DOM 移动到最前面，也就是 `oldStartVNode.el` 前面，由于该节点所对应的真实 DOM 已经被移动，所以我们将该节点置为 `undefined`，这是很关键的一步，最后我们将 `newStartIdx` 下移一位，准备进行下一轮的比较。我们用一张图来描述这个过程结束之后的状态：
 
 <img src="@imgs/diff-vue2-14.png" width="400"/>
 
