@@ -856,7 +856,7 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 - 第三步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-b` 进行比对，不可复用，什么都不做。
 - 第四步：拿旧 `children` 中的 `li-c` 和新 `children` 中的 `li-c` 进行比对，此时，两个节点拥有相同的 `key` 值，可复用。
 
-到了第四步，对于 `li-c` 节点来说，它原本是整个 `children` 的最后一个子节点，但是现在变成了新 `children` 的第一个子节点，按照上端比较的算法逻辑，此时会把 `li-c` 节点所对应的真实 DOM 移动到 `li-a` 节点所对应真实 DOM 的前面，即：
+到了第四步，对于 `li-c` 节点来说，它原本是整个 `children` 的最后一个子节点，但是现在变成了新 `children` 的第一个子节点，按照双端比较的算法逻辑，此时会把 `li-c` 节点所对应的真实 DOM 移动到 `li-a` 节点所对应真实 DOM 的前面，即：
 
 <img src="@imgs/diff-vue2-11.png" width="400"/>
 
