@@ -439,11 +439,11 @@ for (let i = 0; i < nextChildren.length; i++) {
         // 需要移动
         const refNode = nextChildren[i - 1].el.nextSibling
         container.insertBefore(prevVNode.el, refNode)
-        break
       } else {
         // 更新 lastIndex
         lastIndex = j
       }
+      break
     }
   }
 }
@@ -466,11 +466,11 @@ for (let i = 0; i < nextChildren.length; i++) {
         // 需要移动
         const refNode = nextChildren[i - 1].el.nextSibling
         container.insertBefore(prevVNode.el, refNode)
-        break
       } else {
         // 更新 lastIndex
         lastIndex = j
       }
+      break
     }
   }
   if (!find) {
@@ -501,11 +501,11 @@ for (let i = 0; i < nextChildren.length; i++) {
         // 需要移动
         const refNode = nextChildren[i - 1].el.nextSibling
         container.insertBefore(prevVNode.el, refNode)
-        break
       } else {
         // 更新 lastIndex
         lastIndex = j
       }
+      break
     }
   }
   if (!find) {
