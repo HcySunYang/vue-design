@@ -63,7 +63,7 @@ document.getElementById('app').innerHTML = MyComponent({ title: 'MyComponent' })
 
 ![virtual-dom](@imgs/virtual-dom.png)
 
-拿 `Vue` 来说，一个组件最核心的东西是 `render` 函数，剩余的其他内容，如 `data`、`compouted`、`props` 等都是为 `render` 函数提供数据来源服务的。`render` 函数本可以直接产出 `html` 字符串，但却产出了 `Virtual DOM`，借助 `snabbdom` 的 API 我们可以很容易地用代码描述这个公式：
+拿 `Vue` 来说，一个组件最核心的东西是 `render` 函数，剩余的其他内容，如 `data`、`computed`、`props` 等都是为 `render` 函数提供数据来源服务的。`render` 函数本可以直接产出 `html` 字符串，但却产出了 `Virtual DOM`，借助 `snabbdom` 的 API 我们可以很容易地用代码描述这个公式：
 
 ```js
 import { h } from 'snabbdom'
