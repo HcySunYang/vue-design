@@ -1034,16 +1034,17 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 
 <img src="@imgs/diff-vue2-19.png" width="400"/>
 
-此时 `oldEndIdx` 的值将变成 `-1`，它要小于 `oldStartIdx` 的值，这时循环的条件不在满足，意味着更新完成。然而通过上图可以很容易的发现 `li-d` 节点被遗漏了，它没有得到任何的处理，通过这个案例我们意识到了之前的算法是存在缺陷的，为了弥补这个缺陷，我们需要在循环终止之后，对 `oldEndIdx` 和 `oldStartIdx` 的值进行检查，如果在循环结束之后 `oldEndIdx` 的值小于 `oldStartIdx` 的值则说明新的 `children` 中存在**还没有被处理的全新节点**，这时我们应该调用 `mount` 函数将其挂载到容器元素中，观察上图可知，我们只需要把这些全新的节点添加到 `oldStartIdx` 索引所指向的节点之前即可，如下高亮代码所示：
+此时 `oldEndIdx` 的值将变成 `-1`，它要小于 `oldStartIdx` 的值，这时循环的条件不在满足，意味着更新完成。然而通过上图可以很容易的发现 `li-d` 节点被遗漏了，它没有得到任何的处理，通过这个案例我们意识到了之前的算法是存在缺陷的，为了弥补这个缺陷，我们需要在循环终止之后，对 `oldEndIdx` 和 `oldStartIdx` 的值进行检查，如果在循环结束之后 `oldEndIdx` 的值小于 `oldStartIdx` 的值则说明新的 `children` 中存在**还没有被处理的全新节点**，这时我们应该调用 `mount` 函数将其挂载到容器元素中，观察上图可知，我们只需要把这些全新的节点添加到 `newEndIdx + 1` 索引所指向的节点之前即可，如下高亮代码所示：
 
 ```js {4-9}
 while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
   // 省略...
 }
 if (oldEndIdx < oldStartIdx) {
+  const before = nextChildren[newEndIdx + 1] == null ? null : nextChildren[newEndIdx + 1].el
   // 添加新节点
   for (let i = newStartIdx; i <= newEndIdx; i++) {
-    mount(nextChildren[i], container, false, oldStartVNode.el)
+    mount(nextChildren[i], container, false, before)
   }
 }
 ```
