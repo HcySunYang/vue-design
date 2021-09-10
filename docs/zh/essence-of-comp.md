@@ -116,7 +116,7 @@ patch(prevVnode, nextVnode)
 在后续行文时，将统一使用 `VNode` 来简称 `Virtual DOM` 。
 :::
 
-`VNode` 是真实 DOM 的描述，比如我们可以用如下对象描述一个 `div` 标签：
+`VNode` 是对真实 DOM 的描述，比如我们可以用如下对象描述一个 `div` 标签：
 
 ```js
 const elementVnode = {
