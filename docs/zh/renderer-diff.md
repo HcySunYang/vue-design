@@ -1,45 +1,39 @@
 # 渲染器的核心 Diff 算法
 
-## 减小DOM操作的性能开销
+## 减小 DOM 操作的性能开销
 
 上一章我们讨论了渲染器是如何更新各种类型的 `VNode` 的，实际上，上一章所讲解的内容归属于完整的 `Diff` 算法之内，但并不包含核心的 `Diff` 算法。那什么才是核心的 `Diff` 算法呢？看下图：
 
-![](@imgs/patch-children-3.png)
+![](../.vitepress/assets/imgs/patch-children-3.png)
 
 我们曾在上一章中讲解子节点更新的时候见到过这张图，当时我们提到**只有当新旧子节点的类型都是多个子节点时，核心 `Diff` 算法才派得上用场**，并且当时我们采用了一种仅能实现目标但并不完美的算法：**遍历旧的子节点，将其全部移除；再遍历新的子节点，将其全部添加**，如下高亮代码所示：
 
 ```js {20-27}
-function patchChildren(
-  prevChildFlags,
-  nextChildFlags,
-  prevChildren,
-  nextChildren,
-  container
-) {
-  switch (prevChildFlags) {
-    // 省略...
+function patchChildren(prevChildFlags, nextChildFlags, prevChildren, nextChildren, container) {
+    switch (prevChildFlags) {
+        // 省略...
 
-    // 旧的 children 中有多个子节点
-    default:
-      switch (nextChildFlags) {
-        case ChildrenFlags.SINGLE_VNODE:
-          // 省略...
-        case ChildrenFlags.NO_CHILDREN:
-          // 省略...
+        // 旧的 children 中有多个子节点
         default:
-          // 新的 children 中有多个子节点
-          // 遍历旧的子节点，将其全部移除
-          for (let i = 0; i < prevChildren.length; i++) {
-            container.removeChild(prevChildren[i].el)
-          }
-          // 遍历新的子节点，将其全部添加
-          for (let i = 0; i < nextChildren.length; i++) {
-            mount(nextChildren[i], container)
-          }
-          break
-      }
-      break
-  }
+            switch (nextChildFlags) {
+                case ChildrenFlags.SINGLE_VNODE:
+                // 省略...
+                case ChildrenFlags.NO_CHILDREN:
+                // 省略...
+                default:
+                    // 新的 children 中有多个子节点
+                    // 遍历旧的子节点，将其全部移除
+                    for (let i = 0; i < prevChildren.length; i++) {
+                        container.removeChild(prevChildren[i].el);
+                    }
+                    // 遍历新的子节点，将其全部添加
+                    for (let i = 0; i < nextChildren.length; i++) {
+                        mount(nextChildren[i], container);
+                    }
+                    break;
+            }
+            break;
+    }
 }
 ```
 
@@ -47,30 +41,22 @@ function patchChildren(
 
 ```html
 <ul>
-  <li>1</li>
-  <li>2</li>
-  <li>3</li>
+    <li>1</li>
+    <li>2</li>
+    <li>3</li>
 </ul>
 ```
 
 列表中的 `li` 标签是 `ul` 标签的子节点，我们可以使用下面的数组来表示 `ul` 标签的 `children`：
 
 ```js
-[
-  h('li', null, 1),
-  h('li', null, 2),
-  h('li', null, 3)
-]
+[h('li', null, 1), h('li', null, 2), h('li', null, 3)];
 ```
 
 接着由于数据变化导致了列表的顺序发生了变化，新的列表顺序如下：
 
 ```js
-[
-  h('li', null, 3),
-  h('li', null, 1),
-  h('li', null, 2)
-]
+[h('li', null, 3), h('li', null, 1), h('li', null, 2)];
 ```
 
 新的列表和旧的列表构成了新旧 `children`，当我们使用**简单 Diff 算法**更新这两个列表时，其操作行为可以用下图表示：
@@ -86,31 +72,25 @@ function patchChildren(
 用代码实现起来也非常简单，如下高亮代码所示：
 
 ```js {19-21}
-function patchChildren(
-  prevChildFlags,
-  nextChildFlags,
-  prevChildren,
-  nextChildren,
-  container
-) {
-  switch (prevChildFlags) {
-    // 省略...
+function patchChildren(prevChildFlags, nextChildFlags, prevChildren, nextChildren, container) {
+    switch (prevChildFlags) {
+        // 省略...
 
-    // 旧的 children 中有多个子节点
-    default:
-      switch (nextChildFlags) {
-        case ChildrenFlags.SINGLE_VNODE:
-          // 省略...
-        case ChildrenFlags.NO_CHILDREN:
-          // 省略...
+        // 旧的 children 中有多个子节点
         default:
-          for (let i = 0; i < prevChildren.length; i++) {
-            patch(prevChildren[i], nextChildren[i], container)
-          }
-          break
-      }
-      break
-  }
+            switch (nextChildFlags) {
+                case ChildrenFlags.SINGLE_VNODE:
+                // 省略...
+                case ChildrenFlags.NO_CHILDREN:
+                // 省略...
+                default:
+                    for (let i = 0; i < prevChildren.length; i++) {
+                        patch(prevChildren[i], nextChildren[i], container);
+                    }
+                    break;
+            }
+            break;
+    }
 }
 ```
 
@@ -125,47 +105,41 @@ function patchChildren(
 通过分析我们得出一个规律，我们不应该总是遍历旧的 `children`，而是应该遍历新旧 `children` 中长度较短的那一个，这样我们能够做到尽可能多的应用 `patch` 函数进行更新，然后再对比新旧 `children` 的长度，如果新的 `children` 更长，则说明有新的节点需要添加，否则说明有旧的节点需要移除。最终我们得到如下实现：
 
 ```js {20-37}
-function patchChildren(
-  prevChildFlags,
-  nextChildFlags,
-  prevChildren,
-  nextChildren,
-  container
-) {
-  switch (prevChildFlags) {
-    // 省略...
+function patchChildren(prevChildFlags, nextChildFlags, prevChildren, nextChildren, container) {
+    switch (prevChildFlags) {
+        // 省略...
 
-    // 旧的 children 中有多个子节点
-    default:
-      switch (nextChildFlags) {
-        case ChildrenFlags.SINGLE_VNODE:
-          // 省略...
-        case ChildrenFlags.NO_CHILDREN:
-          // 省略...
+        // 旧的 children 中有多个子节点
         default:
-          // 新的 children 中有多个子节点
-          // 获取公共长度，取新旧 children 长度较小的那一个
-          const prevLen = prevChildren.length
-          const nextLen = nextChildren.length
-          const commonLength = prevLen > nextLen ? nextLen : prevLen
-          for (let i = 0; i < commonLength; i++) {
-            patch(prevChildren[i], nextChildren[i], container)
-          }
-          // 如果 nextLen > prevLen，将多出来的元素添加
-          if (nextLen > prevLen) {
-            for (let i = commonLength; i < nextLen; i++) {
-              mount(nextChildren[i], container)
+            switch (nextChildFlags) {
+                case ChildrenFlags.SINGLE_VNODE:
+                // 省略...
+                case ChildrenFlags.NO_CHILDREN:
+                // 省略...
+                default:
+                    // 新的 children 中有多个子节点
+                    // 获取公共长度，取新旧 children 长度较小的那一个
+                    const prevLen = prevChildren.length;
+                    const nextLen = nextChildren.length;
+                    const commonLength = prevLen > nextLen ? nextLen : prevLen;
+                    for (let i = 0; i < commonLength; i++) {
+                        patch(prevChildren[i], nextChildren[i], container);
+                    }
+                    // 如果 nextLen > prevLen，将多出来的元素添加
+                    if (nextLen > prevLen) {
+                        for (let i = commonLength; i < nextLen; i++) {
+                            mount(nextChildren[i], container);
+                        }
+                    } else if (prevLen > nextLen) {
+                        // 如果 prevLen > nextLen，将多出来的元素移除
+                        for (let i = commonLength; i < prevLen; i++) {
+                            container.removeChild(prevChildren[i].el);
+                        }
+                    }
+                    break;
             }
-          } else if (prevLen > nextLen) {
-            // 如果 prevLen > nextLen，将多出来的元素移除
-            for (let i = commonLength; i < prevLen; i++) {
-              container.removeChild(prevChildren[i].el)
-            }
-          }
-          break
-      }
-      break
-  }
+            break;
+    }
 }
 ```
 
@@ -182,29 +156,21 @@ function patchChildren(
 在上一小节中，我们通过减少 DOM 操作的次数使得更新的性能得到了提升，但它仍然存在可优化的空间，要明白如何优化，那首先我们需要知道问题出在哪里。还是拿上一节的例子来说，假设旧的 `children` 如下：
 
 ```js
-[
-  h('li', null, 1),
-  h('li', null, 2),
-  h('li', null, 3)
-]
+[h('li', null, 1), h('li', null, 2), h('li', null, 3)];
 ```
 
 新的 `children` 如下：
 
 ```js
-[
-  h('li', null, 3),
-  h('li', null, 1),
-  h('li', null, 2)
-]
+[h('li', null, 3), h('li', null, 1), h('li', null, 2)];
 ```
 
 我们来看一下，如果使用前面讲解的 `Diff` 算法来更新这对新旧 `children` 的话，会进行哪些操作：首先，旧 `children` 的第一个节点和新 `children` 的第一个节点进行比对(`patch`)，即：
 
 ```js
-h('li', null, 1)
+h('li', null, 1);
 // vs
-h('li', null, 3)
+h('li', null, 3);
 ```
 
 `patch` 函数知道它们是相同的标签，所以只会更新 `VNodeData` 和子节点，由于这两个标签都没有 `VNodeData`，所以只需要更新它们的子节点，旧的 `li` 元素的子节点是文本节点 `'1'`，而新的 `li` 标签的子节点是文本节点 `'3'`，所以最终会调用一次 `patchText` 函数将 `li` 标签的文本子节点由 `'1'` 更新为 `'3'`。接着，使用旧 `children` 的第二个节点和新 `children` 的第二个节点进行比对，结果同样是调用一次 `patchText` 函数用以更新 `li` 标签的文本子节点。类似的，对于新旧 `children` 的第三个节点同样也会调用一次 `patchText` 函数更新其文本子节点。而这，就是问题所在，实际上我们通过观察新旧 `children` 可以很容易的发现：新旧 `children` 中的节点只有顺序是不同的，所以最佳的操作应该是**通过移动元素的位置来达到更新的目的**。
@@ -218,26 +184,26 @@ h('li', null, 3)
 我们可以在使用 `h` 函数创建 `VNode` 时，通过 `VNodeData` 为即将创建的 `VNode` 设置一个 `key`：
 
 ```js
-h('li', { key: 'a' }, 1)
+h('li', { key: 'a' }, 1);
 ```
 
 但是为了 `diff` 算法更加方便的读取一个 `VNode` 的 `key`，我们应该在创建 `VNode` 时将 `VNodeData` 中的 `key` 添加到 `VNode` 本身，所以我们需要修改一下 `h` 函数，如下：
 
 ```js {10}
 export function h(tag, data = null, children = null) {
-  // 省略...
+    // 省略...
 
-  // 返回 VNode 对象
-  return {
-    _isVNode: true,
-    flags,
-    tag,
-    data,
-    key: data && data.key ? data.key : null,
-    children,
-    childFlags,
-    el: null
-  }
+    // 返回 VNode 对象
+    return {
+        _isVNode: true,
+        flags,
+        tag,
+        data,
+        key: data && data.key ? data.key : null,
+        children,
+        childFlags,
+        el: null,
+    };
 }
 ```
 
@@ -270,17 +236,17 @@ export function h(tag, data = null, children = null) {
 ```js
 // 遍历新的 children
 for (let i = 0; i < nextChildren.length; i++) {
-  const nextVNode = nextChildren[i]
-  let j = 0
-  // 遍历旧的 children
-  for (j; j < prevChildren.length; j++) {
-    const prevVNode = prevChildren[j]
-    // 如果找到了具有相同 key 值的两个节点，则调用 `patch` 函数更新之
-    if (nextVNode.key === prevVNode.key) {
-      patch(prevVNode, nextVNode, container)
-      break // 这里需要 break
+    const nextVNode = nextChildren[i];
+    let j = 0;
+    // 遍历旧的 children
+    for (j; j < prevChildren.length; j++) {
+        const prevVNode = prevChildren[j];
+        // 如果找到了具有相同 key 值的两个节点，则调用 `patch` 函数更新之
+        if (nextVNode.key === prevVNode.key) {
+            patch(prevVNode, nextVNode, container);
+            break; // 这里需要 break
+        }
     }
-  }
 }
 ```
 
@@ -294,9 +260,9 @@ for (let i = 0; i < nextChildren.length; i++) {
 
 上图中的数字代表着节点在旧 `children` 中的索引，我们来尝试执行一下本节介绍的算法，看看会发生什么：
 
-- 1、取出新 `children` 的第一个节点，即 `li-a`，并尝试在旧 `children` 中寻找 `li-a`，结果是我们找到了，并且 `li-a` 在旧 `children` 中的索引为 `0`。
-- 2、取出新 `children` 的第二个节点，即 `li-b`，并尝试在旧 `children` 中寻找 `li-b`，也找到了，并且 `li-b` 在旧 `children` 中的索引为 `1`。
-- 3、取出新 `children` 的第三个节点，即 `li-c`，并尝试在旧 `children` 中寻找 `li-c`，同样找到了，并且 `li-c` 在旧 `children` 中的索引为 `2`。
+-   1、取出新 `children` 的第一个节点，即 `li-a`，并尝试在旧 `children` 中寻找 `li-a`，结果是我们找到了，并且 `li-a` 在旧 `children` 中的索引为 `0`。
+-   2、取出新 `children` 的第二个节点，即 `li-b`，并尝试在旧 `children` 中寻找 `li-b`，也找到了，并且 `li-b` 在旧 `children` 中的索引为 `1`。
+-   3、取出新 `children` 的第三个节点，即 `li-c`，并尝试在旧 `children` 中寻找 `li-c`，同样找到了，并且 `li-c` 在旧 `children` 中的索引为 `2`。
 
 总结一下我们在“寻找”的过程中，先后遇到的索引顺序为：`0`->`1`->`2`。这是一个递增的顺序，这说明**如果在寻找的过程中遇到的索引呈现递增趋势，则说明新旧 `children` 中节点顺序相同，不需要移动操作**。相反的，**如果在寻找的过程中遇到的索引值不呈现递增趋势，则说明需要移动操作**，举个例子，下图展示了新旧 `children` 中的节点顺序不一致的情况：
 
@@ -304,12 +270,12 @@ for (let i = 0; i < nextChildren.length; i++) {
 
 我们同样执行一下本节介绍的算法，看看会发生什么：
 
-- 1、取出新 `children` 的第一个节点，即 `li-c`，并尝试在旧 `children` 中寻找 `li-c`，结果是我们找到了，并且 `li-c` 在旧 `children` 中的索引为 `2`。
-- 2、取出新 `children` 的第二个节点，即 `li-a`，并尝试在旧 `children` 中寻找 `li-a`，也找到了，并且 `li-a` 在旧 `children` 中的索引为 `0`。
+-   1、取出新 `children` 的第一个节点，即 `li-c`，并尝试在旧 `children` 中寻找 `li-c`，结果是我们找到了，并且 `li-c` 在旧 `children` 中的索引为 `2`。
+-   2、取出新 `children` 的第二个节点，即 `li-a`，并尝试在旧 `children` 中寻找 `li-a`，也找到了，并且 `li-a` 在旧 `children` 中的索引为 `0`。
 
 到了这里，**递增**的趋势被打破了，我们在寻找的过程中先遇到的索引值是 `2`，接着又遇到了比 `2` 小的 `0`，这说明**在旧 `children` 中 `li-a` 的位置要比 `li-c` 靠前，但在新的 `children` 中 `li-a` 的位置要比 `li-c` 靠后**。这时我们就知道了 `li-a` 是那个需要被移动的节点，我们接着往下执行。
 
-- 3、取出新 `children` 的第三个节点，即 `li-b`，并尝试在旧 `children` 中寻找 `li-b`，同样找到了，并且 `li-b` 在旧 `children` 中的索引为 `1`。
+-   3、取出新 `children` 的第三个节点，即 `li-b`，并尝试在旧 `children` 中寻找 `li-b`，同样找到了，并且 `li-b` 在旧 `children` 中的索引为 `1`。
 
 我们发现 `1` 同样小于 `2`，这说明**在旧 `children` 中节点 `li-b` 的位置也要比 `li-c` 的位置靠前，但在新的 `children` 中 `li-b` 的位置要比 `li-c` 靠后**。所以 `li-b` 也需要被移动。
 
@@ -319,26 +285,26 @@ for (let i = 0; i < nextChildren.length; i++) {
 
 ```js {1-2,13-18}
 // 用来存储寻找过程中遇到的最大索引值
-let lastIndex = 0
+let lastIndex = 0;
 // 遍历新的 children
 for (let i = 0; i < nextChildren.length; i++) {
-  const nextVNode = nextChildren[i]
-  let j = 0
-  // 遍历旧的 children
-  for (j; j < prevChildren.length; j++) {
-    const prevVNode = prevChildren[j]
-    // 如果找到了具有相同 key 值的两个节点，则调用 `patch` 函数更新之
-    if (nextVNode.key === prevVNode.key) {
-      patch(prevVNode, nextVNode, container)
-      if (j < lastIndex) {
-        // 需要移动
-      } else {
-        // 更新 lastIndex
-        lastIndex = j
-      }
-      break // 这里需要 break
+    const nextVNode = nextChildren[i];
+    let j = 0;
+    // 遍历旧的 children
+    for (j; j < prevChildren.length; j++) {
+        const prevVNode = prevChildren[j];
+        // 如果找到了具有相同 key 值的两个节点，则调用 `patch` 函数更新之
+        if (nextVNode.key === prevVNode.key) {
+            patch(prevVNode, nextVNode, container);
+            if (j < lastIndex) {
+                // 需要移动
+            } else {
+                // 更新 lastIndex
+                lastIndex = j;
+            }
+            break; // 这里需要 break
+        }
     }
-  }
 }
 ```
 
@@ -362,7 +328,7 @@ function patchElement(prevVNode, nextVNode, container) {
 
   // 拿到 el 元素，注意这时要让 nextVNode.el 也引用该元素
   const el = (nextVNode.el = prevVNode.el)
-  
+
   // 省略...
 }
 
@@ -377,30 +343,30 @@ beforeCreate() {
 
 ```js {15-18}
 // 用来存储寻找过程中遇到的最大索引值
-let lastIndex = 0
+let lastIndex = 0;
 // 遍历新的 children
 for (let i = 0; i < nextChildren.length; i++) {
-  const nextVNode = nextChildren[i]
-  let j = 0
-  // 遍历旧的 children
-  for (j; j < prevChildren.length; j++) {
-    const prevVNode = prevChildren[j]
-    // 如果找到了具有相同 key 值的两个节点，则调用 `patch` 函数更新之
-    if (nextVNode.key === prevVNode.key) {
-      patch(prevVNode, nextVNode, container)
-      if (j < lastIndex) {
-        // 需要移动
-        // refNode 是为了下面调用 insertBefore 函数准备的
-        const refNode = nextChildren[i - 1].el.nextSibling
-        // 调用 insertBefore 函数移动 DOM
-        container.insertBefore(prevVNode.el, refNode)
-      } else {
-        // 更新 lastIndex
-        lastIndex = j
-      }
-      break // 这里需要 break
+    const nextVNode = nextChildren[i];
+    let j = 0;
+    // 遍历旧的 children
+    for (j; j < prevChildren.length; j++) {
+        const prevVNode = prevChildren[j];
+        // 如果找到了具有相同 key 值的两个节点，则调用 `patch` 函数更新之
+        if (nextVNode.key === prevVNode.key) {
+            patch(prevVNode, nextVNode, container);
+            if (j < lastIndex) {
+                // 需要移动
+                // refNode 是为了下面调用 insertBefore 函数准备的
+                const refNode = nextChildren[i - 1].el.nextSibling;
+                // 调用 insertBefore 函数移动 DOM
+                container.insertBefore(prevVNode.el, refNode);
+            } else {
+                // 更新 lastIndex
+                lastIndex = j;
+            }
+            break; // 这里需要 break
+        }
     }
-  }
 }
 ```
 
@@ -425,58 +391,58 @@ for (let i = 0; i < nextChildren.length; i++) {
 我们将面临两个问题，第一个问题是：如何知道一个节点在旧的 `children` 中是不存在的？这个问题比较好解决，如下代码所示：
 
 ```js {5,9}
-let lastIndex = 0
+let lastIndex = 0;
 for (let i = 0; i < nextChildren.length; i++) {
-  const nextVNode = nextChildren[i]
-  let j = 0,
-    find = false
-  for (j; j < prevChildren.length; j++) {
-    const prevVNode = prevChildren[j]
-    if (nextVNode.key === prevVNode.key) {
-      find = true
-      patch(prevVNode, nextVNode, container)
-      if (j < lastIndex) {
-        // 需要移动
-        const refNode = nextChildren[i - 1].el.nextSibling
-        container.insertBefore(prevVNode.el, refNode)
-        break
-      } else {
-        // 更新 lastIndex
-        lastIndex = j
-      }
+    const nextVNode = nextChildren[i];
+    let j = 0,
+        find = false;
+    for (j; j < prevChildren.length; j++) {
+        const prevVNode = prevChildren[j];
+        if (nextVNode.key === prevVNode.key) {
+            find = true;
+            patch(prevVNode, nextVNode, container);
+            if (j < lastIndex) {
+                // 需要移动
+                const refNode = nextChildren[i - 1].el.nextSibling;
+                container.insertBefore(prevVNode.el, refNode);
+                break;
+            } else {
+                // 更新 lastIndex
+                lastIndex = j;
+            }
+        }
     }
-  }
 }
 ```
 
 如上高亮代码所示，我们在原来的基础上添加了变量 `find`，它将作为一个标志，代表新 `children` 中的节点是否存在于旧 `children` 中，初始值为 `false`，一旦在旧 `children` 中寻找到了相应的节点，我们就将变量 `find` 的值设置为 `true`，所以**如果内层循环结束后，变量 `find` 的值仍然为 `false`，则说明在旧的 `children` 中找不到可复用的节点**，这时我们就需要使用 `mount` 函数将当前遍历到的节点挂载到容器元素，如下高亮的代码所示：
 
 ```js {22-25}
-let lastIndex = 0
+let lastIndex = 0;
 for (let i = 0; i < nextChildren.length; i++) {
-  const nextVNode = nextChildren[i]
-  let j = 0,
-    find = false
-  for (j; j < prevChildren.length; j++) {
-    const prevVNode = prevChildren[j]
-    if (nextVNode.key === prevVNode.key) {
-      find = true
-      patch(prevVNode, nextVNode, container)
-      if (j < lastIndex) {
-        // 需要移动
-        const refNode = nextChildren[i - 1].el.nextSibling
-        container.insertBefore(prevVNode.el, refNode)
-        break
-      } else {
-        // 更新 lastIndex
-        lastIndex = j
-      }
+    const nextVNode = nextChildren[i];
+    let j = 0,
+        find = false;
+    for (j; j < prevChildren.length; j++) {
+        const prevVNode = prevChildren[j];
+        if (nextVNode.key === prevVNode.key) {
+            find = true;
+            patch(prevVNode, nextVNode, container);
+            if (j < lastIndex) {
+                // 需要移动
+                const refNode = nextChildren[i - 1].el.nextSibling;
+                container.insertBefore(prevVNode.el, refNode);
+                break;
+            } else {
+                // 更新 lastIndex
+                lastIndex = j;
+            }
+        }
     }
-  }
-  if (!find) {
-    // 挂载新节点
-    mount(nextVNode, container, false)
-  }
+    if (!find) {
+        // 挂载新节点
+        mount(nextVNode, container, false);
+    }
 }
 ```
 
@@ -487,36 +453,33 @@ for (let i = 0; i < nextChildren.length; i++) {
 新的 `li-d` 节点紧跟在 `li-a` 节点的后面，所以正确的做法应该是把 `li-d` 节点添加到 `li-a` 节点所对应真实 DOM 的后面才行。如何才能保证 `li-d` 节点始终被添加到 `li-a` 节点的后面呢？答案是使用 `insertBefore` 方法代替 `appendChild` 方法，我们可以找到 `li-a` 节点所对应真实 DOM 的下一个节点，然后将 `li-d` 节点插入到该节点之前即可，如下高亮代码所示：
 
 ```js {24-29}
-let lastIndex = 0
+let lastIndex = 0;
 for (let i = 0; i < nextChildren.length; i++) {
-  const nextVNode = nextChildren[i]
-  let j = 0,
-    find = false
-  for (j; j < prevChildren.length; j++) {
-    const prevVNode = prevChildren[j]
-    if (nextVNode.key === prevVNode.key) {
-      find = true
-      patch(prevVNode, nextVNode, container)
-      if (j < lastIndex) {
-        // 需要移动
-        const refNode = nextChildren[i - 1].el.nextSibling
-        container.insertBefore(prevVNode.el, refNode)
-        break
-      } else {
-        // 更新 lastIndex
-        lastIndex = j
-      }
+    const nextVNode = nextChildren[i];
+    let j = 0,
+        find = false;
+    for (j; j < prevChildren.length; j++) {
+        const prevVNode = prevChildren[j];
+        if (nextVNode.key === prevVNode.key) {
+            find = true;
+            patch(prevVNode, nextVNode, container);
+            if (j < lastIndex) {
+                // 需要移动
+                const refNode = nextChildren[i - 1].el.nextSibling;
+                container.insertBefore(prevVNode.el, refNode);
+                break;
+            } else {
+                // 更新 lastIndex
+                lastIndex = j;
+            }
+        }
     }
-  }
-  if (!find) {
-    // 挂载新节点
-    // 找到 refNode
-    const refNode =
-      i - 1 < 0
-        ? prevChildren[0].el
-        : nextChildren[i - 1].el.nextSibling
-    mount(nextVNode, container, false, refNode)
-  }
+    if (!find) {
+        // 挂载新节点
+        // 找到 refNode
+        const refNode = i - 1 < 0 ? prevChildren[0].el : nextChildren[i - 1].el.nextSibling;
+        mount(nextVNode, container, false, refNode);
+    }
 }
 ```
 
@@ -525,20 +488,20 @@ for (let i = 0; i < nextChildren.length; i++) {
 ```js {2,6,13,16}
 // mount 函数
 function mount(vnode, container, isSVG, refNode) {
-  const { flags } = vnode
-  if (flags & VNodeFlags.ELEMENT) {
-    // 挂载普通标签
-    mountElement(vnode, container, isSVG, refNode)
-  }
+    const { flags } = vnode;
+    if (flags & VNodeFlags.ELEMENT) {
+        // 挂载普通标签
+        mountElement(vnode, container, isSVG, refNode);
+    }
 
-  // 省略...
+    // 省略...
 }
 
 // mountElement 函数
 function mountElement(vnode, container, isSVG, refNode) {
-  // 省略...
+    // 省略...
 
-  refNode ? container.insertBefore(el, refNode) : container.appendChild(el)
+    refNode ? container.insertBefore(el, refNode) : container.appendChild(el);
 }
 ```
 
@@ -561,31 +524,29 @@ function mountElement(vnode, container, isSVG, refNode) {
 可以看出，新的 `children` 中已经不存在 `li-c` 节点了，所以我们应该想办法将 `li-c` 节点对应的真实 DOM 从容器元素内移除。但我们之前编写的算法还不能完成这个任务，因为外层循环遍历的是新的 `children`，所以外层循环会执行两次，第一次用于处理 `li-a` 节点，第二次用于处理 `li-b` 节点，此时整个算法已经运行结束了。所以，我们需要在外层循环结束之后，再优先遍历一次旧的 `children`，并尝试拿着旧 `children` 中的节点去新 `children` 中寻找相同的节点，如果找不到则说明该节点已经不存在于新 `children` 中了，这时我们应该将该节点对应的真实 DOM 移除，如下高亮代码所示：
 
 ```js {14-26}
-let lastIndex = 0
+let lastIndex = 0;
 for (let i = 0; i < nextChildren.length; i++) {
-  const nextVNode = nextChildren[i]
-  let j = 0,
-    find = false
-  for (j; j < prevChildren.length; j++) {
-    // 省略...
-  }
-  if (!find) {
-    // 挂载新节点
-    // 省略...
-  }
+    const nextVNode = nextChildren[i];
+    let j = 0,
+        find = false;
+    for (j; j < prevChildren.length; j++) {
+        // 省略...
+    }
+    if (!find) {
+        // 挂载新节点
+        // 省略...
+    }
 }
 // 移除已经不存在的节点
 // 遍历旧的节点
 for (let i = 0; i < prevChildren.length; i++) {
-  const prevVNode = prevChildren[i]
-  // 拿着旧 VNode 去新 children 中寻找相同的节点
-  const has = nextChildren.find(
-    nextVNode => nextVNode.key === prevVNode.key
-  )
-  if (!has) {
-    // 如果没有找到相同的节点，则移除
-    container.removeChild(prevVNode.el)
-  }
+    const prevVNode = prevChildren[i];
+    // 拿着旧 VNode 去新 children 中寻找相同的节点
+    const has = nextChildren.find((nextVNode) => nextVNode.key === prevVNode.key);
+    if (!has) {
+        // 如果没有找到相同的节点，则移除
+        container.removeChild(prevVNode.el);
+    }
 }
 ```
 
@@ -616,27 +577,27 @@ for (let i = 0; i < prevChildren.length; i++) {
 我们使用四个变量 `oldStartIdx`、`oldEndIdx`、`newStartIdx` 以及 `newEndIdx` 分别存储旧 `children` 和新 `children` 的两个端点的位置索引，可以用如下代码来表示：
 
 ```js
-let oldStartIdx = 0
-let oldEndIdx = prevChildren.length - 1
-let newStartIdx = 0
-let newEndIdx = nextChildren.length - 1
+let oldStartIdx = 0;
+let oldEndIdx = prevChildren.length - 1;
+let newStartIdx = 0;
+let newEndIdx = nextChildren.length - 1;
 ```
 
 除了位置索引之外，我们还需要拿到四个位置索引所指向的 `VNode`：
 
 ```js
-let oldStartVNode = prevChildren[oldStartIdx]
-let oldEndVNode = prevChildren[oldEndIdx]
-let newStartVNode = nextChildren[newStartIdx]
-let newEndVNode = nextChildren[newEndIdx]
+let oldStartVNode = prevChildren[oldStartIdx];
+let oldEndVNode = prevChildren[oldEndIdx];
+let newStartVNode = nextChildren[newStartIdx];
+let newEndVNode = nextChildren[newEndIdx];
 ```
 
 有了这些基础信息，我们就可以开始执行双端比较了，在一次比较过程中，最多需要进行四次比较：
 
-- 1、使用旧 `children` 的头一个 `VNode` 与新 `children` 的头一个 `VNode` 比对，即 `oldStartVNode` 和 `newStartVNode` 比较对。
-- 2、使用旧 `children` 的最后一个 `VNode` 与新 `children` 的最后一个 `VNode` 比对，即 `oldEndVNode` 和 `newEndVNode` 比对。
-- 3、使用旧 `children` 的头一个 `VNode` 与新 `children` 的最后一个 `VNode` 比对，即 `oldStartVNode` 和 `newEndVNode` 比对。
-- 4、使用旧 `children` 的最后一个 `VNode` 与新 `children` 的头一个 `VNode` 比对，即 `oldEndVNode` 和 `newStartVNode` 比对。
+-   1、使用旧 `children` 的头一个 `VNode` 与新 `children` 的头一个 `VNode` 比对，即 `oldStartVNode` 和 `newStartVNode` 比较对。
+-   2、使用旧 `children` 的最后一个 `VNode` 与新 `children` 的最后一个 `VNode` 比对，即 `oldEndVNode` 和 `newEndVNode` 比对。
+-   3、使用旧 `children` 的头一个 `VNode` 与新 `children` 的最后一个 `VNode` 比对，即 `oldStartVNode` 和 `newEndVNode` 比对。
+-   4、使用旧 `children` 的最后一个 `VNode` 与新 `children` 的头一个 `VNode` 比对，即 `oldEndVNode` 和 `newStartVNode` 比对。
 
 在如上四步比对过程中，试图去寻找可复用的节点，即拥有相同 `key` 值的节点。这四步比对中，在任何一步中寻找到了可复用节点，则会停止后续的步骤，可以用下图来描述在一次比对过程中的四个步骤：
 
@@ -646,42 +607,42 @@ let newEndVNode = nextChildren[newEndIdx]
 
 ```js
 if (oldStartVNode.key === newStartVNode.key) {
-  // 步骤一：oldStartVNode 和 newStartVNode 比对
+    // 步骤一：oldStartVNode 和 newStartVNode 比对
 } else if (oldEndVNode.key === newEndVNode.key) {
-  // 步骤二：oldEndVNode 和 newEndVNode 比对
+    // 步骤二：oldEndVNode 和 newEndVNode 比对
 } else if (oldStartVNode.key === newEndVNode.key) {
-  // 步骤三：oldStartVNode 和 newEndVNode 比对
+    // 步骤三：oldStartVNode 和 newEndVNode 比对
 } else if (oldEndVNode.key === newStartVNode.key) {
-  // 步骤四：oldEndVNode 和 newStartVNode 比对
+    // 步骤四：oldEndVNode 和 newStartVNode 比对
 }
 ```
 
 每次比对完成之后，如果在某一步骤中找到了可复用的节点，我们就需要将相应的位置索引**后移/前移**一位。以上图为例：
 
-- 第一步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-d` 进行比对，由于二者 `key` 值不同，所以不可复用，什么都不做。
-- 第二步：拿旧 `children` 中的 `li-d` 和新 `children` 中的 `li-c` 进行比对，同样不可复用，什么都不做。
-- 第三步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-c` 进行比对，什么都不做。
-- 第四部：拿旧 `children` 中的 `li-d` 和新 `children` 中的 `li-d` 进行比对，由于这两个节点拥有相同的 `key` 值，所以我们在这次比对的过程中找到了可复用的节点。
+-   第一步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-d` 进行比对，由于二者 `key` 值不同，所以不可复用，什么都不做。
+-   第二步：拿旧 `children` 中的 `li-d` 和新 `children` 中的 `li-c` 进行比对，同样不可复用，什么都不做。
+-   第三步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-c` 进行比对，什么都不做。
+-   第四部：拿旧 `children` 中的 `li-d` 和新 `children` 中的 `li-d` 进行比对，由于这两个节点拥有相同的 `key` 值，所以我们在这次比对的过程中找到了可复用的节点。
 
 由于我们在第四步的比对中找到了可复用的节点，即 `oldEndVNode` 和 `newStartVNode` 拥有相同的 `key` 值，这说明：**`li-d` 节点所对应的真实 DOM 原本是最后一个子节点，并且更新之后它应该变成第一个子节点**。所以我们需要把 `li-d` 所对应的真实 DOM 移动到最前方即可：
 
 ```js {10-16}
 if (oldStartVNode.key === newStartVNode.key) {
-  // 步骤一：oldStartVNode 和 newStartVNode 比对
+    // 步骤一：oldStartVNode 和 newStartVNode 比对
 } else if (oldEndVNode.key === newEndVNode.key) {
-  // 步骤二：oldEndVNode 和 newEndVNode 比对
+    // 步骤二：oldEndVNode 和 newEndVNode 比对
 } else if (oldStartVNode.key === newEndVNode.key) {
-  // 步骤三：oldStartVNode 和 newEndVNode 比对
+    // 步骤三：oldStartVNode 和 newEndVNode 比对
 } else if (oldEndVNode.key === newStartVNode.key) {
-  // 步骤四：oldEndVNode 和 newStartVNode 比对
+    // 步骤四：oldEndVNode 和 newStartVNode 比对
 
-  // 先调用 patch 函数完成更新
-  patch(oldEndVNode, newStartVNode, container)
-  // 更新完成后，将容器中最后一个子节点移动到最前面，使其成为第一个子节点
-  container.insertBefore(oldEndVNode.el, oldStartVNode.el)
-  // 更新索引，指向下一个位置
-  oldEndVNode = prevChildren[--oldEndIdx]
-  newStartVNode = nextChildren[++newStartIdx]
+    // 先调用 patch 函数完成更新
+    patch(oldEndVNode, newStartVNode, container);
+    // 更新完成后，将容器中最后一个子节点移动到最前面，使其成为第一个子节点
+    container.insertBefore(oldEndVNode.el, oldStartVNode.el);
+    // 更新索引，指向下一个位置
+    oldEndVNode = prevChildren[--oldEndIdx];
+    newStartVNode = nextChildren[++newStartIdx];
 }
 ```
 
@@ -697,15 +658,15 @@ if (oldStartVNode.key === newStartVNode.key) {
 
 ```js
 while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-  if (oldStartVNode.key === newStartVNode.key) {
-    // 步骤一：oldStartVNode 和 newStartVNode 比对
-  } else if (oldEndVNode.key === newEndVNode.key) {
-    // 步骤二：oldEndVNode 和 newEndVNode 比对
-  } else if (oldStartVNode.key === newEndVNode.key) {
-    // 步骤三：oldStartVNode 和 newEndVNode 比对
-  } else if (oldEndVNode.key === newStartVNode.key) {
-    // 步骤四：oldEndVNode 和 newStartVNode 比对
-  }
+    if (oldStartVNode.key === newStartVNode.key) {
+        // 步骤一：oldStartVNode 和 newStartVNode 比对
+    } else if (oldEndVNode.key === newEndVNode.key) {
+        // 步骤二：oldEndVNode 和 newEndVNode 比对
+    } else if (oldStartVNode.key === newEndVNode.key) {
+        // 步骤三：oldStartVNode 和 newEndVNode 比对
+    } else if (oldEndVNode.key === newStartVNode.key) {
+        // 步骤四：oldEndVNode 和 newStartVNode 比对
+    }
 }
 ```
 
@@ -713,34 +674,34 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 
 还是观察上图，我们继续进行第二轮的比对：
 
-- 第一步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-b` 进行比对，由于二者 `key` 值不同，所以不可复用，什么都不做。
-- 第二步：拿旧 `children` 中的 `li-c` 和新 `children` 中的 `li-c` 进行比对，此时，由于二者拥有相同的 `key`，所以是可复用的节点，但是由于二者在新旧 `children` 中都是最末尾的一个节点，所以是不需要进行移动操作的，只需要调用 `patch` 函数更新即可，同时将相应的索引前移一位，如下高亮代码所示：
+-   第一步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-b` 进行比对，由于二者 `key` 值不同，所以不可复用，什么都不做。
+-   第二步：拿旧 `children` 中的 `li-c` 和新 `children` 中的 `li-c` 进行比对，此时，由于二者拥有相同的 `key`，所以是可复用的节点，但是由于二者在新旧 `children` 中都是最末尾的一个节点，所以是不需要进行移动操作的，只需要调用 `patch` 函数更新即可，同时将相应的索引前移一位，如下高亮代码所示：
 
 ```js {6-10}
 while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-  if (oldStartVNode.key === newStartVNode.key) {
-    // 步骤一：oldStartVNode 和 newStartVNode 比对
-  } else if (oldEndVNode.key === newEndVNode.key) {
-    // 步骤二：oldEndVNode 和 newEndVNode 比对
+    if (oldStartVNode.key === newStartVNode.key) {
+        // 步骤一：oldStartVNode 和 newStartVNode 比对
+    } else if (oldEndVNode.key === newEndVNode.key) {
+        // 步骤二：oldEndVNode 和 newEndVNode 比对
 
-    // 调用 patch 函数更新
-    patch(oldEndVNode, newEndVNode, container)
-    // 更新索引，指向下一个位置
-    oldEndVNode = prevChildren[--oldEndIdx]
-    newEndVNode = nextChildren[--newEndIdx]
-  } else if (oldStartVNode.key === newEndVNode.key) {
-    // 步骤三：oldStartVNode 和 newEndVNode 比对
-  } else if (oldEndVNode.key === newStartVNode.key) {
-    // 步骤四：oldEndVNode 和 newStartVNode 比对
+        // 调用 patch 函数更新
+        patch(oldEndVNode, newEndVNode, container);
+        // 更新索引，指向下一个位置
+        oldEndVNode = prevChildren[--oldEndIdx];
+        newEndVNode = nextChildren[--newEndIdx];
+    } else if (oldStartVNode.key === newEndVNode.key) {
+        // 步骤三：oldStartVNode 和 newEndVNode 比对
+    } else if (oldEndVNode.key === newStartVNode.key) {
+        // 步骤四：oldEndVNode 和 newStartVNode 比对
 
-    // 先调用 patch 函数完成更新
-    patch(oldEndVNode, newStartVNode, container)
-    // 更新完成后，将容器中最后一个子节点移动到最前面，使其成为第一个子节点
-    container.insertBefore(oldEndVNode.el, oldStartVNode.el)
-    // 更新索引，指向下一个位置
-    oldEndVNode = prevChildren[--oldEndIdx]
-    newStartVNode = nextChildren[++newStartIdx]
-  }
+        // 先调用 patch 函数完成更新
+        patch(oldEndVNode, newStartVNode, container);
+        // 更新完成后，将容器中最后一个子节点移动到最前面，使其成为第一个子节点
+        container.insertBefore(oldEndVNode.el, oldStartVNode.el);
+        // 更新索引，指向下一个位置
+        oldEndVNode = prevChildren[--oldEndIdx];
+        newStartVNode = nextChildren[++newStartIdx];
+    }
 }
 ```
 
@@ -750,48 +711,45 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 
 由于此时循环条件成立，所以会继续下一轮的比较：
 
-- 第一步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-b` 进行比对，由于二者 `key` 值不同，所以不可复用，什么都不做。
-- 第二步：拿旧 `children` 中的 `li-b` 和新 `children` 中的 `li-a` 进行比对，不可复用，什么都不做。
-- 第三步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-a` 进行比对，此时，我们找到了可复用的节点。
+-   第一步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-b` 进行比对，由于二者 `key` 值不同，所以不可复用，什么都不做。
+-   第二步：拿旧 `children` 中的 `li-b` 和新 `children` 中的 `li-a` 进行比对，不可复用，什么都不做。
+-   第三步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-a` 进行比对，此时，我们找到了可复用的节点。
 
 这一次满足的条件是：**`oldStartVNode.key === newEndVNode.key`**，这说明：**`li-a` 节点所对应的真实 DOM 原本是第一个子节点，但现在变成了“最后”一个子节点**，这里的“最后”一词使用了引号，这是因为大家要明白“最后”的真正含义，它并不是指真正意义上的最后一个节点，而是指当前索引范围内的最后一个节点。所以移动操作也是比较明显的，我们将 `oldStartVNode` 对应的真实 DOM 移动到 `oldEndVNode` 所对应真实 DOM 的后面即可，如下高亮代码所示：
 
 ```js {15-24}
 while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-  if (oldStartVNode.key === newStartVNode.key) {
-    // 步骤一：oldStartVNode 和 newStartVNode 比对
-  } else if (oldEndVNode.key === newEndVNode.key) {
-    // 步骤二：oldEndVNode 和 newEndVNode 比对
+    if (oldStartVNode.key === newStartVNode.key) {
+        // 步骤一：oldStartVNode 和 newStartVNode 比对
+    } else if (oldEndVNode.key === newEndVNode.key) {
+        // 步骤二：oldEndVNode 和 newEndVNode 比对
 
-    // 调用 patch 函数更新
-    patch(oldEndVNode, newEndVNode, container)
-    // 更新索引，指向下一个位置
-    oldEndVNode = prevChildren[--oldEndIdx]
-    newEndVNode = newEndVNode[--newEndIdx]
-  } else if (oldStartVNode.key === newEndVNode.key) {
-    // 步骤三：oldStartVNode 和 newEndVNode 比对
+        // 调用 patch 函数更新
+        patch(oldEndVNode, newEndVNode, container);
+        // 更新索引，指向下一个位置
+        oldEndVNode = prevChildren[--oldEndIdx];
+        newEndVNode = newEndVNode[--newEndIdx];
+    } else if (oldStartVNode.key === newEndVNode.key) {
+        // 步骤三：oldStartVNode 和 newEndVNode 比对
 
-    // 调用 patch 函数更新
-    patch(oldStartVNode, newEndVNode, container)
-    // 将 oldStartVNode.el 移动到 oldEndVNode.el 的后面，也就是 oldEndVNode.el.nextSibling 的前面
-    container.insertBefore(
-      oldStartVNode.el,
-      oldEndVNode.el.nextSibling
-    )
-    // 更新索引，指向下一个位置
-    oldStartVNode = prevChildren[++oldStartIdx]
-    newEndVNode = nextChildren[--newEndIdx]
-  } else if (oldEndVNode.key === newStartVNode.key) {
-    // 步骤四：oldEndVNode 和 newStartVNode 比对
+        // 调用 patch 函数更新
+        patch(oldStartVNode, newEndVNode, container);
+        // 将 oldStartVNode.el 移动到 oldEndVNode.el 的后面，也就是 oldEndVNode.el.nextSibling 的前面
+        container.insertBefore(oldStartVNode.el, oldEndVNode.el.nextSibling);
+        // 更新索引，指向下一个位置
+        oldStartVNode = prevChildren[++oldStartIdx];
+        newEndVNode = nextChildren[--newEndIdx];
+    } else if (oldEndVNode.key === newStartVNode.key) {
+        // 步骤四：oldEndVNode 和 newStartVNode 比对
 
-    // 先调用 patch 函数完成更新
-    patch(oldEndVNode, newStartVNode, container)
-    // 更新完成后，将容器中最后一个子节点移动到最前面，使其成为第一个子节点
-    container.insertBefore(oldEndVNode.el, oldStartVNode.el)
-    // 更新索引，指向下一个位置
-    oldEndVNode = prevChildren[--oldEndIdx]
-    newStartVNode = nextChildren[++newStartIdx]
-  }
+        // 先调用 patch 函数完成更新
+        patch(oldEndVNode, newStartVNode, container);
+        // 更新完成后，将容器中最后一个子节点移动到最前面，使其成为第一个子节点
+        container.insertBefore(oldEndVNode.el, oldStartVNode.el);
+        // 更新索引，指向下一个位置
+        oldEndVNode = prevChildren[--oldEndIdx];
+        newStartVNode = nextChildren[++newStartIdx];
+    }
 }
 ```
 
@@ -801,27 +759,27 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 
 现在 `oldStartIdx` 和 `oldEndIdx` 指向了同一个位置，即旧 `children` 中的 `li-b` 节点。同样的 `newStartIdx` 和 `newEndIdx` 也指向了同样的位置，即新 `children` 中的 `li-b`。由于此时仍然满足循环条件，所以会继续下一轮的比对：
 
-- 第一步：拿旧 `children` 中的 `li-b` 和新 `children` 中的 `li-b` 进行比对，二者拥有相同的 `key`，可复用。
+-   第一步：拿旧 `children` 中的 `li-b` 和新 `children` 中的 `li-b` 进行比对，二者拥有相同的 `key`，可复用。
 
 此时，在第一步的时候就已经找到了可复用的节点，满足的条件是：**oldStartVNode.key === newStartVNode.key**，但是由于该节点无论是在新 `children` 中还是旧 `children` 中，都是“第一个”节点，所以位置不需要变化，即不需要移动操作，只需要调用 `patch` 函数更新即可，同时也要将相应的位置所以下移一位，如下高亮代码所示：
 
 ```js {5-9}
 while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-  if (oldStartVNode.key === newStartVNode.key) {
-    // 步骤一：oldStartVNode 和 newStartVNode 比对
+    if (oldStartVNode.key === newStartVNode.key) {
+        // 步骤一：oldStartVNode 和 newStartVNode 比对
 
-    // 调用 patch 函数更新
-    patch(oldStartVNode, newStartVNode, container)
-    // 更新索引，指向下一个位置
-    oldStartVNode = prevChildren[++oldStartIdx]
-    newStartVNode = nextChildren[++newStartIdx]
-  } else if (oldEndVNode.key === newEndVNode.key) {
-    // 省略...
-  } else if (oldStartVNode.key === newEndVNode.key) {
-    // 省略...
-  } else if (oldEndVNode.key === newStartVNode.key) {
-    // 省略...
-  }
+        // 调用 patch 函数更新
+        patch(oldStartVNode, newStartVNode, container);
+        // 更新索引，指向下一个位置
+        oldStartVNode = prevChildren[++oldStartIdx];
+        newStartVNode = nextChildren[++newStartIdx];
+    } else if (oldEndVNode.key === newEndVNode.key) {
+        // 省略...
+    } else if (oldStartVNode.key === newEndVNode.key) {
+        // 省略...
+    } else if (oldEndVNode.key === newStartVNode.key) {
+        // 省略...
+    }
 }
 ```
 
@@ -851,10 +809,10 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 
 我们按照双端比较的思路开始第一轮比较，按步骤执行：
 
-- 第一步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-c` 进行比对，由于二者 `key` 值不同，所以不可复用，什么都不做。
-- 第二步：拿旧 `children` 中的 `li-c` 和新 `children` 中的 `li-b` 进行比对，不可复用，什么都不做。
-- 第三步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-b` 进行比对，不可复用，什么都不做。
-- 第四步：拿旧 `children` 中的 `li-c` 和新 `children` 中的 `li-c` 进行比对，此时，两个节点拥有相同的 `key` 值，可复用。
+-   第一步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-c` 进行比对，由于二者 `key` 值不同，所以不可复用，什么都不做。
+-   第二步：拿旧 `children` 中的 `li-c` 和新 `children` 中的 `li-b` 进行比对，不可复用，什么都不做。
+-   第三步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-b` 进行比对，不可复用，什么都不做。
+-   第四步：拿旧 `children` 中的 `li-c` 和新 `children` 中的 `li-c` 进行比对，此时，两个节点拥有相同的 `key` 值，可复用。
 
 到了第四步，对于 `li-c` 节点来说，它原本是整个 `children` 的最后一个子节点，但是现在变成了新 `children` 的第一个子节点，按照上端比较的算法逻辑，此时会把 `li-c` 节点所对应的真实 DOM 移动到 `li-a` 节点所对应真实 DOM 的前面，即：
 
@@ -872,20 +830,18 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 
 ```js {11-14}
 while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-  if (oldStartVNode.key === newStartVNode.key) {
-    // 省略...
-  } else if (oldEndVNode.key === newEndVNode.key) {
-    // 省略...
-  } else if (oldStartVNode.key === newEndVNode.key) {
-    // 省略...
-  } else if (oldEndVNode.key === newStartVNode.key) {
-    // 省略...
-  } else {
-    // 遍历旧 children，试图寻找与 newStartVNode 拥有相同 key 值的元素
-    const idxInOld = prevChildren.findIndex(
-      node => node.key === newStartVNode.key
-    )
-  }
+    if (oldStartVNode.key === newStartVNode.key) {
+        // 省略...
+    } else if (oldEndVNode.key === newEndVNode.key) {
+        // 省略...
+    } else if (oldStartVNode.key === newEndVNode.key) {
+        // 省略...
+    } else if (oldEndVNode.key === newStartVNode.key) {
+        // 省略...
+    } else {
+        // 遍历旧 children，试图寻找与 newStartVNode 拥有相同 key 值的元素
+        const idxInOld = prevChildren.findIndex((node) => node.key === newStartVNode.key);
+    }
 }
 ```
 
@@ -897,32 +853,30 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 
 ```js {15-26}
 while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-  if (oldStartVNode.key === newStartVNode.key) {
-    // 省略...
-  } else if (oldEndVNode.key === newEndVNode.key) {
-    // 省略...
-  } else if (oldStartVNode.key === newEndVNode.key) {
-    // 省略...
-  } else if (oldEndVNode.key === newStartVNode.key) {
-    // 省略...
-  } else {
-    // 遍历旧 children，试图寻找与 newStartVNode 拥有相同 key 值的元素
-    const idxInOld = prevChildren.findIndex(
-      node => node.key === newStartVNode.key
-    )
-    if (idxInOld >= 0) {
-      // vnodeToMove 就是在旧 children 中找到的节点，该节点所对应的真实 DOM 应该被移动到最前面
-      const vnodeToMove = prevChildren[idxInOld]
-      // 调用 patch 函数完成更新
-      patch(vnodeToMove, newStartVNode, container)
-      // 把 vnodeToMove.el 移动到最前面，即 oldStartVNode.el 的前面
-      container.insertBefore(vnodeToMove.el, oldStartVNode.el)
-      // 由于旧 children 中该位置的节点所对应的真实 DOM 已经被移动，所以将其设置为 undefined
-      prevChildren[idxInOld] = undefined
+    if (oldStartVNode.key === newStartVNode.key) {
+        // 省略...
+    } else if (oldEndVNode.key === newEndVNode.key) {
+        // 省略...
+    } else if (oldStartVNode.key === newEndVNode.key) {
+        // 省略...
+    } else if (oldEndVNode.key === newStartVNode.key) {
+        // 省略...
+    } else {
+        // 遍历旧 children，试图寻找与 newStartVNode 拥有相同 key 值的元素
+        const idxInOld = prevChildren.findIndex((node) => node.key === newStartVNode.key);
+        if (idxInOld >= 0) {
+            // vnodeToMove 就是在旧 children 中找到的节点，该节点所对应的真实 DOM 应该被移动到最前面
+            const vnodeToMove = prevChildren[idxInOld];
+            // 调用 patch 函数完成更新
+            patch(vnodeToMove, newStartVNode, container);
+            // 把 vnodeToMove.el 移动到最前面，即 oldStartVNode.el 的前面
+            container.insertBefore(vnodeToMove.el, oldStartVNode.el);
+            // 由于旧 children 中该位置的节点所对应的真实 DOM 已经被移动，所以将其设置为 undefined
+            prevChildren[idxInOld] = undefined;
+        }
+        // 将 newStartIdx 下移一位
+        newStartVNode = nextChildren[++newStartIdx];
     }
-    // 将 newStartIdx 下移一位
-    newStartVNode = nextChildren[++newStartIdx]
-  }
 }
 ```
 
@@ -934,30 +888,28 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 
 ```js {2-5}
 while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-  if (!oldStartVNode) {
-    oldStartVNode = prevChildren[++oldStartIdx]
-  } else if (!oldEndVNode) {
-    oldEndVNode = prevChildren[--oldEndIdx]
-  } else if (oldStartVNode.key === newStartVNode.key) {
-    // 省略...
-  } else if (oldEndVNode.key === newEndVNode.key) {
-    // 省略...
-  } else if (oldStartVNode.key === newEndVNode.key) {
-    // 省略...
-  } else if (oldEndVNode.key === newStartVNode.key) {
-    // 省略...
-  } else {
-    const idxInOld = prevChildren.findIndex(
-      node => node.key === newStartVNode.key
-    )
-    if (idxInOld >= 0) {
-      const vnodeToMove = prevChildren[idxInOld]
-      patch(vnodeToMove, newStartVNode, container)
-      prevChildren[idxInOld] = undefined
-      container.insertBefore(vnodeToMove.el, oldStartVNode.el)
+    if (!oldStartVNode) {
+        oldStartVNode = prevChildren[++oldStartIdx];
+    } else if (!oldEndVNode) {
+        oldEndVNode = prevChildren[--oldEndIdx];
+    } else if (oldStartVNode.key === newStartVNode.key) {
+        // 省略...
+    } else if (oldEndVNode.key === newEndVNode.key) {
+        // 省略...
+    } else if (oldStartVNode.key === newEndVNode.key) {
+        // 省略...
+    } else if (oldEndVNode.key === newStartVNode.key) {
+        // 省略...
+    } else {
+        const idxInOld = prevChildren.findIndex((node) => node.key === newStartVNode.key);
+        if (idxInOld >= 0) {
+            const vnodeToMove = prevChildren[idxInOld];
+            patch(vnodeToMove, newStartVNode, container);
+            prevChildren[idxInOld] = undefined;
+            container.insertBefore(vnodeToMove.el, oldStartVNode.el);
+        }
+        newStartVNode = nextChildren[++newStartIdx];
     }
-    newStartVNode = nextChildren[++newStartIdx]
-  }
 }
 ```
 
@@ -977,33 +929,31 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 
 ```js {24-25}
 while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-  if (!oldStartVNode) {
-    oldStartVNode = prevChildren[++oldStartIdx]
-  } else if (!oldEndVNode) {
-    oldEndVNode = prevChildren[--oldEndIdx]
-  } else if (oldStartVNode.key === newStartVNode.key) {
-    // 省略...
-  } else if (oldEndVNode.key === newEndVNode.key) {
-    // 省略...
-  } else if (oldStartVNode.key === newEndVNode.key) {
-    // 省略...
-  } else if (oldEndVNode.key === newStartVNode.key) {
-    // 省略...
-  } else {
-    const idxInOld = prevChildren.findIndex(
-      node => node.key === newStartVNode.key
-    )
-    if (idxInOld >= 0) {
-      const vnodeToMove = prevChildren[idxInOld]
-      patch(vnodeToMove, newStartVNode, container)
-      prevChildren[idxInOld] = undefined
-      container.insertBefore(vnodeToMove.el, oldStartVNode.el)
+    if (!oldStartVNode) {
+        oldStartVNode = prevChildren[++oldStartIdx];
+    } else if (!oldEndVNode) {
+        oldEndVNode = prevChildren[--oldEndIdx];
+    } else if (oldStartVNode.key === newStartVNode.key) {
+        // 省略...
+    } else if (oldEndVNode.key === newEndVNode.key) {
+        // 省略...
+    } else if (oldStartVNode.key === newEndVNode.key) {
+        // 省略...
+    } else if (oldEndVNode.key === newStartVNode.key) {
+        // 省略...
     } else {
-      // 使用 mount 函数挂载新节点
-      mount(newStartVNode, container, false, oldStartVNode.el)
+        const idxInOld = prevChildren.findIndex((node) => node.key === newStartVNode.key);
+        if (idxInOld >= 0) {
+            const vnodeToMove = prevChildren[idxInOld];
+            patch(vnodeToMove, newStartVNode, container);
+            prevChildren[idxInOld] = undefined;
+            container.insertBefore(vnodeToMove.el, oldStartVNode.el);
+        } else {
+            // 使用 mount 函数挂载新节点
+            mount(newStartVNode, container, false, oldStartVNode.el);
+        }
+        newStartVNode = nextChildren[++newStartIdx];
     }
-    newStartVNode = nextChildren[++newStartIdx]
-  }
 }
 ```
 
@@ -1019,8 +969,8 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 
 与之前的案例不同，在之前的案例中新 `children` 中节点的顺序为 `li-d`、`li-a`、`li-c` 最后是 `li-b`，我们观察上图可以发现，本例中新 `children` 的节点顺序为 `li-d`、`li-a`、`li-b` 最后是 `li-c`，那么顺序的不同会对结果产生影响吗？想弄明白这个问题很简单，我们只需要按照双端比较算法的思路来模拟执行一次即可得出结论：
 
-- 第一步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-d` 进行比对，由于二者 `key` 值不同，所以不可复用，什么都不做。
-- 第二步：拿旧 `children` 中的 `li-c` 和新 `children` 中的 `li-c` 进行比对，此时，二者拥有相同的 `key` 值。
+-   第一步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-d` 进行比对，由于二者 `key` 值不同，所以不可复用，什么都不做。
+-   第二步：拿旧 `children` 中的 `li-c` 和新 `children` 中的 `li-c` 进行比对，此时，二者拥有相同的 `key` 值。
 
 在第二步中找到了可复用节点，接着使用 `patch` 函数对该节点进行更新，同时将相应的位置索引下移一位，如下图所示：
 
@@ -1038,13 +988,13 @@ while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
 
 ```js {4-9}
 while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-  // 省略...
+    // 省略...
 }
 if (oldEndIdx < oldStartIdx) {
-  // 添加新节点
-  for (let i = newStartIdx; i <= newEndIdx; i++) {
-    mount(nextChildren[i], container, false, oldStartVNode.el)
-  }
+    // 添加新节点
+    for (let i = newStartIdx; i <= newEndIdx; i++) {
+        mount(nextChildren[i], container, false, oldStartVNode.el);
+    }
 }
 ```
 
@@ -1062,7 +1012,7 @@ if (oldEndIdx < oldStartIdx) {
 
 观察上图可以发现，在新 `children` 中 `li-b` 节点已经不存在了，所以完整的更新过程应该包含：**移除已不存在节点所对应真实 DOM 的功能**。为了找到哪些节点需要移除，我们首先还是按照双端比较的算法步骤模拟执行一下即可：
 
-- 第一步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-a` 进行比对，此时，二者拥有相同的 `key` 值。
+-   第一步：拿旧 `children` 中的 `li-a` 和新 `children` 中的 `li-a` 进行比对，此时，二者拥有相同的 `key` 值。
 
 在第一轮的第一步比对中，我们就找到了可复用节点，所以此时会调用 `patch` 函数更新该节点，并更新相应的索引值，可以用下图表示这一轮更新完成之后算法所处的状态：
 
@@ -1070,8 +1020,8 @@ if (oldEndIdx < oldStartIdx) {
 
 这时 `newStartIdx` 和 `newEndIdx` 的值相等，都是 `1`，不过循环的条件仍然满足，所以会立即进行下一轮比较：
 
-- 第一步：拿旧 `children` 中的 `li-b` 和新 `children` 中的 `li-c` 进行比对，由于二者 `key` 值不同，所以不可复用，什么都不做。
-- 第二步：拿旧 `children` 中的 `li-c` 和新 `children` 中的 `li-c` 进行比对，此时，二者拥有相同的 `key` 值。
+-   第一步：拿旧 `children` 中的 `li-b` 和新 `children` 中的 `li-c` 进行比对，由于二者 `key` 值不同，所以不可复用，什么都不做。
+-   第二步：拿旧 `children` 中的 `li-c` 和新 `children` 中的 `li-c` 进行比对，此时，二者拥有相同的 `key` 值。
 
 在第二步的比对中找到了可复用节点 `li-c`，接着更新该节点，并将 `oldEndIdx` 和 `newEndIdx` 分别前移一位，最终结果如下：
 
@@ -1081,18 +1031,18 @@ if (oldEndIdx < oldStartIdx) {
 
 ```js {9-13}
 while (oldStartIdx <= oldEndIdx && newStartIdx <= newEndIdx) {
-  // 省略...
+    // 省略...
 }
 if (oldEndIdx < oldStartIdx) {
-  // 添加新节点
-  for (let i = newStartIdx; i <= newEndIdx; i++) {
-    mount(nextChildren[i], container, false, oldStartVNode.el)
-  }
+    // 添加新节点
+    for (let i = newStartIdx; i <= newEndIdx; i++) {
+        mount(nextChildren[i], container, false, oldStartVNode.el);
+    }
 } else if (newEndIdx < newStartIdx) {
-  // 移除操作
-  for (let i = oldStartIdx; i <= oldEndIdx; i++) {
-    container.removeChild(prevChildren[i].el)
-  }
+    // 移除操作
+    for (let i = oldStartIdx; i <= oldEndIdx; i++) {
+        container.removeChild(prevChildren[i].el);
+    }
 }
 ```
 
@@ -1117,7 +1067,7 @@ if (oldEndIdx < oldStartIdx) {
 实际上本节介绍的 `Diff` 算法最早应用于两个不同文本之间的差异比较，在文本 `Diff` 中，真正进行核心的 `Diff` 算法之前，会有一个预处理的过程，例如可以先对两个文本进行“相等”比较：
 
 ```js
-if (text1 === text2) return
+if (text1 === text2) return;
 ```
 
 如果两个文本相等，则无需进行真正的 `Diff`，预处理的好处之一就是**在某些情况下能够避免 `Diff` 算法的执行**，还有比这更加高效的方式吗？当然，这是一个简单的情形，除此之外，在文本的 `Diff` 中还有其他的预处理过程，其中就包含：去除**相同的前缀和后缀**。什么意思呢？假设我们有如下两个文本：
@@ -1177,16 +1127,16 @@ text2:
 ```js
 // 更新相同的前缀节点
 // j 为指向新旧 children 中第一个节点的索引
-let j = 0
-let prevVNode = prevChildren[j]
-let nextVNode = nextChildren[j]
+let j = 0;
+let prevVNode = prevChildren[j];
+let nextVNode = nextChildren[j];
 // while 循环向后遍历，直到遇到拥有不同 key 值的节点为止
 while (prevVNode.key === nextVNode.key) {
-  // 调用 patch 函数更新
-  patch(prevVNode, nextVNode, container)
-  j++
-  prevVNode = prevChildren[j]
-  nextVNode = nextChildren[j]
+    // 调用 patch 函数更新
+    patch(prevVNode, nextVNode, container);
+    j++;
+    prevVNode = prevChildren[j];
+    nextVNode = nextChildren[j];
 }
 ```
 
@@ -1200,21 +1150,21 @@ while (prevVNode.key === nextVNode.key) {
 // 更新相同的后缀节点
 
 // 指向旧 children 最后一个节点的索引
-let prevEnd = prevChildren.length - 1
+let prevEnd = prevChildren.length - 1;
 // 指向新 children 最后一个节点的索引
-let nextEnd = nextChildren.length - 1
+let nextEnd = nextChildren.length - 1;
 
-prevVNode = prevChildren[prevEnd]
-nextVNode = nextChildren[nextEnd]
+prevVNode = prevChildren[prevEnd];
+nextVNode = nextChildren[nextEnd];
 
 // while 循环向前遍历，直到遇到拥有不同 key 值的节点为止
 while (prevVNode.key === nextVNode.key) {
-  // 调用 patch 函数更新
-  patch(prevVNode, nextVNode, container)
-  prevEnd--
-  nextEnd--
-  prevVNode = prevChildren[prevEnd]
-  nextVNode = nextChildren[nextEnd]
+    // 调用 patch 函数更新
+    patch(prevVNode, nextVNode, container);
+    prevEnd--;
+    nextEnd--;
+    prevVNode = prevChildren[prevEnd];
+    nextVNode = nextChildren[nextEnd];
 }
 ```
 
@@ -1239,14 +1189,13 @@ nextEnd: 1
 ```js
 // 满足条件，则说明从 j -> nextEnd 之间的节点应作为新节点插入
 if (j > prevEnd && j <= nextEnd) {
-  // 所有新节点应该插入到位于 nextPos 位置的节点的前面
-  const nextPos = nextEnd + 1
-  const refNode =
-    nextPos < nextChildren.length ? nextChildren[nextPos].el : null
-  // 采用 while 循环，调用 mount 函数挂载节点
-  while (j <= nextEnd) {
-    mount(nextChildren[j++], container, false, refNode)
-  }
+    // 所有新节点应该插入到位于 nextPos 位置的节点的前面
+    const nextPos = nextEnd + 1;
+    const refNode = nextPos < nextChildren.length ? nextChildren[nextPos].el : null;
+    // 采用 while 循环，调用 mount 函数挂载节点
+    while (j <= nextEnd) {
+        mount(nextChildren[j++], container, false, refNode);
+    }
 }
 ```
 
@@ -1270,18 +1219,17 @@ nextEnd: 0
 
 ```js {9-13}
 if (j > prevEnd && j <= nextEnd) {
-  // j -> nextEnd 之间的节点应该被添加
-  const nextPos = nextEnd + 1
-  const refNode =
-    nextPos < nextChildren.length ? nextChildren[nextPos].el : null
-  while (j <= nextEnd) {
-    mount(nextChildren[j++], container, false, refNode)
-  }
+    // j -> nextEnd 之间的节点应该被添加
+    const nextPos = nextEnd + 1;
+    const refNode = nextPos < nextChildren.length ? nextChildren[nextPos].el : null;
+    while (j <= nextEnd) {
+        mount(nextChildren[j++], container, false, refNode);
+    }
 } else if (j > nextEnd) {
-  // j -> prevEnd 之间的节点应该被移除
-  while (j <= prevEnd) {
-    container.removeChild(prevChildren[j++].el)
-  }
+    // j -> prevEnd 之间的节点应该被移除
+    while (j <= prevEnd) {
+        container.removeChild(prevChildren[j++].el);
+    }
 }
 ```
 
@@ -1290,28 +1238,28 @@ if (j > prevEnd && j <= nextEnd) {
 ```js {5,13-14,19,22}
 // while 循环向后遍历，直到遇到拥有不同 key 值的节点为止
 while (prevVNode.key === nextVNode.key) {
-  // 调用 patch 函数更新
-  // 省略...
-  j++
-  // 省略...
+    // 调用 patch 函数更新
+    // 省略...
+    j++;
+    // 省略...
 }
 
 // while 循环向前遍历，直到遇到拥有不同 key 值的节点为止
 while (prevVNode.key === nextVNode.key) {
-  // 调用 patch 函数更新
-  // 省略...
-  prevEnd--
-  nextEnd--
-  // 省略...
+    // 调用 patch 函数更新
+    // 省略...
+    prevEnd--;
+    nextEnd--;
+    // 省略...
 }
 
 // 满足条件，则说明从 j -> nextEnd 之间的节点应作为新节点插入
 if (j > prevEnd && j <= nextEnd) {
-  // j -> nextEnd 之间的节点应该被添加
-  // 省略...
+    // j -> nextEnd 之间的节点应该被添加
+    // 省略...
 } else if (j > nextEnd) {
-  // j -> prevEnd 之间的节点应该被移除
-  // 省略...
+    // j -> prevEnd 之间的节点应该被移除
+    // 省略...
 }
 ```
 
@@ -1319,28 +1267,28 @@ if (j > prevEnd && j <= nextEnd) {
 
 ```js {1,5-7,18-20}
 outer: {
-  while (prevVNode.key === nextVNode.key) {
-    patch(prevVNode, nextVNode, container)
-    j++
-    if (j > prevEnd || j > nextEnd) {
-      break outer
+    while (prevVNode.key === nextVNode.key) {
+        patch(prevVNode, nextVNode, container);
+        j++;
+        if (j > prevEnd || j > nextEnd) {
+            break outer;
+        }
+        prevVNode = prevChildren[j];
+        nextVNode = nextChildren[j];
     }
-    prevVNode = prevChildren[j]
-    nextVNode = nextChildren[j]
-  }
-  // 更新相同的后缀节点
-  prevVNode = prevChildren[prevEnd]
-  nextVNode = nextChildren[nextEnd]
-  while (prevVNode.key === nextVNode.key) {
-    patch(prevVNode, nextVNode, container)
-    prevEnd--
-    nextEnd--
-    if (j > prevEnd || j > nextEnd) {
-      break outer
+    // 更新相同的后缀节点
+    prevVNode = prevChildren[prevEnd];
+    nextVNode = nextChildren[nextEnd];
+    while (prevVNode.key === nextVNode.key) {
+        patch(prevVNode, nextVNode, container);
+        prevEnd--;
+        nextEnd--;
+        if (j > prevEnd || j > nextEnd) {
+            break outer;
+        }
+        prevVNode = prevChildren[prevEnd];
+        nextVNode = nextChildren[nextEnd];
     }
-    prevVNode = prevChildren[prevEnd]
-    nextVNode = nextChildren[nextEnd]
-  }
 }
 ```
 
@@ -1367,11 +1315,11 @@ outer: {
 ```js
 // 满足条件，则说明从 j -> nextEnd 之间的节点应作为新节点插入
 if (j > prevEnd && j <= nextEnd) {
-  // j -> nextEnd 之间的节点应该被添加
-  // 省略...
+    // j -> nextEnd 之间的节点应该被添加
+    // 省略...
 } else if (j > nextEnd) {
-  // j -> prevEnd 之间的节点应该被移除
-  // 省略...
+    // j -> prevEnd 之间的节点应该被移除
+    // 省略...
 }
 ```
 
@@ -1380,13 +1328,13 @@ if (j > prevEnd && j <= nextEnd) {
 ```js {8-10}
 // 满足条件，则说明从 j -> nextEnd 之间的节点应作为新节点插入
 if (j > prevEnd && j <= nextEnd) {
-  // j -> nextEnd 之间的节点应该被添加
-  // 省略...
+    // j -> nextEnd 之间的节点应该被添加
+    // 省略...
 } else if (j > nextEnd) {
-  // j -> prevEnd 之间的节点应该被移除
-  // 省略...
+    // j -> prevEnd 之间的节点应该被移除
+    // 省略...
 } else {
-  // 在这里编写处理逻辑
+    // 在这里编写处理逻辑
 }
 ```
 
@@ -1398,16 +1346,16 @@ if (j > prevEnd && j <= nextEnd) {
 
 ```js {7-11}
 if (j > prevEnd && j <= nextEnd) {
-  // 省略...
+    // 省略...
 } else if (j > nextEnd) {
-  // 省略...
+    // 省略...
 } else {
-  // 构造 source 数组
-  const nextLeft = nextEnd - j + 1  // 新 children 中剩余未处理节点的数量
-  const source = []
-  for (let i = 0; i < nextLeft; i++) {
-    source.push(-1)
-  }
+    // 构造 source 数组
+    const nextLeft = nextEnd - j + 1; // 新 children 中剩余未处理节点的数量
+    const source = [];
+    for (let i = 0; i < nextLeft; i++) {
+        source.push(-1);
+    }
 }
 ```
 
@@ -1418,49 +1366,49 @@ if (j > prevEnd && j <= nextEnd) {
 我们可以通过两层 `for` 循环来完成这个工作，外层循环用于遍历旧 `children`，内层循环用于遍历新 `children`：
 
 ```js
-const prevStart = j
-const nextStart = j
+const prevStart = j;
+const nextStart = j;
 // 遍历旧 children
 for (let i = prevStart; i <= prevEnd; i++) {
-  const prevVNode = prevChildren[i]
-  // 遍历新 children
-  for (let k = nextStart; k <= nextEnd; k++) {
-    const nextVNode = nextChildren[k]
-    // 找到拥有相同 key 值的可复用节点
-    if (prevVNode.key === nextVNode.key) {
-      // patch 更新
-      patch(prevVNode, nextVNode, container)
-      // 更新 source 数组
-      source[k - nextStart] = i
+    const prevVNode = prevChildren[i];
+    // 遍历新 children
+    for (let k = nextStart; k <= nextEnd; k++) {
+        const nextVNode = nextChildren[k];
+        // 找到拥有相同 key 值的可复用节点
+        if (prevVNode.key === nextVNode.key) {
+            // patch 更新
+            patch(prevVNode, nextVNode, container);
+            // 更新 source 数组
+            source[k - nextStart] = i;
+        }
     }
-  }
 }
 ```
 
 如上代码所示，外层循环逐个从旧 `children` 中取出未处理的节点，并尝试在新 `children` 中寻找拥有相同 `key` 值的可复用节点，一旦找到了可复用节点，则调用 `patch` 函数更新之。接着更新 `source` 数组中对应位置的值，这里需要注意的是，由于 `k - nextStart` 的值才是正确的位置索引，而非 `k` 本身，并且外层循环中变量 `i` 的值就代表了该节点在旧 `children` 中的位置，所以直接将 `i` 赋值给 `source[k - nextStart]` 即可达到目的，最终的效果就如上图中所展示的那样。可以看到 `source` 数组的第四个元素值仍然为初始值 `-1`，这是因为**新 `children` 中的 `li-g` 节点不存在于旧 `children` 中**。除此之外，还有一件很重要的事儿需要做，即判断是否需要移动节点，判断的方式类似于 `React` 所采用的方式，如下高亮代码所示：
 
 ```js {3-4,15-19}
-const prevStart = j
-const nextStart = j
-let moved = false
-let pos = 0
+const prevStart = j;
+const nextStart = j;
+let moved = false;
+let pos = 0;
 for (let i = prevStart; i <= prevEnd; i++) {
-  const prevVNode = prevChildren[i]
-  for (let k = nextStart; k <= nextEnd; k++) {
-    const nextVNode = nextChildren[k]
-    if (prevVNode.key === nextVNode.key) {
-      // patch 更新
-      patch(prevVNode, nextVNode, container)
-      // 更新 source 数组
-      source[k - nextStart] = i
-      // 判断是否需要移动
-      if (k < pos) {
-        moved = true
-      } else {
-        pos = k
-      }
+    const prevVNode = prevChildren[i];
+    for (let k = nextStart; k <= nextEnd; k++) {
+        const nextVNode = nextChildren[k];
+        if (prevVNode.key === nextVNode.key) {
+            // patch 更新
+            patch(prevVNode, nextVNode, container);
+            // 更新 source 数组
+            source[k - nextStart] = i;
+            // 判断是否需要移动
+            if (k < pos) {
+                moved = true;
+            } else {
+                pos = k;
+            }
+        }
     }
-  }
 }
 ```
 
@@ -1473,36 +1421,36 @@ for (let i = prevStart; i <= prevEnd; i++) {
 `Index Map` 中的键是节点的 `key`，值是节点在新 `children` 中的位置索引，由于数据结构带来的优势，使得我们能够非常快速的定位旧 `children` 中的节点在新 `children` 中的位置，落实的代码如下：
 
 ```js
-const prevStart = j
-const nextStart = j
-let moved = false
-let pos = 0
+const prevStart = j;
+const nextStart = j;
+let moved = false;
+let pos = 0;
 // 构建索引表
-const keyIndex = {}
-for(let i = nextStart; i <= nextEnd; i++) {
-  keyIndex[nextChildren[i].key] = i
+const keyIndex = {};
+for (let i = nextStart; i <= nextEnd; i++) {
+    keyIndex[nextChildren[i].key] = i;
 }
 // 遍历旧 children 的剩余未处理节点
-for(let i = prevStart; i <= prevEnd; i++) {
-  prevVNode = prevChildren[i]
-  // 通过索引表快速找到新 children 中具有相同 key 的节点的位置
-  const k = keyIndex[prevVNode.key]
+for (let i = prevStart; i <= prevEnd; i++) {
+    prevVNode = prevChildren[i];
+    // 通过索引表快速找到新 children 中具有相同 key 的节点的位置
+    const k = keyIndex[prevVNode.key];
 
-  if (typeof k !== 'undefined') {
-    nextVNode = nextChildren[k]
-    // patch 更新
-    patch(prevVNode, nextVNode, container)
-    // 更新 source 数组
-    source[k - nextStart] = i
-    // 判断是否需要移动
-    if (k < pos) {
-      moved = true
+    if (typeof k !== 'undefined') {
+        nextVNode = nextChildren[k];
+        // patch 更新
+        patch(prevVNode, nextVNode, container);
+        // 更新 source 数组
+        source[k - nextStart] = i;
+        // 判断是否需要移动
+        if (k < pos) {
+            moved = true;
+        } else {
+            pos = k;
+        }
     } else {
-      pos = k
+        // 没找到
     }
-  } else {
-    // 没找到
-  }
 }
 ```
 
@@ -1512,52 +1460,52 @@ for(let i = prevStart; i <= prevEnd; i++) {
 
 ```js {11}
 // 遍历旧 children 的剩余未处理节点
-for(let i = prevStart; i <= prevEnd; i++) {
-  prevVNode = prevChildren[i]
-  // 通过索引表快速找到新 children 中具有相同 key 的节点的位置
-  const k = keyIndex[prevVNode.key]
+for (let i = prevStart; i <= prevEnd; i++) {
+    prevVNode = prevChildren[i];
+    // 通过索引表快速找到新 children 中具有相同 key 的节点的位置
+    const k = keyIndex[prevVNode.key];
 
-  if (typeof k !== 'undefined') {
-    // 省略...
-  } else {
-    // 没找到，说明旧节点在新 children 中已经不存在了，应该移除
-    container.removeChild(prevVNode.el)
-  }
+    if (typeof k !== 'undefined') {
+        // 省略...
+    } else {
+        // 没找到，说明旧节点在新 children 中已经不存在了，应该移除
+        container.removeChild(prevVNode.el);
+    }
 }
 ```
 
 除此之外，我们还需要一个数量标识，用来代表**已经更新过的节点的数量**。我们知道，**已经更新过的节点数量**应该小于新 `children` 中需要更新的节点数量，一旦更新过的节点数量超过了新 `children` 中需要更新的节点数量，则说明该节点是多余的节点，我们也应该将其移除，如下高亮代码所示：
 
 ```js {1,6,13,28}
-let patched = 0
+let patched = 0;
 // 遍历旧 children 的剩余未处理节点
 for (let i = prevStart; i <= prevEnd; i++) {
-  prevVNode = prevChildren[i]
+    prevVNode = prevChildren[i];
 
-  if (patched < nextLeft) {
-    // 通过索引表快速找到新 children 中具有相同 key 的节点的位置
-    const k = keyIndex[prevVNode.key]
-    if (typeof k !== 'undefined') {
-      nextVNode = nextChildren[k]
-      // patch 更新
-      patch(prevVNode, nextVNode, container)
-      patched++
-      // 更新 source 数组
-      source[k - nextStart] = i
-      // 判断是否需要移动
-      if (k < pos) {
-        moved = true
-      } else {
-        pos = k
-      }
+    if (patched < nextLeft) {
+        // 通过索引表快速找到新 children 中具有相同 key 的节点的位置
+        const k = keyIndex[prevVNode.key];
+        if (typeof k !== 'undefined') {
+            nextVNode = nextChildren[k];
+            // patch 更新
+            patch(prevVNode, nextVNode, container);
+            patched++;
+            // 更新 source 数组
+            source[k - nextStart] = i;
+            // 判断是否需要移动
+            if (k < pos) {
+                moved = true;
+            } else {
+                pos = k;
+            }
+        } else {
+            // 没找到，说明旧节点在新 children 中已经不存在了，应该移除
+            container.removeChild(prevVNode.el);
+        }
     } else {
-      // 没找到，说明旧节点在新 children 中已经不存在了，应该移除
-      container.removeChild(prevVNode.el)
+        // 多余的节点，应该移除
+        container.removeChild(prevVNode.el);
     }
-  } else {
-    // 多余的节点，应该移除
-    container.removeChild(prevVNode.el)
-  }
 }
 ```
 
@@ -1577,7 +1525,7 @@ for (let i = prevStart; i <= prevEnd; i++) {
 
 ```js
 if (moved) {
-  // 如果 moved 为真，则需要进行 DOM 移动操作
+    // 如果 moved 为真，则需要进行 DOM 移动操作
 }
 ```
 
@@ -1585,8 +1533,8 @@ if (moved) {
 
 ```js {3}
 if (moved) {
-  // 计算最长递增子序列
-  const seq = lis(sources) // [ 0, 1 ]
+    // 计算最长递增子序列
+    const seq = lis(sources); // [ 0, 1 ]
 }
 ```
 
@@ -1616,19 +1564,19 @@ if (moved) {
 
 ```js
 if (moved) {
-  const seq = lis(source)
-  // j 指向最长递增子序列的最后一个值
-  let j = seq.length - 1
-  // 从后向前遍历新 children 中的剩余未处理节点
-  for (let i = nextLeft - 1; i >= 0; i--) {
-    if (i !== seq[j]) {
-      // 说明该节点需要移动
-    } else {
-      // 当 i === seq[j] 时，说明该位置的节点不需要移动
-      // 并让 j 指向下一个位置
-      j--
+    const seq = lis(source);
+    // j 指向最长递增子序列的最后一个值
+    let j = seq.length - 1;
+    // 从后向前遍历新 children 中的剩余未处理节点
+    for (let i = nextLeft - 1; i >= 0; i--) {
+        if (i !== seq[j]) {
+            // 说明该节点需要移动
+        } else {
+            // 当 i === seq[j] 时，说明该位置的节点不需要移动
+            // 并让 j 指向下一个位置
+            j--;
+        }
     }
-  }
 }
 ```
 
@@ -1636,36 +1584,29 @@ if (moved) {
 
 ```js {7-23}
 if (moved) {
-  const seq = lis(source)
-  // j 指向最长递增子序列的最后一个值
-  let j = seq.length - 1
-  // 从后向前遍历新 children 中的剩余未处理节点
-  for (let i = nextLeft - 1; i >= 0; i--) {
-    if (source[i] === -1) {
-      // 作为全新的节点挂载
+    const seq = lis(source);
+    // j 指向最长递增子序列的最后一个值
+    let j = seq.length - 1;
+    // 从后向前遍历新 children 中的剩余未处理节点
+    for (let i = nextLeft - 1; i >= 0; i--) {
+        if (source[i] === -1) {
+            // 作为全新的节点挂载
 
-      // 该节点在新 children 中的真实位置索引
-      const pos = i + nextStart
-      const nextVNode = nextChildren[pos]
-      // 该节点下一个节点的位置索引
-      const nextPos = pos + 1
-      // 挂载
-      mount(
-        nextVNode,
-        container,
-        false,
-        nextPos < nextChildren.length
-          ? nextChildren[nextPos].el
-          : null
-      )
-    } else if (i !== seq[j]) {
-      // 说明该节点需要移动
-    } else {
-      // 当 i === seq[j] 时，说明该位置的节点不需要移动
-      // 并让 j 指向下一个位置
-      j--
+            // 该节点在新 children 中的真实位置索引
+            const pos = i + nextStart;
+            const nextVNode = nextChildren[pos];
+            // 该节点下一个节点的位置索引
+            const nextPos = pos + 1;
+            // 挂载
+            mount(nextVNode, container, false, nextPos < nextChildren.length ? nextChildren[nextPos].el : null);
+        } else if (i !== seq[j]) {
+            // 说明该节点需要移动
+        } else {
+            // 当 i === seq[j] 时，说明该位置的节点不需要移动
+            // 并让 j 指向下一个位置
+            j--;
+        }
     }
-  }
 }
 ```
 
@@ -1677,49 +1618,37 @@ if (moved) {
 
 ```js {27-38}
 if (moved) {
-  const seq = lis(source)
-  // j 指向最长递增子序列的最后一个值
-  let j = seq.length - 1
-  // 从后向前遍历新 children 中的剩余未处理节点
-  for (let i = nextLeft - 1; i >= 0; i--) {
-    if (source[i] === -1) {
-      // 作为全新的节点挂载
+    const seq = lis(source);
+    // j 指向最长递增子序列的最后一个值
+    let j = seq.length - 1;
+    // 从后向前遍历新 children 中的剩余未处理节点
+    for (let i = nextLeft - 1; i >= 0; i--) {
+        if (source[i] === -1) {
+            // 作为全新的节点挂载
 
-      // 该节点在新 children 中的真实位置索引
-      const pos = i + nextStart
-      const nextVNode = nextChildren[pos]
-      // 该节点下一个节点的位置索引
-      const nextPos = pos + 1
-      // 挂载
-      mount(
-        nextVNode,
-        container,
-        false,
-        nextPos < nextChildren.length
-          ? nextChildren[nextPos].el
-          : null
-      )
-    } else if (i !== seq[j]) {
-      // 说明该节点需要移动
+            // 该节点在新 children 中的真实位置索引
+            const pos = i + nextStart;
+            const nextVNode = nextChildren[pos];
+            // 该节点下一个节点的位置索引
+            const nextPos = pos + 1;
+            // 挂载
+            mount(nextVNode, container, false, nextPos < nextChildren.length ? nextChildren[nextPos].el : null);
+        } else if (i !== seq[j]) {
+            // 说明该节点需要移动
 
-      // 该节点在新 children 中的真实位置索引
-      const pos = i + nextStart
-      const nextVNode = nextChildren[pos]
-      // 该节点下一个节点的位置索引
-      const nextPos = pos + 1
-      // 移动
-      container.insertBefore(
-        nextVNode.el,
-        nextPos < nextChildren.length
-          ? nextChildren[nextPos].el
-          : null
-      )
-    } else {
-      // 当 i === seq[j] 时，说明该位置的节点不需要移动
-      // 并让 j 指向下一个位置
-      j--
+            // 该节点在新 children 中的真实位置索引
+            const pos = i + nextStart;
+            const nextVNode = nextChildren[pos];
+            // 该节点下一个节点的位置索引
+            const nextPos = pos + 1;
+            // 移动
+            container.insertBefore(nextVNode.el, nextPos < nextChildren.length ? nextChildren[nextPos].el : null);
+        } else {
+            // 当 i === seq[j] 时，说明该位置的节点不需要移动
+            // 并让 j 指向下一个位置
+            j--;
+        }
     }
-  }
 }
 ```
 
@@ -1779,15 +1708,15 @@ if (moved) {
 
 到现在为止，不知道大家发现什么规律没有？如何计算一个格子中的值呢？实际很简单，规则是：
 
-- 1、拿该格子对应的数字 `a` 与其后面的所有格子对应的数字 `b` 进行比较，如果条件 `a < b` 成立，则用数字 `b` 对应格子中的值加 `1`，并将结果填充到数字 `a` 对应的格子中。
-- 2、只有当计算出来的值大于数字 `a` 所对应的格子中的值时，才需要更新格子中的数值。
+-   1、拿该格子对应的数字 `a` 与其后面的所有格子对应的数字 `b` 进行比较，如果条件 `a < b` 成立，则用数字 `b` 对应格子中的值加 `1`，并将结果填充到数字 `a` 对应的格子中。
+-   2、只有当计算出来的值大于数字 `a` 所对应的格子中的值时，才需要更新格子中的数值。
 
 有了这两条规则，我们就很容易填充剩余格子的值了，接下来我们来填充原序列中数字 `8` 所对应的格子的值。按照上面的分析，我们需要判断四个条件：
 
-- `8 < 4`
-- `8 < 12`
-- `8 < 2`
-- `8 < 10`
+-   `8 < 4`
+-   `8 < 12`
+-   `8 < 2`
+-   `8 < 10`
 
 很显然条件 `8 < 4` 不成立，什么都不做；条件 `8 < 12` 成立，拿出数字 `12` 对应格子中的值：`1`，为这个值再加 `1` 得出的值为 `2`，大于数字 `8` 对应格子的当前值，所以更新该格子的值为 `2`；条件 `8 < 2` 也不成立，什么都不做；条件 `8 < 10` 成立，拿出数字 `10` 对应格子中的值 `1`，为这个值再加 `1` 得出的值为 `2`，不大于数字 `8` 所对应格子中的值，所以什么都不需要做，最终我们为数字 `8` 所对应的格子填充的值是 `2`：
 
@@ -1795,11 +1724,11 @@ if (moved) {
 
 现在，就剩下原序列中数字 `0` 对应的格子的值还没有被更新了，按照之前的思路，我们需要判断的条件如下：
 
-- `0 < 8`
-- `0 < 4`
-- `0 < 12`
-- `0 < 2`
-- `0 < 10`
+-   `0 < 8`
+-   `0 < 4`
+-   `0 < 12`
+-   `0 < 2`
+-   `0 < 10`
 
 条件 `0 < 8` 成立，拿出数字 `8` 对应格子中的值 `2`，为这个值再加 `1` 得出的值为 `3`，大于数字 `0` 对应格子的当前值，所以更新该格子的值为 `3`。重复执行上面介绍的步骤，最终原序列中数字 `0` 对应格子的值就是 `3`：
 
@@ -1823,23 +1752,23 @@ if (moved) {
 
 关键在于，有三个格子的数值是 `2`，因此你可以有三种选择：
 
-- `[ 0, 8 ]`
-- `[ 0, 4 ]`
-- `[ 0, 2 ]`
+-   `[ 0, 8 ]`
+-   `[ 0, 4 ]`
+-   `[ 0, 2 ]`
 
 当你选择的是 `[ 0, 8 ]` 时，又因为数字 `8` 对应的格子后面的格子中，有两个数值为 `1` 的格子可供选择，所以你还有两种选择：
 
-- `[ 0, 8, 12 ]`
-- `[ 0, 8, 10 ]`
+-   `[ 0, 8, 12 ]`
+-   `[ 0, 8, 10 ]`
 
 同样的，如果你选择的是 `[ 0, 4 ]`，也有两个选择：
 
-- `[ 0, 4, 12 ]`
-- `[ 0, 4, 10 ]`
+-   `[ 0, 4, 12 ]`
+-   `[ 0, 4, 10 ]`
 
 但当你选择 `[ 0, 2 ]` 时，你就只有一个选择：
 
-- `[ 0, 2, 10 ]`
+-   `[ 0, 2, 10 ]`
 
 这是因为数字 `2` 所对应的格子后面，只有一个格子的数值是 `1`，即数字 `10` 所对应的那个格子，因此你只有一种选择。换句话说当你选择 `[ 0, 2 ]` 时，即使数字 `12` 对应的格子的值也是 `1`，你也不能选择它，因为数字 `12` 对应的格子在数字 `2` 对应的格子之前。
 
@@ -1859,4 +1788,4 @@ if (moved) {
 
 ## References
 
-- [https://neil.fraser.name/writing/diff/](https://neil.fraser.name/writing/diff/)
+-   [https://neil.fraser.name/writing/diff/](https://neil.fraser.name/writing/diff/)
